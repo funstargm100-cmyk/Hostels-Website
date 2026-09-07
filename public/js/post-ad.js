@@ -6,6 +6,9 @@ let selectedFiles = [];
 async function checkAuth() {
   const user = await initNavAuth();
   if (!user) { location.href = '/login?redirect=/post-ad'; return; }
+  if (user.role === 'seeker') {
+    document.getElementById('wizardContainer').innerHTML = '<div class="card" style="padding:2rem;text-align:center"><div style="font-size:3rem;margin-bottom:1rem">🚫</div><h2>Owners Only</h2><p class="text-muted mt-1 mb-3">Only owners and agents can post listings. Sign up with an owner account to list a room.</p><a href="/signup" class="btn btn-primary btn-lg">Create Owner Account</a></div>';
+  }
 }
 
 // ─── WIZARD NAVIGATION ────────────────────────────────────────────────────────
