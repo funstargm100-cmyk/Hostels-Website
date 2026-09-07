@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Post a Room — HostelHub</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <nav class="navbar">
+    <div class="container">
+      <a href="/" class="navbar-brand">🏠 Hostel<span>Hub</span></a>
+      <ul class="navbar-nav" id="navMenu">
+        <li><a href="/">Home</a></li>
+        <li><a href="/listings">Browse Rooms</a></li>
+        <li><a href="/post-ad" class="active">Post a Room</a></li>
+      </ul>
+      <div class="navbar-actions">
+        <button class="theme-toggle" id="themeToggle">🌙</button>
+        <a href="/login" class="btn btn-ghost btn-sm" id="loginBtn">Login</a>
+        <a href="/signup" class="btn btn-primary btn-sm" id="signupBtn">Sign Up Free</a>
+        <a href="/dashboard" class="btn btn-outline btn-sm" id="dashboardBtn" style="display:none">Dashboard</a>
+        <button class="btn btn-ghost btn-sm" id="logoutBtn" style="display:none">Logout</button>
+        <button class="hamburger" id="hamburger"><span></span><span></span><span></span></button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container" style="max-width:720px;padding-top:2rem;padding-bottom:3rem">
+    <h1 class="mb-1">Post a Room</h1>
+    <p class="text-muted mb-3">Fill in the details below. Your ad will be reviewed before going live.</p>
+
+    <div class="alert alert-warning mb-3">
+      ⚠️ <strong>Important:</strong> Do NOT include phone numbers, emails, or social handles anywhere in your listing. Violations result in rejection and may lead to account suspension.
+    </div>
+
+    <!-- KYC GATE -->
+    <div id="kycGate" style="display:none">
+      <div class="card" style="padding:2rem;text-align:center">
+        <div style="font-size:3rem;margin-bottom:1rem">🪪</div>
+        <h2>Identity Verification Required</h2>
+        <p class="text-muted mt-1 mb-3">You must complete KYC verification before posting your first listing. This protects seekers and builds trust.</p>
+        <a href="/dashboard#kyc" class="btn btn-primary btn-lg">Complete KYC Verification</a>
+      </div>
+    </div>
+
+    <!-- WIZARD -->
+    <div id="wizardContainer">
+      <!-- STEPS -->
+      <div class="wizard-steps" id="wizardSteps">
+        <div class="wizard-step active" data-step="1"><div class="step-num">1</div><div class="step-label">Photos</div></div>
+        <div class="step-divider"></div>
+        <div class="wizard-step" data-step="2"><div class="step-num">2</div><div class="step-label">Basic Info</div></div>
+        <div class="step-divider"></div>
+        <div class="wizard-step" data-step="3"><div class="step-num">3</div><div class="step-label">Pricing</div></div>
+        <div class="step-divider"></div>
+        <div class="wizard-step" data-step="4"><div class="step-num">4</div><div class="step-label">Amenities</div></div>
+        <div class="step-divider"></div>
+        <div class="wizard-step" data-step="5"><div class="step-num">5</div><div class="step-label">Location</div></div>
+        <div class="step-divider"></div>
+        <div class="wizard-step" data-step="6"><div class="step-num">6</div><div class="step-label">Review</div></div>
+      </div>
+
+      <form id="postAdForm" enctype="multipart/form-data">
+
+        <!-- STEP 1: PHOTOS -->
+        <div class="wizard-panel active card" style="padding:1.5rem" id="step1">
+          <h3 class="mb-2">Upload Photos</h3>
+          <p class="text-muted mb-2" style="font-size:0.875rem">Upload up to 10 photos. First photo will be the cover image. Max 5MB each.</p>
+          <div id="photoDropzone" style="border:2px dashed var(--border);border-radius:var(--radius);padding:2.5rem;text-align:center;cursor:pointer;transition:border-color var(--transition)" onclick="document.getElementById('photoInput').click()" ondragover="event.preventDefault()" ondrop="handleDrop(event)">
+            <div style="font-size:2.5rem;margin-bottom:0.5rem">📷</div>
+            <p style="font-weight:600">Click or drag photos here</p>
+            <p class="text-muted" style="font-size:0.82rem">JPG, PNG, WebP — up to 10 images</p>
+          </div>
+          <input type="file" id="photoInput" name="images" multiple accept="image/*" style="display:none" onchange="handlePhotoSelect(this.files)" />
+          <div id="photoPreview" class="mt-2" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:0.5rem"></div>
+          <div id="step1Error" class="form-error"></div>
+        </div>
+
+        <!-- STEP 2: BASIC INFO -->
+        <div class="wizard-panel card" style="padding:1.5rem" id="step2">
+          <h3 class="mb-3">Basic Information</h3>
+          <div class="form-group">
+            <label class="form-label">Listing Title *</label>
+            <input type="text" class="form-control" id="adTitle" name="title" placeholder="e.g. Spacious 2-in-1 Room Near KNUST" maxlength="200" required />
+            <div class="form-hint">Be descriptive. Do NOT include contact info.</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Description *</label>
+            <textarea class="form-control" id="adDescription" name="description" rows="5" placeholder="Describe the room, building, surroundings... No phone numbers or emails." required></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Gender Preference</label>
+            <select class="form-control" name="gender_preference">
+              <option value="mixed">Mixed (Any)</option>
+              <option value="male">Male Only</option>
+              <option value="female">Female Only</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Available From</label>
+            <input type="date" class="form-control" name="move_in_date" />
+          </div>
+          <div id="step2Error" class="form-error"></div>
+        </div>
+
+        <!-- STEP 3: PRICING -->
+        <div class="wizard-panel card" style="padding:1.5rem" id="step3">
+          <h3 class="mb-3">Occupancy & Pricing</h3>
+          <div class="form-group">
+            <label class="form-label">Occupancy Type *</label>
+            <select class="form-control" id="adOccupancy" name="occupancy_type" required onchange="calcPrice()">
+              <option value="">Select occupancy</option>
+              <option value="1">1 in 1 (Self-contained)</option>
+              <option value="2">2 in 1</option>
+              <option value="3">3 in 1</option>
+              <option value="4">4 in 1</option>
+              <option value="5">5 in 1</option>
+              <option value="6">6 in 1</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Your Room Price (GHS) *</label>
+            <div class="input-group">
+              <span class="input-icon">₵</span>
+              <input type="number" class="form-control" id="adOriginalPrice" name="original_price" placeholder="e.g. 800" min="1" required oninput="calcPrice()" />
+            </div>
+            <div class="form-hint">Enter your desired price. Platform adds 10% commission automatically.</div>
+          </div>
+          <div id="pricePreview" style="display:none" class="card mt-2" style="padding:1rem;background:var(--bg-secondary)">
+            <div style="padding:1rem;background:var(--bg-secondary);border-radius:var(--radius-sm)">
+              <div style="display:flex;justify-content:space-between;margin-bottom:0.4rem;font-size:0.875rem"><span>Your price:</span><span id="prevOriginal"></span></div>
+              <div style="display:flex;justify-content:space-between;margin-bottom:0.4rem;font-size:0.875rem;color:var(--text-muted)"><span>Platform fee (10%):</span><span id="prevFee"></span></div>
+              <div style="display:flex;justify-content:space-between;font-weight:700;color:var(--primary)"><span>Listed price (seekers see):</span><span id="prevListed"></span></div>
+              <div id="prevPerHead" style="font-size:0.82rem;color:var(--text-muted);margin-top:0.4rem"></div>
+            </div>
+          </div>
+          <div id="step3Error" class="form-error"></div>
+        </div>
+
+        <!-- STEP 4: AMENITIES -->
+        <div class="wizard-panel card" style="padding:1.5rem" id="step4">
+          <h3 class="mb-3">Amenities & Facilities</h3>
+          <div class="form-group">
+            <label class="form-label">💧 Water Supply</label>
+            <select class="form-control" name="water">
+              <option value="constant">Constant</option>
+              <option value="intermittent">Intermittent</option>
+              <option value="borehole">Borehole</option>
+              <option value="none">None</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">⚡ Electricity</label>
+            <select class="form-control" name="electricity">
+              <option value="prepaid">Prepaid Meter</option>
+              <option value="postpaid">Postpaid</option>
+              <option value="generator">Generator Backup</option>
+              <option value="none">None</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">🛡️ Security</label>
+            <select class="form-control" name="security">
+              <option value="gated">Gated</option>
+              <option value="fenced">Fenced</option>
+              <option value="guard">Security Guard</option>
+              <option value="cctv">CCTV</option>
+              <option value="none">None</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">🛋️ Furnishing</label>
+            <select class="form-control" name="furnishing">
+              <option value="furnished">Furnished</option>
+              <option value="semi-furnished">Semi-Furnished</option>
+              <option value="unfurnished">Unfurnished</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">🚿 Bathroom</label>
+            <select class="form-control" name="bathroom">
+              <option value="private">Private</option>
+              <option value="shared">Shared</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Nearest Landmark / School</label>
+            <input type="text" class="form-control" name="nearest_landmark" placeholder="e.g. 5 mins from KNUST main gate" />
+          </div>
+          <div class="checkbox-group mt-2">
+            <label class="checkbox-item"><input type="checkbox" name="kitchen_access" value="1"> 🍳 Kitchen Access</label>
+            <label class="checkbox-item"><input type="checkbox" name="wifi" value="1"> 📶 Wi-Fi</label>
+            <label class="checkbox-item"><input type="checkbox" name="parking" value="1"> 🚗 Parking</label>
+            <label class="checkbox-item"><input type="checkbox" name="pet_friendly" value="1"> 🐾 Pet Friendly</label>
+          </div>
+        </div>
+
+        <!-- STEP 5: LOCATION -->
+        <div class="wizard-panel card" style="padding:1.5rem" id="step5">
+          <h3 class="mb-2">Location</h3>
+          <p class="text-muted mb-3" style="font-size:0.875rem">Your exact address is stored privately. Seekers only see an approximate area.</p>
+          <div class="form-group">
+            <label class="form-label">Area / Neighborhood *</label>
+            <input type="text" class="form-control" id="adLocationArea" name="location_area" placeholder="e.g. Ayeduase, Kumasi" required />
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+            <div class="form-group">
+              <label class="form-label">Latitude</label>
+              <input type="number" class="form-control" id="adLat" name="location_lat" step="any" placeholder="e.g. 6.6745" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Longitude</label>
+              <input type="number" class="form-control" id="adLng" name="location_lng" step="any" placeholder="e.g. -1.5716" />
+            </div>
+          </div>
+          <button type="button" class="btn btn-outline btn-sm" onclick="getMyLocation()">📍 Use My Current Location</button>
+          <div id="postMap" style="height:250px;border-radius:var(--radius);border:1px solid var(--border);margin-top:1rem;background:var(--bg-secondary);display:flex;align-items:center;justify-content:center;color:var(--text-muted)">Map preview (enter coordinates above)</div>
+          <div id="step5Error" class="form-error"></div>
+        </div>
+
+        <!-- STEP 6: REVIEW -->
+        <div class="wizard-panel card" style="padding:1.5rem" id="step6">
+          <h3 class="mb-3">Review & Submit</h3>
+          <div id="reviewSummary"></div>
+          <div class="alert alert-warning mt-3">
+            By submitting, you confirm this listing contains no contact information and complies with HostelHub's <a href="/about#terms" style="color:var(--primary)">Terms of Service</a>.
+          </div>
+          <div id="submitError" class="form-error mt-2"></div>
+        </div>
+
+        <!-- NAVIGATION BUTTONS -->
+        <div class="flex-between mt-3">
+          <button type="button" class="btn btn-ghost" id="prevBtn" onclick="wizardPrev()" style="display:none">← Previous</button>
+          <button type="button" class="btn btn-primary" id="nextBtn" onclick="wizardNext()">Next →</button>
+          <button type="submit" class="btn btn-primary btn-lg" id="submitBtn" style="display:none">🚀 Submit for Review</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="toast-container" id="toastContainer"></div>
+  <script src="/js/app.js"></script>
+  <script src="/js/post-ad.js"></script>
+</body>
+</html>

@@ -1,0 +1,163 @@
+let currentUser = null;
+
+async function initDashboard() {
+  currentUser = await initNavAuth();
+  if (!currentUser) { location.href = '/login?redirect=/dashboard'; return; }
+
+  document.getElementById('sidebarName').textContent = currentUser.name;
+  document.getElementById('sidebarRole').textContent = currentUser.role.charAt(0).toUpperCase() + currentUser.role.slice(1);
+
+  if (currentUser.role === 'owner' || currentUser.role === 'agent') {
+    document.getElementById('myListingsNav').style.display = '';
+    document.getElementById('earningsNav').style.display = '';
+    document.getElementById('myRequestsNav').style.display = 'none';
+  }
+
+  // Handle hash navigation
+  const hash = location.hash.replace('#', '') || 'overview';
+  const link = document.querySelector(`[href="#${hash}"]`);
+  if (link) showTab(hash, link);
+  else loadOverview();
+}
+
+function showTab(tab, link) {
+  document.querySelectorAll('[id^="tab-"]').forEach(el => el.style.display = 'none');
+  document.querySelectorAll('.sidebar-nav a').forEach(a => a.classList.remove('active'));
+  const el = document.getElementById(`tab-${tab}`);
+  if (el) el.style.display = 'block';
+  if (link) link.classList.add('active');
+  history.replaceState(null, '', `#${tab}`);
+
+  const loaders = { overview: loadOverview, requests: loadRequests, listings: loadOwnerListings, earnings: loadEarnings, favorites: loadFavorites, notifications: loadNotifications, kyc: loadKYC };
+  loaders[tab]?.();
+}
+
+async function loadOverview() {
+  const statsEl = document.getElementById('statCards');
+  try {
+    if (currentUser.role === 'owner' || currentUser.role === 'agent') {
+      const [{ listings }, earnings] = await Promise.all([api.get('/api/user/listings'), api.get('/api/payments/summary')]);
+      statsEl.innerHTML = `
+        <div class="stat-card"><div class="stat-card-value">${listings.length}</div><div class="stat-card-label">My Listings</div></div>
+        <div class="stat-card"><div class="stat-card-value">GHS ${Number(earnings.wallet_balance).toFixed(2)}</div><div class="stat-card-label">Wallet Balance</div></div>
+        <div class="stat-card"><div class="stat-card-value">${earnings.total_bookings}</div><div class="stat-card-label">Total Bookings</div></div>
+        <div class="stat-card"><div class="stat-card-value">GHS ${Number(earnings.total_earned).toFixed(2)}</div><div class="stat-card-label">Total Earned</div></div>`;
+    } else {
+      const { requests } = await api.get('/api/requests/mine');
+      statsEl.innerHTML = `
+        <div class="stat-card"><div class="stat-card-value">${requests.length}</div><div class="stat-card-label">My Requests</div></div>
+        <div class="stat-card"><div class="stat-card-value">${requests.filter(r => r.status === 'connected').length}</div><div class="stat-card-label">Connected</div></div>`;
+    }
+  } catch (e) { statsEl.innerHTML = `<p class="text-muted">${e.message}</p>`; }
+}
+
+async function loadRequests() {
+  const el = document.getElementById('requestsList');
+  try {
+    const { requests } = await api.get('/api/requests/mine');
+    if (!requests.length) { el.innerHTML = '<div class="empty-state"><div class="icon">💬</div><p>No requests yet. <a href="/listings" style="color:var(--primary)">Browse rooms</a></p></div>'; return; }
+    el.innerHTML = `<div class="table-wrap"><table><thead><tr><th>Listing</th><th>Status</th><th>Move-in</th><th>Date</th></tr></thead><tbody>` +
+      requests.map(r => `<tr>
+        <td><a href="/listing?id=${r.listing_uuid}" style="color:var(--primary)">${r.listing_title}</a><br><span class="text-muted">${r.location_area}</span></td>
+        <td><span class="status-badge status-${r.status}">${r.status.replace('_', ' ')}</span></td>
+        <td>${r.move_in_date ? new Date(r.move_in_date).toLocaleDateString() : '—'}</td>
+        <td>${new Date(r.created_at).toLocaleDateString()}</td>
+      </tr>`).join('') + '</tbody></table></div>';
+  } catch (e) { el.innerHTML = `<p class="text-muted">${e.message}</p>`; }
+}
+
+async function loadOwnerListings() {
+  const el = document.getElementById('ownerListings');
+  try {
+    const { listings } = await api.get('/api/user/listings');
+    if (!listings.length) { el.innerHTML = '<div class="empty-state"><div class="icon">🏠</div><p>No listings yet. <a href="/post-ad" style="color:var(--primary)">Post your first room</a></p></div>'; return; }
+    el.innerHTML = `<div class="table-wrap"><table><thead><tr><th>Title</th><th>Status</th><th>Price</th><th>Views</th><th>Interest</th><th>Actions</th></tr></thead><tbody>` +
+      listings.map(l => `<tr>
+        <td><a href="/listing?id=${l.uuid}" style="color:var(--primary)">${l.title}</a></td>
+        <td><span class="status-badge status-${l.status}">${l.status}</span></td>
+        <td>GHS ${Number(l.listed_price).toLocaleString()}</td>
+        <td>${l.views_count}</td>
+        <td>${l.interest_count}</td>
+        <td><button class="btn btn-ghost btn-sm" onclick="deactivateListing('${l.uuid}')">Deactivate</button></td>
+      </tr>`).join('') + '</tbody></table></div>';
+  } catch (e) { el.innerHTML = `<p class="text-muted">${e.message}</p>`; }
+}
+
+async function deactivateListing(uuid) {
+  if (!confirm('Deactivate this listing?')) return;
+  try {
+    await api.delete(`/api/listings/${uuid}`);
+    showToast('Listing deactivated', 'success');
+    loadOwnerListings();
+  } catch (e) { showToast(e.message, 'error'); }
+}
+
+async function loadEarnings() {
+  const el = document.getElementById('earningStats');
+  try {
+    const data = await api.get('/api/payments/summary');
+    el.innerHTML = `
+      <div class="stat-card"><div class="stat-card-value">GHS ${Number(data.wallet_balance).toFixed(2)}</div><div class="stat-card-label">Available Balance</div></div>
+      <div class="stat-card"><div class="stat-card-value">GHS ${Number(data.total_earned).toFixed(2)}</div><div class="stat-card-label">Total Earned</div></div>
+      <div class="stat-card"><div class="stat-card-value">${data.total_bookings}</div><div class="stat-card-label">Bookings</div></div>`;
+  } catch (e) { el.innerHTML = `<p class="text-muted">${e.message}</p>`; }
+}
+
+async function requestPayout(e) {
+  e.preventDefault();
+  try {
+    await api.post('/api/user/payout-request', {
+      amount: document.getElementById('payoutAmount').value,
+      payment_method: document.getElementById('payoutMethod').value,
+      account_number: document.getElementById('payoutAccount').value
+    });
+    showToast('Payout request submitted', 'success');
+    e.target.reset();
+    loadEarnings();
+  } catch (ex) { showToast(ex.message, 'error'); }
+}
+
+async function loadFavorites() {
+  const el = document.getElementById('favoritesList');
+  try {
+    const { favorites } = await api.get('/api/user/favorites');
+    if (!favorites.length) { el.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><div class="icon">❤️</div><p>No saved listings yet.</p></div>'; return; }
+    el.innerHTML = favorites.map(renderListingCard).join('');
+  } catch (e) { el.innerHTML = `<p class="text-muted">${e.message}</p>`; }
+}
+
+async function loadNotifications() {
+  const el = document.getElementById('notificationsList');
+  try {
+    const { notifications } = await api.get('/api/user/notifications');
+    if (!notifications.length) { el.innerHTML = '<div class="empty-state"><div class="icon">🔔</div><p>No notifications.</p></div>'; return; }
+    el.innerHTML = notifications.map(n => `
+      <div style="padding:1rem;border-bottom:1px solid var(--border);${!n.is_read ? 'background:var(--primary-light)' : ''}">
+        <div style="font-weight:600;font-size:0.875rem">${n.title}</div>
+        <div style="font-size:0.82rem;color:var(--text-muted);margin-top:0.2rem">${n.message}</div>
+        <div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.3rem">${new Date(n.created_at).toLocaleString()}</div>
+      </div>`).join('');
+  } catch (e) { el.innerHTML = `<p class="text-muted">${e.message}</p>`; }
+}
+
+async function loadKYC() {
+  const statusEl = document.getElementById('kycStatus');
+  if (currentUser.is_kyc_verified) {
+    statusEl.innerHTML = '<div class="alert alert-success">✅ Your identity has been verified.</div>';
+    document.getElementById('kycForm').style.display = 'none';
+  } else {
+    statusEl.innerHTML = '<div class="alert alert-warning">⏳ KYC not yet verified. Submit your documents below.</div>';
+  }
+}
+
+async function submitKYC(e) {
+  e.preventDefault();
+  try {
+    const formData = new FormData(e.target);
+    await api.upload('/api/user/kyc', formData);
+    showToast('KYC documents submitted for review', 'success');
+    e.target.reset();
+  } catch (ex) { showToast(ex.message, 'error'); }
+}
+
+initDashboard();

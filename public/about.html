@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>About — HostelHub</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <nav class="navbar">
+    <div class="container">
+      <a href="/" class="navbar-brand">🏠 Hostel<span>Hub</span></a>
+      <ul class="navbar-nav" id="navMenu">
+        <li><a href="/">Home</a></li>
+        <li><a href="/listings">Browse Rooms</a></li>
+        <li><a href="/post-ad">Post a Room</a></li>
+        <li><a href="/about" class="active">About</a></li>
+      </ul>
+      <div class="navbar-actions">
+        <button class="theme-toggle" id="themeToggle">🌙</button>
+        <a href="/login" class="btn btn-ghost btn-sm" id="loginBtn">Login</a>
+        <a href="/signup" class="btn btn-primary btn-sm" id="signupBtn">Sign Up Free</a>
+        <a href="/dashboard" class="btn btn-outline btn-sm" id="dashboardBtn" style="display:none">Dashboard</a>
+        <button class="btn btn-ghost btn-sm" id="logoutBtn" style="display:none">Logout</button>
+        <button class="hamburger" id="hamburger"><span></span><span></span><span></span></button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container" style="max-width:800px;padding-top:2.5rem;padding-bottom:4rem">
+
+    <h1 class="mb-1">About HostelHub</h1>
+    <p class="text-muted mb-4">Ghana's trusted hostel and room rental marketplace.</p>
+
+    <div class="card" style="padding:2rem;margin-bottom:2rem">
+      <h2 class="mb-2">Our Mission</h2>
+      <p style="color:var(--text-muted);line-height:1.8">HostelHub connects students and young professionals with verified room owners — without the stress of walking around or falling victim to scams. We act as the trusted middleman for every contact and transaction, ensuring both seekers and owners are protected.</p>
+    </div>
+
+    <div class="card" style="padding:2rem;margin-bottom:2rem" id="safety">
+      <h2 class="mb-3">🛡️ Safety Tips</h2>
+      <div style="display:flex;flex-direction:column;gap:1rem">
+        <div style="display:flex;gap:0.75rem;align-items:flex-start">
+          <span style="font-size:1.3rem;flex-shrink:0">✅</span>
+          <div><strong>Always transact through HostelHub.</strong> Never pay a room owner directly before we confirm the connection.</div>
+        </div>
+        <div style="display:flex;gap:0.75rem;align-items:flex-start">
+          <span style="font-size:1.3rem;flex-shrink:0">✅</span>
+          <div><strong>Inspect before you pay.</strong> We will arrange a viewing before any payment is made.</div>
+        </div>
+        <div style="display:flex;gap:0.75rem;align-items:flex-start">
+          <span style="font-size:1.3rem;flex-shrink:0">✅</span>
+          <div><strong>Report suspicious listings.</strong> Use the report button on any listing that looks fake or contains contact info.</div>
+        </div>
+        <div style="display:flex;gap:0.75rem;align-items:flex-start">
+          <span style="font-size:1.3rem;flex-shrink:0">⚠️</span>
+          <div><strong>Never share your payment details</strong> with anyone claiming to be a room owner outside the platform.</div>
+        </div>
+        <div style="display:flex;gap:0.75rem;align-items:flex-start">
+          <span style="font-size:1.3rem;flex-shrink:0">⚠️</span>
+          <div><strong>Verified badge matters.</strong> Look for the green "Verified" badge — it means the owner has passed our KYC check.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:2rem;margin-bottom:2rem">
+      <h2 class="mb-3">💰 How Commission Works</h2>
+      <p style="color:var(--text-muted);margin-bottom:1rem">HostelHub adds a transparent 10% platform fee to every listing price:</p>
+      <div style="background:var(--bg-secondary);border-radius:var(--radius-sm);padding:1.25rem;font-size:0.875rem">
+        <div style="display:flex;justify-content:space-between;margin-bottom:0.5rem"><span>Owner's original price</span><span>GHS 1,000</span></div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:0.5rem;color:var(--text-muted)"><span>Platform fee (10%)</span><span>GHS 100</span></div>
+        <div style="display:flex;justify-content:space-between;font-weight:700;color:var(--primary);border-top:1px solid var(--border);padding-top:0.5rem"><span>Seeker pays</span><span>GHS 1,100</span></div>
+      </div>
+      <p style="color:var(--text-muted);margin-top:1rem;font-size:0.875rem">Of the 10%: 5% goes to the room owner/poster as a success fee, and 5% is retained by HostelHub to run the platform.</p>
+    </div>
+
+    <div class="card" style="padding:2rem;margin-bottom:2rem" id="terms">
+      <h2 class="mb-3">📄 Terms of Service</h2>
+      <div style="color:var(--text-muted);font-size:0.875rem;line-height:1.8">
+        <p class="mb-2"><strong>1. Contact Information Policy:</strong> Room owners must not include any phone numbers, email addresses, social media handles, or contact-soliciting phrases in their listings. Violations result in rejection, warnings, and potential account suspension.</p>
+        <p class="mb-2"><strong>2. Middleman Model:</strong> All connections between seekers and owners are facilitated exclusively by HostelHub. Direct contact outside the platform voids any platform protection.</p>
+        <p class="mb-2"><strong>3. KYC Requirement:</strong> Room owners must complete identity verification before their first listing goes live.</p>
+        <p class="mb-2"><strong>4. Listing Accuracy:</strong> Owners are responsible for the accuracy of their listings. Misleading listings will be removed.</p>
+        <p class="mb-2"><strong>5. Reviews:</strong> Reviews can only be submitted after a confirmed connection to prevent fake reviews.</p>
+        <p><strong>6. Platform Rights:</strong> HostelHub reserves the right to remove any listing or suspend any account that violates these terms.</p>
+      </div>
+    </div>
+
+    <div class="card" style="padding:2rem" id="privacy">
+      <h2 class="mb-3">🔒 Privacy Policy</h2>
+      <div style="color:var(--text-muted);font-size:0.875rem;line-height:1.8">
+        <p class="mb-2"><strong>Data We Collect:</strong> Name, email, phone number, and KYC documents for account holders. Location data for listings (stored privately).</p>
+        <p class="mb-2"><strong>How We Use It:</strong> To facilitate room connections, verify identities, process payments, and send relevant notifications.</p>
+        <p class="mb-2"><strong>Location Privacy:</strong> Exact listing coordinates are never shown publicly. Seekers see only an approximate area (±150–300m offset). Exact address is shared only after a confirmed booking.</p>
+        <p class="mb-2"><strong>Contact Privacy:</strong> Owner contact details are never displayed to seekers. Seeker contact details are never displayed to owners until the platform manually connects them.</p>
+        <p><strong>Data Security:</strong> All passwords are hashed. KYC documents are stored securely and accessible only to admins.</p>
+      </div>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-bottom">
+        <span>© 2025 HostelHub. All rights reserved.</span>
+        <span>Made with ❤️ in Ghana</span>
+      </div>
+    </div>
+  </footer>
+
+  <div class="toast-container" id="toastContainer"></div>
+  <script src="/js/app.js"></script>
+</body>
+</html>

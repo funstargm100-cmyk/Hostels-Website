@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HostelHub — Find & Post Hostels. Get Paid.</title>
+  <meta name="description" content="No need to walk around looking for hostels or rooms to rent — do it all from your phone with ease." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/style.css" />
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#FF6B6B" />
+</head>
+<body>
+  <!-- NAVBAR -->
+  <nav class="navbar">
+    <div class="container">
+      <a href="/" class="navbar-brand">🏠 Hostel<span>Hub</span></a>
+      <ul class="navbar-nav" id="navMenu">
+        <li><a href="/" class="active">Home</a></li>
+        <li><a href="/listings">Browse Rooms</a></li>
+        <li><a href="/post-ad">Post a Room</a></li>
+        <li><a href="/about">About</a></li>
+      </ul>
+      <div class="navbar-actions">
+        <button class="theme-toggle" id="themeToggle" title="Toggle dark mode">🌙</button>
+        <a href="/login" class="btn btn-ghost btn-sm" id="loginBtn">Login</a>
+        <a href="/signup" class="btn btn-primary btn-sm" id="signupBtn">Sign Up Free</a>
+        <a href="/dashboard" class="btn btn-outline btn-sm" id="dashboardBtn" style="display:none">Dashboard</a>
+        <button class="btn btn-ghost btn-sm" id="logoutBtn" style="display:none">Logout</button>
+        <button class="hamburger" id="hamburger" aria-label="Menu">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="container">
+      <h1 class="hero-title">Find & Post Hostels —<br><span>Get Paid.</span></h1>
+      <p class="hero-subtitle">No need to walk around looking for hostels or rooms to rent. Do it all from your phone with ease.</p>
+
+      <!-- SEARCH BAR -->
+      <div class="search-bar">
+        <div class="form-group">
+          <label class="form-label">Location / University</label>
+          <div class="input-group">
+            <span class="input-icon">📍</span>
+            <input type="text" class="form-control" id="heroLocation" placeholder="e.g. Legon, KNUST, Accra..." />
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Max Price (GHS)</label>
+          <input type="number" class="form-control" id="heroMaxPrice" placeholder="e.g. 500" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Occupancy</label>
+          <select class="form-control" id="heroOccupancy">
+            <option value="">Any</option>
+            <option value="1">1 in 1</option>
+            <option value="2">2 in 1</option>
+            <option value="3">3 in 1</option>
+            <option value="4">4 in 1</option>
+          </select>
+        </div>
+        <button class="btn btn-primary btn-lg" onclick="heroSearch()">🔍 Search</button>
+      </div>
+
+      <div class="hero-stats">
+        <div class="hero-stat"><div class="hero-stat-num" id="statListings">—</div><div class="hero-stat-label">Active Listings</div></div>
+        <div class="hero-stat"><div class="hero-stat-num" id="statCities">10+</div><div class="hero-stat-label">Cities Covered</div></div>
+        <div class="hero-stat"><div class="hero-stat-num" id="statOwners">—</div><div class="hero-stat-label">Verified Owners</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SCAM AWARENESS BANNER -->
+  <div class="container mt-3">
+    <div class="scam-banner">
+      <span style="font-size:1.4rem">🛡️</span>
+      <div>
+        <strong>Stay Safe:</strong> Never pay anyone directly before inspecting a room. All transactions go through HostelHub. <a href="/about#safety" style="color:var(--primary);font-weight:600">Learn more →</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- FEATURED LISTINGS -->
+  <section class="section">
+    <div class="container">
+      <div class="flex-between section-title">
+        <div>
+          <h2>Featured Rooms</h2>
+          <p class="text-muted">Verified, top-rated listings near you</p>
+        </div>
+        <a href="/listings" class="btn btn-outline">View All →</a>
+      </div>
+      <div class="grid-2" id="featuredListings">
+        <!-- Skeleton loaders -->
+        <div class="skeleton-card"><div class="skeleton skeleton-img"></div><div style="padding:1rem"><div class="skeleton skeleton-text w-80"></div><div class="skeleton skeleton-text w-60 mt-1"></div><div class="skeleton skeleton-text w-40 mt-1"></div></div></div>
+        <div class="skeleton-card"><div class="skeleton skeleton-img"></div><div style="padding:1rem"><div class="skeleton skeleton-text w-80"></div><div class="skeleton skeleton-text w-60 mt-1"></div><div class="skeleton skeleton-text w-40 mt-1"></div></div></div>
+        <div class="skeleton-card"><div class="skeleton skeleton-img"></div><div style="padding:1rem"><div class="skeleton skeleton-text w-80"></div><div class="skeleton skeleton-text w-60 mt-1"></div><div class="skeleton skeleton-text w-40 mt-1"></div></div></div>
+        <div class="skeleton-card"><div class="skeleton skeleton-img"></div><div style="padding:1rem"><div class="skeleton skeleton-text w-80"></div><div class="skeleton skeleton-text w-60 mt-1"></div><div class="skeleton skeleton-text w-40 mt-1"></div></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section class="section" style="background:var(--bg-secondary)">
+    <div class="container">
+      <h2 class="text-center section-title">How It Works</h2>
+      <div class="grid-3" style="max-width:800px;margin:0 auto">
+        <div class="card" style="text-align:center;padding:2rem 1.5rem">
+          <div style="font-size:2.5rem;margin-bottom:1rem">🔍</div>
+          <h3>Search & Browse</h3>
+          <p class="text-muted mt-1" style="font-size:0.875rem">Filter by location, price, occupancy, and amenities to find your perfect room.</p>
+        </div>
+        <div class="card" style="text-align:center;padding:2rem 1.5rem">
+          <div style="font-size:2.5rem;margin-bottom:1rem">💬</div>
+          <h3>Express Interest</h3>
+          <p class="text-muted mt-1" style="font-size:0.875rem">Click "I'm Interested" and we handle the connection — your privacy is protected.</p>
+        </div>
+        <div class="card" style="text-align:center;padding:2rem 1.5rem">
+          <div style="font-size:2.5rem;margin-bottom:1rem">🏠</div>
+          <h3>Move In Safely</h3>
+          <p class="text-muted mt-1" style="font-size:0.875rem">We verify, connect, and support you through the entire process.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOR OWNERS CTA -->
+  <section class="section">
+    <div class="container">
+      <div class="card" style="background:linear-gradient(135deg,var(--primary),var(--secondary));color:#fff;padding:3rem 2rem;text-align:center;border:none">
+        <h2 style="color:#fff">Have a Room to Rent?</h2>
+        <p style="opacity:0.9;margin:0.75rem 0 1.5rem;max-width:500px;margin-left:auto;margin-right:auto">Post your listing for free. Earn 5% commission on every successful booking. We handle the marketing and connections.</p>
+        <a href="/post-ad" class="btn btn-lg" style="background:#fff;color:var(--primary)">Post a Room Free →</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <div class="navbar-brand" style="font-size:1.2rem">🏠 Hostel<span>Hub</span></div>
+          <p>Find and post hostels — get paid. Ghana's trusted room rental marketplace.</p>
+        </div>
+        <div class="footer-links">
+          <h4>For Seekers</h4>
+          <ul>
+            <li><a href="/listings">Browse Rooms</a></li>
+            <li><a href="/listings?sort=newest">New Listings</a></li>
+            <li><a href="/dashboard">My Requests</a></li>
+          </ul>
+        </div>
+        <div class="footer-links">
+          <h4>For Owners</h4>
+          <ul>
+            <li><a href="/post-ad">Post a Room</a></li>
+            <li><a href="/dashboard">My Listings</a></li>
+            <li><a href="/dashboard#earnings">Earnings</a></li>
+          </ul>
+        </div>
+        <div class="footer-links">
+          <h4>Company</h4>
+          <ul>
+            <li><a href="/about">About Us</a></li>
+            <li><a href="/about#safety">Safety Tips</a></li>
+            <li><a href="/about#terms">Terms of Service</a></li>
+            <li><a href="/about#privacy">Privacy Policy</a></li>
+            <li><a href="/contact">Contact</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>© 2025 HostelHub. All rights reserved.</span>
+        <span>Made with ❤️ in Ghana</span>
+      </div>
+    </div>
+  </footer>
+
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="/js/app.js"></script>
+  <script src="/js/home.js"></script>
+</body>
+</html>

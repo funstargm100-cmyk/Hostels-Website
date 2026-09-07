@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard — HostelHub</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <nav class="navbar">
+    <div class="container">
+      <a href="/" class="navbar-brand">🏠 Hostel<span>Hub</span></a>
+      <ul class="navbar-nav" id="navMenu">
+        <li><a href="/">Home</a></li>
+        <li><a href="/listings">Browse Rooms</a></li>
+        <li><a href="/post-ad">Post a Room</a></li>
+      </ul>
+      <div class="navbar-actions">
+        <button class="theme-toggle" id="themeToggle">🌙</button>
+        <a href="/dashboard" class="btn btn-outline btn-sm" id="dashboardBtn">Dashboard</a>
+        <button class="btn btn-ghost btn-sm" id="logoutBtn">Logout</button>
+        <button class="hamburger" id="hamburger"><span></span><span></span><span></span></button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div class="dashboard-layout">
+      <!-- SIDEBAR -->
+      <aside class="sidebar">
+        <div style="text-align:center;padding:1rem 0;border-bottom:1px solid var(--border);margin-bottom:1rem">
+          <div style="width:60px;height:60px;border-radius:50%;background:var(--primary-light);display:flex;align-items:center;justify-content:center;font-size:1.5rem;margin:0 auto 0.5rem">👤</div>
+          <div style="font-weight:600" id="sidebarName">Loading...</div>
+          <div class="text-muted" style="font-size:0.78rem" id="sidebarRole"></div>
+        </div>
+        <ul class="sidebar-nav">
+          <li><a href="#overview" class="active" onclick="showTab('overview',this)">📊 Overview</a></li>
+          <li id="myRequestsNav"><a href="#requests" onclick="showTab('requests',this)">💬 My Requests</a></li>
+          <li id="myListingsNav" style="display:none"><a href="#listings" onclick="showTab('listings',this)">🏠 My Listings</a></li>
+          <li id="earningsNav" style="display:none"><a href="#earnings" onclick="showTab('earnings',this)">💰 Earnings</a></li>
+          <li><a href="#favorites" onclick="showTab('favorites',this)">❤️ Favorites</a></li>
+          <li><a href="#notifications" onclick="showTab('notifications',this)">🔔 Notifications</a></li>
+          <li id="kycNav"><a href="#kyc" onclick="showTab('kyc',this)">🪪 KYC Verification</a></li>
+        </ul>
+      </aside>
+
+      <!-- MAIN CONTENT -->
+      <main>
+        <!-- OVERVIEW TAB -->
+        <div id="tab-overview">
+          <h2 class="mb-3">Overview</h2>
+          <div class="stat-cards" id="statCards"></div>
+          <div class="card" style="padding:1.25rem">
+            <h3 class="mb-2">Recent Activity</h3>
+            <div id="recentActivity"><p class="text-muted" style="font-size:0.875rem">No recent activity.</p></div>
+          </div>
+        </div>
+
+        <!-- REQUESTS TAB -->
+        <div id="tab-requests" style="display:none">
+          <h2 class="mb-3">My Contact Requests</h2>
+          <div id="requestsList"></div>
+        </div>
+
+        <!-- LISTINGS TAB -->
+        <div id="tab-listings" style="display:none">
+          <div class="flex-between mb-3">
+            <h2>My Listings</h2>
+            <a href="/post-ad" class="btn btn-primary">+ Post New Room</a>
+          </div>
+          <div id="ownerListings"></div>
+        </div>
+
+        <!-- EARNINGS TAB -->
+        <div id="tab-earnings" style="display:none">
+          <h2 class="mb-3">Earnings & Payouts</h2>
+          <div class="stat-cards" id="earningStats"></div>
+          <div class="card" style="padding:1.5rem;margin-top:1rem">
+            <h3 class="mb-3">Request Payout</h3>
+            <form onsubmit="requestPayout(event)">
+              <div class="form-group">
+                <label class="form-label">Amount (GHS)</label>
+                <input type="number" class="form-control" id="payoutAmount" min="1" required />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Payment Method</label>
+                <select class="form-control" id="payoutMethod" required>
+                  <option value="momo_mtn">MTN MoMo</option>
+                  <option value="momo_vodafone">Vodafone Cash</option>
+                  <option value="momo_airteltigo">AirtelTigo Money</option>
+                  <option value="bank">Bank Transfer</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Account Number / Phone</label>
+                <input type="text" class="form-control" id="payoutAccount" required />
+              </div>
+              <button type="submit" class="btn btn-primary">Request Payout</button>
+            </form>
+          </div>
+        </div>
+
+        <!-- FAVORITES TAB -->
+        <div id="tab-favorites" style="display:none">
+          <h2 class="mb-3">Saved Listings</h2>
+          <div class="grid-2" id="favoritesList"></div>
+        </div>
+
+        <!-- NOTIFICATIONS TAB -->
+        <div id="tab-notifications" style="display:none">
+          <h2 class="mb-3">Notifications</h2>
+          <div id="notificationsList"></div>
+        </div>
+
+        <!-- KYC TAB -->
+        <div id="tab-kyc" style="display:none">
+          <h2 class="mb-2">Identity Verification (KYC)</h2>
+          <p class="text-muted mb-3" style="font-size:0.875rem">Required before posting your first listing. Upload a valid government ID and a selfie.</p>
+          <div id="kycStatus" class="mb-3"></div>
+          <form id="kycForm" onsubmit="submitKYC(event)" enctype="multipart/form-data">
+            <div class="form-group">
+              <label class="form-label">Government ID (Passport, Voter ID, Driver's License) *</label>
+              <input type="file" class="form-control" name="id_doc" accept="image/*" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Selfie (holding your ID) *</label>
+              <input type="file" class="form-control" name="selfie" accept="image/*" required />
+            </div>
+            <button type="submit" class="btn btn-primary">Submit for Verification</button>
+          </form>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <div class="toast-container" id="toastContainer"></div>
+  <script src="/js/app.js"></script>
+  <script src="/js/dashboard.js"></script>
+</body>
+</html>

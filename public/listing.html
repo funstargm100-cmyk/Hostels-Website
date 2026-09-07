@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Room Details — HostelHub</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <nav class="navbar">
+    <div class="container">
+      <a href="/" class="navbar-brand">🏠 Hostel<span>Hub</span></a>
+      <ul class="navbar-nav" id="navMenu">
+        <li><a href="/">Home</a></li>
+        <li><a href="/listings">Browse Rooms</a></li>
+        <li><a href="/post-ad">Post a Room</a></li>
+      </ul>
+      <div class="navbar-actions">
+        <button class="theme-toggle" id="themeToggle">🌙</button>
+        <a href="/login" class="btn btn-ghost btn-sm" id="loginBtn">Login</a>
+        <a href="/signup" class="btn btn-primary btn-sm" id="signupBtn">Sign Up Free</a>
+        <a href="/dashboard" class="btn btn-outline btn-sm" id="dashboardBtn" style="display:none">Dashboard</a>
+        <button class="btn btn-ghost btn-sm" id="logoutBtn" style="display:none">Logout</button>
+        <button class="hamburger" id="hamburger"><span></span><span></span><span></span></button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container" style="padding-top:1.5rem;padding-bottom:3rem">
+    <a href="/listings" style="color:var(--text-muted);font-size:0.875rem;display:inline-flex;align-items:center;gap:0.3rem;margin-bottom:1rem">← Back to listings</a>
+
+    <!-- Skeleton while loading -->
+    <div id="detailSkeleton">
+      <div class="skeleton" style="height:420px;border-radius:var(--radius);margin-bottom:1.5rem"></div>
+      <div class="skeleton skeleton-text w-80" style="height:28px"></div>
+      <div class="skeleton skeleton-text w-60 mt-1"></div>
+    </div>
+
+    <div id="detailContent" style="display:none">
+      <!-- GALLERY -->
+      <div class="gallery" id="gallery"></div>
+
+      <div class="detail-layout">
+        <!-- LEFT COLUMN -->
+        <div>
+          <div class="flex-between mt-3 mb-1" style="flex-wrap:wrap;gap:0.5rem">
+            <div>
+              <div id="listingBadges" style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.5rem"></div>
+              <h1 id="listingTitle" style="font-size:1.5rem"></h1>
+            </div>
+            <button class="fav-btn" id="favBtn" onclick="toggleFavorite()" title="Save to favorites">🤍</button>
+          </div>
+
+          <p class="card-location" id="listingLocation"></p>
+
+          <div class="divider"></div>
+
+          <h3 class="mb-2">About this room</h3>
+          <p id="listingDescription" style="color:var(--text-muted);line-height:1.7"></p>
+
+          <div class="divider"></div>
+
+          <h3 class="mb-2">Amenities</h3>
+          <div class="amenities-grid" id="amenitiesGrid"></div>
+
+          <div class="divider"></div>
+
+          <h3 class="mb-2">Location (Approximate Area)</h3>
+          <div id="detail-map"></div>
+          <p class="map-privacy-note">🔒 Exact address is shared only after booking confirmation.</p>
+
+          <!-- DISTANCE CALCULATOR -->
+          <div class="card mt-3" style="padding:1.25rem">
+            <h3 class="mb-2">📏 Distance Calculator</h3>
+            <p class="text-muted mb-2" style="font-size:0.875rem">Enter a reference point to estimate travel distance.</p>
+            <div style="display:flex;gap:0.75rem;flex-wrap:wrap">
+              <input type="text" class="form-control" id="fromLocation" placeholder="e.g. University of Ghana, Legon" style="flex:1" />
+              <button class="btn btn-outline" onclick="calcDistance()">Calculate</button>
+            </div>
+            <div id="distanceResult" class="mt-2" style="display:none">
+              <div class="alert alert-info" id="distanceText"></div>
+            </div>
+          </div>
+
+          <div class="divider"></div>
+
+          <h3 class="mb-2">Reviews</h3>
+          <div id="reviewsList">
+            <p class="text-muted" style="font-size:0.875rem">No reviews yet.</p>
+          </div>
+        </div>
+
+        <!-- RIGHT COLUMN — PRICE BOX -->
+        <div>
+          <div class="price-box">
+            <div class="occupancy-tag" id="occupancyTag"></div>
+            <div class="price-main" id="priceMain"></div>
+            <div class="price-per-head" id="pricePerHead"></div>
+            <div class="divider"></div>
+            <div style="font-size:0.82rem;color:var(--text-muted);margin-bottom:1rem">
+              <div style="display:flex;justify-content:space-between;margin-bottom:0.3rem"><span>Listed price (incl. platform fee)</span><span id="priceBreakdown"></span></div>
+            </div>
+            <div id="moveInDate" class="text-muted mb-2" style="font-size:0.82rem"></div>
+            <button class="btn btn-primary btn-block btn-lg" onclick="openInterestModal()">💬 I'm Interested</button>
+            <p style="font-size:0.75rem;color:var(--text-muted);text-align:center;margin-top:0.75rem">Your contact details are never shared without your consent.</p>
+            <div class="divider"></div>
+            <div style="font-size:0.82rem;color:var(--text-muted)">
+              <div style="display:flex;align-items:center;gap:0.4rem;margin-bottom:0.4rem">👤 <span id="ownerName"></span></div>
+              <div style="display:flex;align-items:center;gap:0.4rem;margin-bottom:0.4rem">👁️ <span id="viewCount"></span> views</div>
+              <div style="display:flex;align-items:center;gap:0.4rem">💬 <span id="interestCount"></span> interested</div>
+            </div>
+            <div class="divider"></div>
+            <button class="btn btn-ghost btn-sm btn-block" onclick="openReportModal()" style="color:var(--text-muted)">🚩 Report this listing</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- INTEREST MODAL -->
+  <div class="modal-overlay" id="interestModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Express Interest</h3>
+        <button class="modal-close" onclick="closeModal('interestModal')">✕</button>
+      </div>
+      <div class="alert alert-info mb-2">We'll contact you and arrange the connection. Your privacy is protected.</div>
+      <form id="interestForm" onsubmit="submitInterest(event)">
+        <div class="form-group">
+          <label class="form-label">Your Name *</label>
+          <input type="text" class="form-control" id="intName" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Phone Number</label>
+          <input type="tel" class="form-control" id="intPhone" placeholder="e.g. 0244000000" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email Address</label>
+          <input type="email" class="form-control" id="intEmail" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Preferred Move-in Date</label>
+          <input type="date" class="form-control" id="intMoveIn" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Message (optional)</label>
+          <textarea class="form-control" id="intMessage" rows="3" placeholder="Any specific questions or requirements..."></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block btn-lg" id="interestSubmitBtn">Send Request</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- REPORT MODAL -->
+  <div class="modal-overlay" id="reportModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Report Listing</h3>
+        <button class="modal-close" onclick="closeModal('reportModal')">✕</button>
+      </div>
+      <form onsubmit="submitReport(event)">
+        <div class="form-group">
+          <label class="form-label">Reason *</label>
+          <select class="form-control" id="reportReason" required>
+            <option value="">Select reason</option>
+            <option value="contact_info">Contains contact information</option>
+            <option value="scam">Suspected scam</option>
+            <option value="inappropriate">Inappropriate content</option>
+            <option value="fake">Fake listing</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Details</label>
+          <textarea class="form-control" id="reportDetails" rows="3"></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">Submit Report</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="toast-container" id="toastContainer"></div>
+  <script src="/js/app.js"></script>
+  <script src="/js/listing-detail.js"></script>
+</body>
+</html>

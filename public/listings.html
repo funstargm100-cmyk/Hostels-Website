@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Browse Rooms — HostelHub</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <nav class="navbar">
+    <div class="container">
+      <a href="/" class="navbar-brand">🏠 Hostel<span>Hub</span></a>
+      <ul class="navbar-nav" id="navMenu">
+        <li><a href="/">Home</a></li>
+        <li><a href="/listings" class="active">Browse Rooms</a></li>
+        <li><a href="/post-ad">Post a Room</a></li>
+        <li><a href="/about">About</a></li>
+      </ul>
+      <div class="navbar-actions">
+        <button class="theme-toggle" id="themeToggle">🌙</button>
+        <a href="/login" class="btn btn-ghost btn-sm" id="loginBtn">Login</a>
+        <a href="/signup" class="btn btn-primary btn-sm" id="signupBtn">Sign Up Free</a>
+        <a href="/dashboard" class="btn btn-outline btn-sm" id="dashboardBtn" style="display:none">Dashboard</a>
+        <button class="btn btn-ghost btn-sm" id="logoutBtn" style="display:none">Logout</button>
+        <button class="hamburger" id="hamburger"><span></span><span></span><span></span></button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="search-sticky">
+    <div class="container">
+      <div style="display:flex;gap:0.75rem;flex-wrap:wrap;align-items:center">
+        <div class="input-group" style="flex:1;min-width:180px">
+          <span class="input-icon">📍</span>
+          <input type="text" class="form-control" id="searchLocation" placeholder="Location or university..." />
+        </div>
+        <button class="btn btn-primary" onclick="applyFilters()">🔍 Search</button>
+        <button class="btn btn-ghost" onclick="toggleFilters()">⚙️ Filters</button>
+        <div style="display:flex;gap:0.4rem;margin-left:auto">
+          <button class="btn btn-ghost btn-sm" onclick="setView('grid')" title="Grid">⊞</button>
+          <button class="btn btn-ghost btn-sm" onclick="setView('list')" title="List">☰</button>
+        </div>
+        <select class="form-control" id="sortSelect" style="width:auto" onchange="applyFilters()">
+          <option value="">Sort: Featured</option>
+          <option value="newest">Newest</option>
+          <option value="price_asc">Price: Low → High</option>
+          <option value="price_desc">Price: High → Low</option>
+          <option value="rating">Top Rated</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="container" style="padding-top:1.5rem;padding-bottom:2rem">
+    <div class="listings-layout">
+      <aside class="filters-panel" id="filtersPanel">
+        <div class="flex-between mb-2">
+          <h3 style="font-size:1rem">Filters</h3>
+          <button class="btn btn-ghost btn-sm" onclick="clearFilters()">Clear all</button>
+        </div>
+        <div class="filter-section">
+          <div class="filter-title">Price Range (GHS)</div>
+          <div class="price-range">
+            <input type="number" class="form-control" id="minPrice" placeholder="Min" style="width:80px" />
+            <span style="color:var(--text-muted)">—</span>
+            <input type="number" class="form-control" id="maxPrice" placeholder="Max" style="width:80px" />
+          </div>
+        </div>
+        <div class="filter-section">
+          <div class="filter-title">Occupancy Type</div>
+          <div class="checkbox-group" style="flex-direction:column">
+            <label class="checkbox-item"><input type="radio" name="occupancy" value="" checked onchange="applyFilters()"> Any</label>
+            <label class="checkbox-item"><input type="radio" name="occupancy" value="1" onchange="applyFilters()"> 1 in 1</label>
+            <label class="checkbox-item"><input type="radio" name="occupancy" value="2" onchange="applyFilters()"> 2 in 1</label>
+            <label class="checkbox-item"><input type="radio" name="occupancy" value="3" onchange="applyFilters()"> 3 in 1</label>
+            <label class="checkbox-item"><input type="radio" name="occupancy" value="4" onchange="applyFilters()"> 4 in 1</label>
+          </div>
+        </div>
+        <div class="filter-section">
+          <div class="filter-title">Gender Preference</div>
+          <select class="form-control" id="genderFilter" onchange="applyFilters()">
+            <option value="">Any</option>
+            <option value="male">Male Only</option>
+            <option value="female">Female Only</option>
+            <option value="mixed">Mixed</option>
+          </select>
+        </div>
+        <div class="filter-section">
+          <div class="filter-title">Amenities</div>
+          <div class="checkbox-group" style="flex-direction:column">
+            <label class="checkbox-item"><input type="checkbox" id="filterWifi" onchange="applyFilters()"> 📶 Wi-Fi</label>
+            <label class="checkbox-item"><input type="checkbox" id="filterParking" onchange="applyFilters()"> 🚗 Parking</label>
+          </div>
+        </div>
+        <div class="filter-section">
+          <div class="filter-title">Water Supply</div>
+          <select class="form-control" id="waterFilter" onchange="applyFilters()">
+            <option value="">Any</option>
+            <option value="constant">Constant</option>
+            <option value="intermittent">Intermittent</option>
+            <option value="borehole">Borehole</option>
+          </select>
+        </div>
+        <div class="filter-section">
+          <div class="filter-title">Electricity</div>
+          <select class="form-control" id="electricityFilter" onchange="applyFilters()">
+            <option value="">Any</option>
+            <option value="prepaid">Prepaid Meter</option>
+            <option value="postpaid">Postpaid</option>
+            <option value="generator">Generator Backup</option>
+          </select>
+        </div>
+        <div class="filter-section">
+          <div class="filter-title">Furnishing</div>
+          <select class="form-control" id="furnishedFilter" onchange="applyFilters()">
+            <option value="">Any</option>
+            <option value="furnished">Furnished</option>
+            <option value="semi-furnished">Semi-Furnished</option>
+            <option value="unfurnished">Unfurnished</option>
+          </select>
+        </div>
+        <div class="filter-section">
+          <div class="filter-title">Bathroom</div>
+          <select class="form-control" id="bathroomFilter" onchange="applyFilters()">
+            <option value="">Any</option>
+            <option value="private">Private</option>
+            <option value="shared">Shared</option>
+          </select>
+        </div>
+        <button class="btn btn-primary btn-block mt-2" onclick="applyFilters()">Apply Filters</button>
+      </aside>
+
+      <div>
+        <p class="text-muted mb-2" id="resultsCount">Loading...</p>
+        <div class="grid-2" id="listingsGrid"></div>
+        <div class="pagination" id="pagination"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-container" id="toastContainer"></div>
+  <script src="/js/app.js"></script>
+  <script src="/js/listings.js"></script>
+</body>
+</html>
