@@ -4,6 +4,7 @@ async function loadFeatured() {
     const { listings } = await api.get('/api/listings?limit=4&sort=featured');
     if (!listings.length) { grid.innerHTML = '<p class="text-muted">No listings yet. <a href="/post-ad" style="color:var(--primary)">Be the first to post!</a></p>'; return; }
     grid.innerHTML = listings.map(renderListingCard).join('');
+    if (typeof lucide !== 'undefined') lucide.createIcons();
   } catch {
     grid.innerHTML = '<p class="text-muted">Could not load listings.</p>';
   }
