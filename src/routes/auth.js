@@ -26,15 +26,13 @@ router.post('/signup', async (req, res) => {
     );
     const uuid = result.rows[0].uuid;
 
-    if (email) await sendEmail(email, 'Verify your account', templates.otp(otp));
-    res.json({ message: 'Account created. Check your email/phone for OTP.', uuid });
+    // Send OTP email non-blocking so email failure doesn't break signup
+    if (email) sendEmail(email, 'Verify your account', templates.otp(otp)).catch(console.error);
+    res.json({ message: 'Account created. Check your email/phone for OTP.', uuid, otp: process.env.NODE_ENV !== 'production' ? otp : undefined });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Server error' });
+    console.error('SIGNUP ERROR:', err.message, err.stack);
+    res.status(500).json({ error: err.message || 'Server error' });
   }
-});
-
-// POST /api/auth/verify-otp
 router.post('/verify-otp', async (req, res) => {
   const { uuid, otp } = req.body;
   try {
