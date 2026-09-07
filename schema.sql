@@ -37,6 +37,7 @@ CREATE TABLE IF NOT EXISTS listings (
   listed_price NUMERIC(10,2) NOT NULL,
   price_per_head NUMERIC(10,2) NOT NULL,
   location_area VARCHAR(200) NOT NULL,
+  full_address TEXT,
   location_lat NUMERIC(10,8),
   location_lng NUMERIC(11,8),
   nearest_landmark VARCHAR(200),
@@ -181,3 +182,6 @@ CREATE TRIGGER trg_requests_updated BEFORE UPDATE ON contact_requests FOR EACH R
 INSERT INTO users (name, email, password_hash, role, is_verified, is_kyc_verified)
 VALUES ('Platform Admin', 'admin@hostels.com', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin', TRUE, TRUE)
 ON CONFLICT (email) DO NOTHING;
+
+-- Migration: add full_address column if upgrading existing DB
+ALTER TABLE listings ADD COLUMN IF NOT EXISTS full_address TEXT;

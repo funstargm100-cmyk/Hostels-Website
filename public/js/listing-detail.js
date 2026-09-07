@@ -96,9 +96,20 @@ function renderReviews(reviews, avgRating, reviewCount) {
 
 function initMap(lat, lng, area) {
   const mapEl = document.getElementById('detail-map');
-  if (!lat || !lng) { mapEl.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-muted)">📍 ${area}</div>`; return; }
-  mapEl.innerHTML = `<iframe width="100%" height="300" frameborder="0" style="border:0;border-radius:var(--radius)" loading="lazy"
-    src="https://maps.google.com/maps?q=${lat},${lng}&z=14&output=embed" allowfullscreen></iframe>`;
+  if (!lat || !lng) {
+    mapEl.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-muted)">📍 ${area}</div>`;
+    return;
+  }
+  // Apply ~150-300m privacy jitter (already done server-side, but ensure map shows jittered coords)
+  const map = L.map(mapEl).setView([lat, lng], 15);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    maxZoom: 19
+  }).addTo(map);
+
+  // Privacy circle instead of exact pin
+  L.circle([lat, lng], { radius: 200, color: 'var(--primary, #FF6B6B)', fillColor: '#FF6B6B', fillOpacity: 0.15, weight: 2 }).addTo(map)
+    .bindPopup(`📍 ${area}<br><small>Approximate area — exact address shared after booking</small>`).openPopup();
 }
 
 function openInterestModal() { openModal('interestModal'); }

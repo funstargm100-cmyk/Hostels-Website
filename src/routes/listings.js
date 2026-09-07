@@ -18,13 +18,13 @@ const COMMISSION_RATE = 0.10;
 // GET /api/listings
 router.get('/', async (req, res) => {
   try {
-    const { location, min_price, max_price, occupancy, gender, water, electricity, wifi, parking, furnished, bathroom, sort, page = 1, limit = 12 } = req.query;
+    const { location, min_price, max_price, occupancy, gender, water, electricity, wifi, parking, furnished, bathroom, sort, page = 1, limit = 12, near_lat, near_lng, near_km = 5 } = req.query;
     const offset = (page - 1) * limit;
     const where = ['l.status = \'active\''];
     const params = [];
     let p = 1;
 
-    if (location) { where.push(`(l.location_area ILIKE $${p} OR l.nearest_landmark ILIKE $${p+1})`); params.push(`%${location}%`, `%${location}%`); p += 2; }
+    if (location) { where.push(`(l.location_area ILIKE $${p} OR l.nearest_landmark ILIKE $${p+1} OR l.full_address ILIKE $${p+2})`); params.push(`%${location}%`, `%${location}%`, `%${location}%`); p += 3; }
     if (min_price) { where.push(`l.listed_price >= $${p++}`); params.push(min_price); }
     if (max_price) { where.push(`l.listed_price <= $${p++}`); params.push(max_price); }
     if (occupancy) { where.push(`l.occupancy_type = $${p++}`); params.push(occupancy); }
@@ -35,13 +35,25 @@ router.get('/', async (req, res) => {
     if (electricity) { where.push(`a.electricity = $${p++}`); params.push(electricity); }
     if (furnished) { where.push(`a.furnishing = $${p++}`); params.push(furnished); }
     if (bathroom) { where.push(`a.bathroom = $${p++}`); params.push(bathroom); }
+    // Proximity filter using Haversine formula
+    if (near_lat && near_lng) {
+      where.push(`(
+        6371 * acos(
+          cos(radians($${p})) * cos(radians(l.location_lat)) *
+          cos(radians(l.location_lng) - radians($${p+1})) +
+          sin(radians($${p})) * sin(radians(l.location_lat))
+        )
+      ) <= $${p+2}`);
+      params.push(parseFloat(near_lat), parseFloat(near_lng), parseFloat(near_km));
+      p += 3;
+    }
 
     const orderMap = { price_asc: 'l.listed_price ASC', price_desc: 'l.listed_price DESC', newest: 'l.created_at DESC', rating: 'avg_rating DESC NULLS LAST' };
     const orderBy = orderMap[sort] || 'l.is_featured DESC, l.created_at DESC';
     const whereStr = `WHERE ${where.join(' AND ')}`;
 
     const sql = `
-      SELECT l.id, l.uuid, l.title, l.location_area, l.nearest_landmark, l.listed_price, l.price_per_head,
+      SELECT l.id, l.uuid, l.title, l.location_area, l.full_address, l.nearest_landmark, l.listed_price, l.price_per_head,
              l.occupancy_type, l.gender_preference, l.is_featured, l.views_count, l.interest_count,
              l.move_in_date, l.created_at,
              u.is_kyc_verified as owner_verified,
@@ -122,10 +134,10 @@ router.post('/', requireAuth, requireRole('owner', 'agent', 'admin'), upload.arr
     const price_per_head = parseFloat((listed_price / parseInt(occupancy_type)).toFixed(2));
     const expires_at = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
-    const result = await db.query(
-      `INSERT INTO listings (owner_id, title, description, occupancy_type, original_price, listed_price, price_per_head, location_area, location_lat, location_lng, nearest_landmark, gender_preference, move_in_date, expires_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING id, uuid`,
-      [req.session.user.id, title, description, occupancy_type, price, listed_price, price_per_head, location_area, location_lat || null, location_lng || null, nearest_landmark || null, gender_preference || 'mixed', move_in_date || null, expires_at]
+  const result = await db.query(
+      `INSERT INTO listings (owner_id, title, description, occupancy_type, original_price, listed_price, price_per_head, location_area, full_address, location_lat, location_lng, nearest_landmark, gender_preference, move_in_date, expires_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING id, uuid`,
+      [req.session.user.id, title, description, occupancy_type, price, listed_price, price_per_head, location_area, req.body.full_address || null, location_lat || null, location_lng || null, nearest_landmark || null, gender_preference || 'mixed', move_in_date || null, expires_at]
     );
     const { id: listingId, uuid } = result.rows[0];
 

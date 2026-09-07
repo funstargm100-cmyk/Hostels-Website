@@ -1,8 +1,10 @@
 let currentPage = 1;
 let currentView = 'grid';
+let nearMeLat = null;
+let nearMeLng = null;
 
 function getFilters() {
-  return {
+  const f = {
     location: document.getElementById('searchLocation').value,
     min_price: document.getElementById('minPrice').value,
     max_price: document.getElementById('maxPrice').value,
@@ -18,6 +20,12 @@ function getFilters() {
     page: currentPage,
     limit: 12
   };
+  if (nearMeLat && nearMeLng) {
+    f.near_lat = nearMeLat;
+    f.near_lng = nearMeLng;
+    f.near_km = 5; // 5km radius
+  }
+  return f;
 }
 
 async function loadListings() {
@@ -72,7 +80,32 @@ function clearFilters() {
   document.getElementById('furnishedFilter').value = '';
   document.getElementById('bathroomFilter').value = '';
   document.getElementById('sortSelect').value = '';
+  nearMeLat = null; nearMeLng = null;
+  const btn = document.getElementById('nearMeBtn');
+  if (btn) { btn.classList.remove('btn-primary'); btn.classList.add('btn-ghost'); }
   applyFilters();
+}
+
+function filterNearMe() {
+  const btn = document.getElementById('nearMeBtn');
+  if (nearMeLat && nearMeLng) {
+    // Toggle off
+    nearMeLat = null; nearMeLng = null;
+    if (btn) { btn.classList.remove('btn-primary'); btn.classList.add('btn-ghost'); btn.textContent = '📍 Near Me'; }
+    applyFilters();
+    return;
+  }
+  if (!navigator.geolocation) return showToast('Geolocation not supported', 'error');
+  if (btn) btn.textContent = '🔄 Locating...';
+  navigator.geolocation.getCurrentPosition(pos => {
+    nearMeLat = pos.coords.latitude;
+    nearMeLng = pos.coords.longitude;
+    if (btn) { btn.classList.remove('btn-ghost'); btn.classList.add('btn-primary'); btn.textContent = '📍 Near Me ✓'; }
+    applyFilters();
+  }, () => {
+    showToast('Could not get your location', 'error');
+    if (btn) btn.textContent = '📍 Near Me';
+  });
 }
 function toggleFilters() { document.getElementById('filtersPanel').classList.toggle('open'); }
 function setView(v) { currentView = v; loadListings(); }
