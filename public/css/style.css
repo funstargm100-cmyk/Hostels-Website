@@ -173,6 +173,9 @@ select.form-control { appearance: none; background-image: url("data:image/svg+xm
 .navbar-transparent .navbar-brand span { color: rgba(255,255,255,0.75); }
 .navbar-transparent .navbar-nav a { color: rgba(255,255,255,0.85); }
 .navbar-transparent .navbar-nav a:hover, .navbar-transparent .navbar-nav a.active { background: rgba(255,255,255,0.15); color: #fff; }
+/* Mobile dropdown always uses theme colors regardless of transparent state */
+.navbar-transparent .navbar-nav.open a { color: var(--text); }
+.navbar-transparent .navbar-nav.open a:hover, .navbar-transparent .navbar-nav.open a.active { background: var(--bg-secondary); color: var(--primary); }
 .navbar-transparent .btn-ghost { color: rgba(255,255,255,0.85); }
 .navbar-transparent .btn-ghost:hover { background: rgba(255,255,255,0.15); color: #fff; }
 .navbar-transparent .btn-outline { border-color: rgba(255,255,255,0.6); color: #fff; }
