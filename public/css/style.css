@@ -188,8 +188,8 @@ select.form-control { appearance: none; background-image: url("data:image/svg+xm
 .hero-split-title span { color: var(--primary); }
 .hero-split-sub { color: rgba(255,255,255,0.6); font-size: 1.05rem; line-height: 1.7; max-width: 420px; margin-bottom: 2rem; }
 .hero-split-actions { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 3rem; }
-.btn-white { background: #fff; color: var(--text); }
-.btn-white:hover { background: #f1f5f9; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+.btn-white { background: #fff; color: #1a1a2e; }
+.btn-white:hover { background: #f1f5f9; color: #1a1a2e; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
 .hero-split-stats { display: flex; align-items: center; gap: 2rem; padding-top: 2rem; border-top: 1px solid rgba(255,255,255,0.1); }
 .hero-split-stat { display: flex; flex-direction: column; gap: 0.2rem; }
 .hero-split-stat-num { font-family: var(--font-head); font-size: 1.6rem; font-weight: 700; color: var(--primary); }
