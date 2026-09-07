@@ -28,7 +28,7 @@ function showTab(tab, link) {
   if (link) link.classList.add('active');
   history.replaceState(null, '', `#${tab}`);
 
-  const loaders = { overview: loadOverview, requests: loadRequests, listings: loadOwnerListings, earnings: loadEarnings, favorites: loadFavorites, notifications: loadNotifications, kyc: loadKYC };
+  const loaders = { overview: loadOverview, requests: loadRequests, listings: loadOwnerListings, earnings: loadEarnings, favorites: loadFavorites, notifications: loadNotifications };
   loaders[tab]?.();
 }
 
@@ -140,24 +140,5 @@ async function loadNotifications() {
   } catch (e) { el.innerHTML = `<p class="text-muted">${e.message}</p>`; }
 }
 
-async function loadKYC() {
-  const statusEl = document.getElementById('kycStatus');
-  if (currentUser.is_kyc_verified) {
-    statusEl.innerHTML = '<div class="alert alert-success">✅ Your identity has been verified.</div>';
-    document.getElementById('kycForm').style.display = 'none';
-  } else {
-    statusEl.innerHTML = '<div class="alert alert-warning">⏳ KYC not yet verified. Submit your documents below.</div>';
-  }
-}
-
-async function submitKYC(e) {
-  e.preventDefault();
-  try {
-    const formData = new FormData(e.target);
-    await api.upload('/api/user/kyc', formData);
-    showToast('KYC documents submitted for review', 'success');
-    e.target.reset();
-  } catch (ex) { showToast(ex.message, 'error'); }
-}
 
 initDashboard();

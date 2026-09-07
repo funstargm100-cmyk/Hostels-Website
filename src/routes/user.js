@@ -1,13 +1,6 @@
 const router = require('express').Router();
-const multer = require('multer');
 const db = require('../utils/db');
 const { requireAuth } = require('../middleware/auth');
-
-// Memory storage — Vercel has no writable filesystem
-const kycUpload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024 }
-});
 
 // GET /api/user/profile
 router.get('/profile', requireAuth, async (req, res) => {
@@ -55,16 +48,6 @@ router.get('/notifications', requireAuth, async (req, res) => {
   } catch (err) { res.status(500).json({ error: 'Server error' }); }
 });
 
-// POST /api/user/kyc
-router.post('/kyc', requireAuth, kycUpload.fields([{ name: 'id_doc', maxCount: 1 }, { name: 'selfie', maxCount: 1 }]), async (req, res) => {
-  if (!req.files?.id_doc || !req.files?.selfie) return res.status(400).json({ error: 'Both ID document and selfie required' });
-  try {
-    const docB64 = `data:${req.files.id_doc[0].mimetype};base64,${req.files.id_doc[0].buffer.toString('base64')}`;
-    const selfieB64 = `data:${req.files.selfie[0].mimetype};base64,${req.files.selfie[0].buffer.toString('base64')}`;
-    await db.query('UPDATE users SET kyc_doc_path=$1, kyc_selfie_path=$2 WHERE id=$3', [docB64, selfieB64, req.session.user.id]);
-    res.json({ message: 'KYC documents submitted for review' });
-  } catch (err) { res.status(500).json({ error: 'Server error' }); }
-});
 
 // POST /api/user/payout-request
 router.post('/payout-request', requireAuth, async (req, res) => {
@@ -82,10 +65,9 @@ router.post('/payout-request', requireAuth, async (req, res) => {
 // PUT /api/user/role-upgrade
 router.put('/role-upgrade', requireAuth, async (req, res) => {
   try {
-    const result = await db.query('SELECT role, is_kyc_verified FROM users WHERE id=$1', [req.session.user.id]);
+    const result = await db.query('SELECT role FROM users WHERE id=$1', [req.session.user.id]);
     const user = result.rows[0];
     if (user.role === 'owner') return res.status(400).json({ error: 'Already an owner' });
-    if (!user.is_kyc_verified) return res.status(403).json({ error: 'KYC verification required before posting' });
     await db.query("UPDATE users SET role='owner' WHERE id=$1", [req.session.user.id]);
     req.session.user.role = 'owner';
     res.json({ message: 'Role upgraded to owner' });

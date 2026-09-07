@@ -36,12 +36,11 @@ async function loadAdminListings() {
   try {
     const { listings } = await api.get(`/api/admin/listings?status=${status}`);
     if (!listings.length) { el.innerHTML = '<p class="text-muted">No listings.</p>'; return; }
-    el.innerHTML = `<div class="table-wrap"><table><thead><tr><th>Title</th><th>Owner</th><th>Price</th><th>KYC</th><th>Date</th><th>Actions</th></tr></thead><tbody>` +
+    el.innerHTML = `<div class="table-wrap"><table><thead><tr><th>Title</th><th>Owner</th><th>Price</th><th>Date</th><th>Actions</th></tr></thead><tbody>` +
       listings.map(l => `<tr>
         <td><a href="/listing?id=${l.uuid}" target="_blank" style="color:var(--primary)">${l.title}</a></td>
         <td>${l.owner_name}<br><span class="text-muted" style="font-size:0.75rem">${l.owner_email}</span></td>
         <td>GHS ${Number(l.listed_price).toLocaleString()}</td>
-        <td>${l.owner_verified ? '<span class="badge badge-verified">✓</span>' : '<span class="badge badge-pending">Pending</span>'}</td>
         <td>${new Date(l.created_at).toLocaleDateString()}</td>
         <td style="display:flex;gap:0.4rem;flex-wrap:wrap">
           ${status === 'pending' ? `<button class="btn btn-secondary btn-sm" onclick="approveListing(${l.id})">✓ Approve</button><button class="btn btn-sm" style="background:#fee2e2;color:#991b1b" onclick="openRejectModal(${l.id})">✗ Reject</button>` : ''}
@@ -115,12 +114,11 @@ async function loadAdminUsers() {
   try {
     const { users } = await api.get(`/api/admin/users${role ? '?role=' + role : ''}`);
     if (!users.length) { el.innerHTML = '<p class="text-muted">No users.</p>'; return; }
-    el.innerHTML = `<div class="table-wrap"><table><thead><tr><th>Name</th><th>Contact</th><th>Role</th><th>KYC</th><th>Status</th><th>Actions</th></tr></thead><tbody>` +
+    el.innerHTML = `<div class="table-wrap"><table><thead><tr><th>Name</th><th>Contact</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead><tbody>` +
       users.map(u => `<tr>
         <td>${u.name}</td>
         <td style="font-size:0.82rem">${u.email || ''}<br>${u.phone || ''}</td>
         <td><span class="tag">${u.role}</span></td>
-        <td>${u.is_kyc_verified ? '<span class="badge badge-verified">✓</span>' : '<button class="btn btn-sm" style="background:#dbeafe;color:#1e40af" onclick="verifyKYC('+u.id+')">Verify</button>'}</td>
         <td>${u.is_suspended ? '<span class="badge" style="background:#fee2e2;color:#991b1b">Suspended</span>' : '<span class="badge badge-verified">Active</span>'}</td>
         <td>${u.is_suspended
           ? `<button class="btn btn-ghost btn-sm" onclick="unsuspendUser(${u.id})">Unsuspend</button>`
@@ -139,10 +137,7 @@ async function unsuspendUser(id) {
   try { await api.put(`/api/admin/users/${id}/unsuspend`); showToast('User unsuspended', 'success'); loadAdminUsers(); }
   catch (e) { showToast(e.message, 'error'); }
 }
-async function verifyKYC(id) {
-  try { await api.put(`/api/admin/users/${id}/verify-kyc`); showToast('KYC verified', 'success'); loadAdminUsers(); }
-  catch (e) { showToast(e.message, 'error'); }
-}
+
 
 async function loadAdminReports() {
   const el = document.getElementById('adminReportsTable');

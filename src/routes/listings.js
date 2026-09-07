@@ -107,7 +107,7 @@ router.get('/:uuid', async (req, res) => {
 });
 
 // POST /api/listings
-router.post('/', requireAuth, requireRole('owner', 'agent', 'admin'), upload.array('images', 10), async (req, res) => {
+router.post('/', requireAuth, upload.array('images', 10), async (req, res) => {
   const { title, description, occupancy_type, original_price, location_area, location_lat, location_lng, nearest_landmark, gender_preference, move_in_date, water, electricity, security, furnishing, bathroom, kitchen_access, wifi, parking, pet_friendly } = req.body;
 
   if (!title || !original_price || !location_area || !occupancy_type) return res.status(400).json({ error: 'Missing required fields' });

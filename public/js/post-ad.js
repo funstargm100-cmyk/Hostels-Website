@@ -6,12 +6,6 @@ let selectedFiles = [];
 async function checkAuth() {
   const user = await initNavAuth();
   if (!user) { location.href = '/login?redirect=/post-ad'; return; }
-  if (user.role === 'seeker') {
-    if (!user.is_kyc_verified) {
-      document.getElementById('kycGate').style.display = 'block';
-      document.getElementById('wizardContainer').style.display = 'none';
-    }
-  }
 }
 
 // ─── WIZARD NAVIGATION ────────────────────────────────────────────────────────

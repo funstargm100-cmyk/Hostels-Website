@@ -42,7 +42,7 @@
           <li id="earningsNav" style="display:none"><a href="#earnings" onclick="showTab('earnings',this)">💰 Earnings</a></li>
           <li><a href="#favorites" onclick="showTab('favorites',this)">❤️ Favorites</a></li>
           <li><a href="#notifications" onclick="showTab('notifications',this)">🔔 Notifications</a></li>
-          <li id="kycNav"><a href="#kyc" onclick="showTab('kyc',this)">🪪 KYC Verification</a></li>
+
         </ul>
       </aside>
 
@@ -114,23 +114,7 @@
           <div id="notificationsList"></div>
         </div>
 
-        <!-- KYC TAB -->
-        <div id="tab-kyc" style="display:none">
-          <h2 class="mb-2">Identity Verification (KYC)</h2>
-          <p class="text-muted mb-3" style="font-size:0.875rem">Required before posting your first listing. Upload a valid government ID and a selfie.</p>
-          <div id="kycStatus" class="mb-3"></div>
-          <form id="kycForm" onsubmit="submitKYC(event)" enctype="multipart/form-data">
-            <div class="form-group">
-              <label class="form-label">Government ID (Passport, Voter ID, Driver's License) *</label>
-              <input type="file" class="form-control" name="id_doc" accept="image/*" required />
-            </div>
-            <div class="form-group">
-              <label class="form-label">Selfie (holding your ID) *</label>
-              <input type="file" class="form-control" name="selfie" accept="image/*" required />
-            </div>
-            <button type="submit" class="btn btn-primary">Submit for Verification</button>
-          </form>
-        </div>
+
       </main>
     </div>
   </div>

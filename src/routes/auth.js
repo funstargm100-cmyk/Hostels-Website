@@ -8,7 +8,7 @@ const { sendEmail, templates } = require('../utils/mailer');
 const SECRET = process.env.SESSION_SECRET || 'hostel_secret';
 const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
 const signToken = (user) => jwt.sign(
-  { id: user.id, uuid: user.uuid, name: user.name, role: user.role, is_kyc_verified: user.is_kyc_verified },
+  { id: user.id, uuid: user.uuid, name: user.name, role: user.role },
   SECRET,
   { expiresIn: '7d' }
 );
@@ -76,7 +76,7 @@ router.post('/login', async (req, res) => {
     if (!valid) return res.status(401).json({ error: 'Invalid credentials' });
 
     const token = signToken(user);
-    const userData = { id: user.id, uuid: user.uuid, name: user.name, role: user.role, is_kyc_verified: user.is_kyc_verified };
+    const userData = { id: user.id, uuid: user.uuid, name: user.name, role: user.role };
     res.json({ message: 'Login successful', token, user: userData });
   } catch (err) {
     console.error('LOGIN ERROR:', err.message);
