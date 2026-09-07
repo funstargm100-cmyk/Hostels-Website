@@ -1,6 +1,5 @@
 require('dotenv').config();
 const express = require('express');
-const session = require('express-session');
 const cors = require('cors');
 const path = require('path');
 const rateLimit = require('express-rate-limit');
@@ -8,26 +7,20 @@ const rateLimit = require('express-rate-limit');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware
-app.use(cors());
+app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-app.use(session({
-  secret: process.env.SESSION_SECRET || 'hostel_secret',
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-    maxAge: 7 * 24 * 60 * 60 * 1000
-  }
-}));
+// Stub req.session so route files that reference req.session.user still work
+app.use((req, res, next) => {
+  req.session = { user: null };
+  next();
+});
 
 // Rate limiting
 const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, message: { error: 'Too many attempts, try again later.' } });
-const generalLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 200 });
+const generalLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 300 });
 app.use('/api/auth', authLimiter);
 app.use('/api', generalLimiter);
 
@@ -47,10 +40,8 @@ pages.forEach(page => {
   app.get(route, (req, res) => res.sendFile(path.join(__dirname, 'public', file)));
 });
 
-// Catch-all
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 
-// Global error handler — always return JSON
 app.use((err, req, res, next) => {
   console.error('UNHANDLED ERROR:', err.message);
   res.status(500).json({ error: err.message || 'Server error' });

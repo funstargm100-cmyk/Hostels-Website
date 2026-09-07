@@ -1,7 +1,13 @@
 // ─── API HELPER ───────────────────────────────────────────────────────────────
 const api = {
+  getToken: () => localStorage.getItem('token'),
+
   async request(method, url, body) {
-    const opts = { method, headers: { 'Content-Type': 'application/json' }, credentials: 'include' };
+    const token = api.getToken();
+    const opts = {
+      method,
+      headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    };
     if (body) opts.body = JSON.stringify(body);
     const res = await fetch(url, opts);
     const data = await res.json();
@@ -14,7 +20,12 @@ const api = {
   delete: (url) => api.request('DELETE', url),
 
   async upload(url, formData) {
-    const res = await fetch(url, { method: 'POST', body: formData, credentials: 'include' });
+    const token = api.getToken();
+    const res = await fetch(url, {
+      method: 'POST',
+      body: formData,
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Upload failed');
     return data;
@@ -65,6 +76,13 @@ document.getElementById('themeToggle')?.addEventListener('click', toggleTheme);
 
 // ─── NAVBAR AUTH STATE ────────────────────────────────────────────────────────
 async function initNavAuth() {
+  const token = localStorage.getItem('token');
+  if (!token) {
+    localStorage.removeItem('user');
+    document.getElementById('dashboardBtn')?.style && (document.getElementById('dashboardBtn').style.display = 'none');
+    document.getElementById('logoutBtn')?.style && (document.getElementById('logoutBtn').style.display = 'none');
+    return null;
+  }
   try {
     const { user } = await api.get('/api/auth/me');
     localStorage.setItem('user', JSON.stringify(user));
@@ -75,14 +93,15 @@ async function initNavAuth() {
     return user;
   } catch {
     localStorage.removeItem('user');
+    localStorage.removeItem('token');
     document.getElementById('dashboardBtn')?.style && (document.getElementById('dashboardBtn').style.display = 'none');
     document.getElementById('logoutBtn')?.style && (document.getElementById('logoutBtn').style.display = 'none');
     return null;
   }
 }
 
-document.getElementById('logoutBtn')?.addEventListener('click', async () => {
-  await api.post('/api/auth/logout');
+document.getElementById('logoutBtn')?.addEventListener('click', () => {
+  localStorage.removeItem('token');
   localStorage.removeItem('user');
   location.href = '/';
 });

@@ -1,10 +1,17 @@
 const router = require('express').Router();
 const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
 const db = require('../utils/db');
 const { sendEmail, templates } = require('../utils/mailer');
 
+const SECRET = process.env.SESSION_SECRET || 'hostel_secret';
 const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
+const signToken = (user) => jwt.sign(
+  { id: user.id, uuid: user.uuid, name: user.name, role: user.role, is_kyc_verified: user.is_kyc_verified },
+  SECRET,
+  { expiresIn: '7d' }
+);
 
 // POST /api/auth/signup
 router.post('/signup', async (req, res) => {
@@ -68,8 +75,9 @@ router.post('/login', async (req, res) => {
     const valid = await bcrypt.compare(password, user.password_hash);
     if (!valid) return res.status(401).json({ error: 'Invalid credentials' });
 
-    req.session.user = { id: user.id, uuid: user.uuid, name: user.name, role: user.role, is_kyc_verified: user.is_kyc_verified };
-    res.json({ message: 'Login successful', user: req.session.user });
+    const token = signToken(user);
+    const userData = { id: user.id, uuid: user.uuid, name: user.name, role: user.role, is_kyc_verified: user.is_kyc_verified };
+    res.json({ message: 'Login successful', token, user: userData });
   } catch (err) {
     console.error('LOGIN ERROR:', err.message);
     res.status(500).json({ error: err.message || 'Server error' });
@@ -78,7 +86,8 @@ router.post('/login', async (req, res) => {
 
 // POST /api/auth/logout
 router.post('/logout', (req, res) => {
-  req.session.destroy(() => res.json({ message: 'Logged out' }));
+  // JWT is stateless — client just deletes the token
+  res.json({ message: 'Logged out' });
 });
 
 // POST /api/auth/forgot-password
@@ -118,8 +127,14 @@ router.post('/reset-password', async (req, res) => {
 
 // GET /api/auth/me
 router.get('/me', (req, res) => {
-  if (!req.session.user) return res.status(401).json({ error: 'Not authenticated' });
-  res.json({ user: req.session.user });
+  const token = req.headers.authorization?.split(' ')[1];
+  if (!token) return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    const user = jwt.verify(token, SECRET);
+    res.json({ user });
+  } catch {
+    res.status(401).json({ error: 'Invalid or expired token' });
+  }
 });
 
 module.exports = router;
