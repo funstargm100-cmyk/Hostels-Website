@@ -21,11 +21,11 @@
   </style>
 </head>
 <body>
-  <button class="theme-toggle" id="themeToggle" style="position:fixed;top:1rem;right:1rem;z-index:100">🌙</button>
+  <button class="theme-toggle" id="themeToggle" style="position:fixed;top:1rem;right:1rem;z-index:100"><i data-lucide="moon"></i></button>
   <div class="auth-page">
     <div class="auth-card">
       <div style="text-align:center;margin-bottom:1.5rem">
-        <a href="/" style="font-family:var(--font-head);font-size:1.6rem;font-weight:700;color:var(--primary)">🏠 Hostel<span style="color:var(--text)">Hub</span></a>
+        <a href="/" style="font-family:var(--font-head);font-size:1.6rem;font-weight:700;color:var(--primary);display:inline-flex;align-items:center;gap:0.4rem"><i data-lucide="home" style="width:22px;height:22px"></i> Hostel<span style="color:var(--text)">Hub</span></a>
       </div>
       <h2 style="text-align:center;margin-bottom:0.25rem">Create your account</h2>
       <p class="text-muted text-center mb-3" style="font-size:0.875rem">Free to join. No hidden fees.</p>
@@ -48,12 +48,12 @@
         <p style="font-size:0.875rem;font-weight:600;margin-bottom:0.75rem">I am a:</p>
         <div class="role-cards">
           <div class="role-card selected" id="roleSeeker" onclick="selectRole('seeker')">
-            <div class="icon">🔍</div>
+            <div class="icon" style="display:flex;justify-content:center"><i data-lucide="search" style="width:32px;height:32px;color:var(--primary)"></i></div>
             <h4>Room Seeker</h4>
             <p>Looking for a hostel or room to rent</p>
           </div>
           <div class="role-card" id="roleOwner" onclick="selectRole('owner')">
-            <div class="icon">🏠</div>
+            <div class="icon" style="display:flex;justify-content:center"><i data-lucide="building-2" style="width:32px;height:32px;color:var(--primary)"></i></div>
             <h4>Room Owner</h4>
             <p>I have rooms to list and rent out</p>
           </div>
@@ -94,6 +94,7 @@
   </div>
 
   <div class="toast-container" id="toastContainer"></div>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   <script src="/js/app.js"></script>
   <script>
     let pendingUUID = null;
@@ -151,5 +152,6 @@
       showToast('Resend not yet implemented — check your email/phone', 'info');
     }
   </script>
+  <script>lucide.createIcons();</script>
 </body>
 </html>

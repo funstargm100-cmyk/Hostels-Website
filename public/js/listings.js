@@ -40,13 +40,15 @@ async function loadListings() {
     document.getElementById('resultsCount').textContent = `${data.total} room${data.total !== 1 ? 's' : ''} found`;
 
     if (!data.listings.length) {
-      grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="icon">🏠</div><h3>No rooms found</h3><p>Try adjusting your filters.</p></div>`;
+      grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="icon"><i data-lucide="building-2" style="width:48px;height:48px"></i></div><h3>No rooms found</h3><p>Try adjusting your filters.</p></div>`;
+      if (typeof lucide !== 'undefined') lucide.createIcons();
       document.getElementById('pagination').innerHTML = '';
       return;
     }
 
     grid.className = currentView === 'list' ? '' : 'grid-2';
     grid.innerHTML = data.listings.map(renderListingCard).join('');
+    if (typeof lucide !== 'undefined') lucide.createIcons();
     renderPagination(data.page, data.pages);
   } catch (e) {
     grid.innerHTML = `<p class="text-muted">Failed to load listings: ${e.message}</p>`;
@@ -82,7 +84,7 @@ function clearFilters() {
   document.getElementById('sortSelect').value = '';
   nearMeLat = null; nearMeLng = null;
   const btn = document.getElementById('nearMeBtn');
-  if (btn) { btn.classList.remove('btn-primary'); btn.classList.add('btn-ghost'); }
+  if (btn) { btn.classList.remove('btn-primary'); btn.classList.add('btn-ghost'); btn.innerHTML = '<i data-lucide="navigation"></i> Near Me'; if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [btn] }); }
   applyFilters();
 }
 
@@ -91,20 +93,20 @@ function filterNearMe() {
   if (nearMeLat && nearMeLng) {
     // Toggle off
     nearMeLat = null; nearMeLng = null;
-    if (btn) { btn.classList.remove('btn-primary'); btn.classList.add('btn-ghost'); btn.textContent = '📍 Near Me'; }
+    if (btn) { btn.classList.remove('btn-primary'); btn.classList.add('btn-ghost'); btn.innerHTML = '<i data-lucide="navigation"></i> Near Me'; if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [btn] }); }
     applyFilters();
     return;
   }
   if (!navigator.geolocation) return showToast('Geolocation not supported', 'error');
-  if (btn) btn.textContent = '🔄 Locating...';
+  if (btn) { btn.innerHTML = '<i data-lucide="loader"></i> Locating...'; if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [btn] }); }
   navigator.geolocation.getCurrentPosition(pos => {
     nearMeLat = pos.coords.latitude;
     nearMeLng = pos.coords.longitude;
-    if (btn) { btn.classList.remove('btn-ghost'); btn.classList.add('btn-primary'); btn.textContent = '📍 Near Me ✓'; }
+    if (btn) { btn.classList.remove('btn-ghost'); btn.classList.add('btn-primary'); btn.innerHTML = '<i data-lucide="navigation"></i> Near Me ✓'; if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [btn] }); }
     applyFilters();
   }, () => {
     showToast('Could not get your location', 'error');
-    if (btn) btn.textContent = '📍 Near Me';
+    if (btn) { btn.innerHTML = '<i data-lucide="navigation"></i> Near Me'; if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [btn] }); }
   });
 }
 function toggleFilters() { document.getElementById('filtersPanel').classList.toggle('open'); }

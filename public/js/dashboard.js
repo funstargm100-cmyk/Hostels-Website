@@ -55,7 +55,7 @@ async function loadRequests() {
   const el = document.getElementById('requestsList');
   try {
     const { requests } = await api.get('/api/requests/mine');
-    if (!requests.length) { el.innerHTML = '<div class="empty-state"><div class="icon">💬</div><p>No requests yet. <a href="/listings" style="color:var(--primary)">Browse rooms</a></p></div>'; return; }
+    if (!requests.length) { el.innerHTML = '<div class="empty-state"><div class="icon"><i data-lucide="message-circle" style="width:48px;height:48px"></i></div><p>No requests yet. <a href="/listings" style="color:var(--primary)">Browse rooms</a></p></div>'; return; }
     el.innerHTML = `<div class="table-wrap"><table><thead><tr><th>Listing</th><th>Status</th><th>Move-in</th><th>Date</th></tr></thead><tbody>` +
       requests.map(r => `<tr>
         <td><a href="/listing?id=${r.listing_uuid}" style="color:var(--primary)">${r.listing_title}</a><br><span class="text-muted">${r.location_area}</span></td>
@@ -70,7 +70,7 @@ async function loadOwnerListings() {
   const el = document.getElementById('ownerListings');
   try {
     const { listings } = await api.get('/api/user/listings');
-    if (!listings.length) { el.innerHTML = '<div class="empty-state"><div class="icon">🏠</div><p>No listings yet. <a href="/post-ad" style="color:var(--primary)">Post your first room</a></p></div>'; return; }
+    if (!listings.length) { el.innerHTML = '<div class="empty-state"><div class="icon"><i data-lucide="building-2" style="width:48px;height:48px"></i></div><p>No listings yet. <a href="/post-ad" style="color:var(--primary)">Post your first room</a></p></div>'; return; }
     el.innerHTML = `<div class="table-wrap"><table><thead><tr><th>Title</th><th>Status</th><th>Price</th><th>Views</th><th>Interest</th><th>Actions</th></tr></thead><tbody>` +
       listings.map(l => `<tr>
         <td><a href="/listing?id=${l.uuid}" style="color:var(--primary)">${l.title}</a></td>
@@ -121,8 +121,9 @@ async function loadFavorites() {
   const el = document.getElementById('favoritesList');
   try {
     const { favorites } = await api.get('/api/user/favorites');
-    if (!favorites.length) { el.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><div class="icon">❤️</div><p>No saved listings yet.</p></div>'; return; }
+    if (!favorites.length) { el.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><div class="icon"><i data-lucide="heart" style="width:48px;height:48px"></i></div><p>No saved listings yet.</p></div>'; return; }
     el.innerHTML = favorites.map(renderListingCard).join('');
+    if (typeof lucide !== 'undefined') lucide.createIcons();
   } catch (e) { el.innerHTML = `<p class="text-muted">${e.message}</p>`; }
 }
 
@@ -130,7 +131,7 @@ async function loadNotifications() {
   const el = document.getElementById('notificationsList');
   try {
     const { notifications } = await api.get('/api/user/notifications');
-    if (!notifications.length) { el.innerHTML = '<div class="empty-state"><div class="icon">🔔</div><p>No notifications.</p></div>'; return; }
+    if (!notifications.length) { el.innerHTML = '<div class="empty-state"><div class="icon"><i data-lucide="bell" style="width:48px;height:48px"></i></div><p>No notifications.</p></div>'; return; }
     el.innerHTML = notifications.map(n => `
       <div style="padding:1rem;border-bottom:1px solid var(--border);${!n.is_read ? 'background:var(--primary-light)' : ''}">
         <div style="font-weight:600;font-size:0.875rem">${n.title}</div>

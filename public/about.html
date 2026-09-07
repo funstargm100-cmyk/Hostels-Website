@@ -11,7 +11,7 @@
 <body>
   <nav class="navbar">
     <div class="container">
-      <a href="/" class="navbar-brand">🏠 Hostel<span>Hub</span></a>
+      <a href="/" class="navbar-brand"><i data-lucide="home"></i> Hostel<span>Hub</span></a>
       <ul class="navbar-nav" id="navMenu">
         <li><a href="/">Home</a></li>
         <li><a href="/listings">Browse Rooms</a></li>
@@ -19,7 +19,7 @@
         <li><a href="/about" class="active">About</a></li>
       </ul>
       <div class="navbar-actions">
-        <button class="theme-toggle" id="themeToggle">🌙</button>
+        <button class="theme-toggle" id="themeToggle"><i data-lucide="moon"></i></button>
         <a href="/login" class="btn btn-ghost btn-sm" id="loginBtn">Login</a>
         <a href="/signup" class="btn btn-primary btn-sm" id="signupBtn">Sign Up Free</a>
         <a href="/dashboard" class="btn btn-outline btn-sm" id="dashboardBtn" style="display:none">Dashboard</a>
@@ -40,33 +40,33 @@
     </div>
 
     <div class="card" style="padding:2rem;margin-bottom:2rem" id="safety">
-      <h2 class="mb-3">🛡️ Safety Tips</h2>
+      <h2 class="mb-3"><i data-lucide="shield-check" style="width:22px;height:22px;color:var(--primary)"></i> Safety Tips</h2>
       <div style="display:flex;flex-direction:column;gap:1rem">
         <div style="display:flex;gap:0.75rem;align-items:flex-start">
-          <span style="font-size:1.3rem;flex-shrink:0">✅</span>
+          <i data-lucide="check-circle" style="width:20px;height:20px;color:#10b981;flex-shrink:0;margin-top:2px"></i>
           <div><strong>Always transact through HostelHub.</strong> Never pay a room owner directly before we confirm the connection.</div>
         </div>
         <div style="display:flex;gap:0.75rem;align-items:flex-start">
-          <span style="font-size:1.3rem;flex-shrink:0">✅</span>
+          <i data-lucide="check-circle" style="width:20px;height:20px;color:#10b981;flex-shrink:0;margin-top:2px"></i>
           <div><strong>Inspect before you pay.</strong> We will arrange a viewing before any payment is made.</div>
         </div>
         <div style="display:flex;gap:0.75rem;align-items:flex-start">
-          <span style="font-size:1.3rem;flex-shrink:0">✅</span>
+          <i data-lucide="check-circle" style="width:20px;height:20px;color:#10b981;flex-shrink:0;margin-top:2px"></i>
           <div><strong>Report suspicious listings.</strong> Use the report button on any listing that looks fake or contains contact info.</div>
         </div>
         <div style="display:flex;gap:0.75rem;align-items:flex-start">
-          <span style="font-size:1.3rem;flex-shrink:0">⚠️</span>
+          <i data-lucide="alert-triangle" style="width:20px;height:20px;color:#f59e0b;flex-shrink:0;margin-top:2px"></i>
           <div><strong>Never share your payment details</strong> with anyone claiming to be a room owner outside the platform.</div>
         </div>
         <div style="display:flex;gap:0.75rem;align-items:flex-start">
-          <span style="font-size:1.3rem;flex-shrink:0">⚠️</span>
+          <i data-lucide="alert-triangle" style="width:20px;height:20px;color:#f59e0b;flex-shrink:0;margin-top:2px"></i>
           <div><strong>Verified badge matters.</strong> Look for the green "Verified" badge — it means the owner has passed our KYC check.</div>
         </div>
       </div>
     </div>
 
     <div class="card" style="padding:2rem;margin-bottom:2rem">
-      <h2 class="mb-3">💰 How Commission Works</h2>
+      <h2 class="mb-3"><i data-lucide="coins" style="width:22px;height:22px;color:var(--primary)"></i> How Commission Works</h2>
       <p style="color:var(--text-muted);margin-bottom:1rem">HostelHub adds a transparent 10% platform fee to every listing price:</p>
       <div style="background:var(--bg-secondary);border-radius:var(--radius-sm);padding:1.25rem;font-size:0.875rem">
         <div style="display:flex;justify-content:space-between;margin-bottom:0.5rem"><span>Owner's original price</span><span>GHS 1,000</span></div>
@@ -77,7 +77,7 @@
     </div>
 
     <div class="card" style="padding:2rem;margin-bottom:2rem" id="terms">
-      <h2 class="mb-3">📄 Terms of Service</h2>
+      <h2 class="mb-3"><i data-lucide="file-text" style="width:22px;height:22px;color:var(--primary)"></i> Terms of Service</h2>
       <div style="color:var(--text-muted);font-size:0.875rem;line-height:1.8">
         <p class="mb-2"><strong>1. Contact Information Policy:</strong> Room owners must not include any phone numbers, email addresses, social media handles, or contact-soliciting phrases in their listings. Violations result in rejection, warnings, and potential account suspension.</p>
         <p class="mb-2"><strong>2. Middleman Model:</strong> All connections between seekers and owners are facilitated exclusively by HostelHub. Direct contact outside the platform voids any platform protection.</p>
@@ -89,7 +89,7 @@
     </div>
 
     <div class="card" style="padding:2rem" id="privacy">
-      <h2 class="mb-3">🔒 Privacy Policy</h2>
+      <h2 class="mb-3"><i data-lucide="lock" style="width:22px;height:22px;color:var(--primary)"></i> Privacy Policy</h2>
       <div style="color:var(--text-muted);font-size:0.875rem;line-height:1.8">
         <p class="mb-2"><strong>Data We Collect:</strong> Name, email, phone number, and KYC documents for account holders. Location data for listings (stored privately).</p>
         <p class="mb-2"><strong>How We Use It:</strong> To facilitate room connections, verify identities, process payments, and send relevant notifications.</p>
@@ -104,12 +104,14 @@
     <div class="container">
       <div class="footer-bottom">
         <span>© 2025 HostelHub. All rights reserved.</span>
-        <span>Made with ❤️ in Ghana</span>
+        <span style="display:flex;align-items:center;gap:0.3rem">Made with <i data-lucide="heart" style="width:14px;height:14px;color:var(--primary);fill:var(--primary)"></i> in Ghana</span>
       </div>
     </div>
   </footer>
 
   <div class="toast-container" id="toastContainer"></div>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   <script src="/js/app.js"></script>
+  <script>lucide.createIcons();</script>
 </body>
 </html>

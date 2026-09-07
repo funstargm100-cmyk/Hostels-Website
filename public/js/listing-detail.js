@@ -2,11 +2,34 @@ const listingUUID = new URLSearchParams(location.search).get('id');
 let currentListing = null;
 
 const AMENITY_MAP = {
-  water: { constant: '💧 Constant Water', intermittent: '💧 Intermittent Water', borehole: '💧 Borehole', none: '💧 No Water' },
-  electricity: { prepaid: '⚡ Prepaid Meter', postpaid: '⚡ Postpaid', generator: '⚡ Generator Backup', none: '⚡ No Electricity' },
-  security: { fenced: '🛡️ Fenced', gated: '🛡️ Gated', guard: '🛡️ Security Guard', cctv: '🛡️ CCTV', none: '🛡️ No Security' },
-  furnishing: { furnished: '🛋️ Furnished', 'semi-furnished': '🛋️ Semi-Furnished', unfurnished: '🛋️ Unfurnished' },
-  bathroom: { private: '🚿 Private Bathroom', shared: '🚿 Shared Bathroom' }
+  water: {
+    constant: { icon: 'droplets', label: 'Constant Water' },
+    intermittent: { icon: 'droplets', label: 'Intermittent Water' },
+    borehole: { icon: 'droplets', label: 'Borehole' },
+    none: { icon: 'droplets', label: 'No Water' }
+  },
+  electricity: {
+    prepaid: { icon: 'zap', label: 'Prepaid Meter' },
+    postpaid: { icon: 'zap', label: 'Postpaid' },
+    generator: { icon: 'zap', label: 'Generator Backup' },
+    none: { icon: 'zap', label: 'No Electricity' }
+  },
+  security: {
+    fenced: { icon: 'shield', label: 'Fenced' },
+    gated: { icon: 'shield', label: 'Gated' },
+    guard: { icon: 'shield', label: 'Security Guard' },
+    cctv: { icon: 'shield', label: 'CCTV' },
+    none: { icon: 'shield', label: 'No Security' }
+  },
+  furnishing: {
+    furnished: { icon: 'armchair', label: 'Furnished' },
+    'semi-furnished': { icon: 'armchair', label: 'Semi-Furnished' },
+    unfurnished: { icon: 'armchair', label: 'Unfurnished' }
+  },
+  bathroom: {
+    private: { icon: 'shower-head', label: 'Private Bathroom' },
+    shared: { icon: 'shower-head', label: 'Shared Bathroom' }
+  }
 };
 
 async function loadListing() {
@@ -21,12 +44,13 @@ async function loadListing() {
     renderGallery(images);
     renderBadges(listing);
     document.getElementById('listingTitle').textContent = listing.title;
-    document.getElementById('listingLocation').innerHTML = `📍 ${listing.location_area}${listing.nearest_landmark ? ' · ' + listing.nearest_landmark : ''}`;
+    document.getElementById('listingLocation').innerHTML = `<i data-lucide="map-pin" style="width:13px;height:13px"></i> ${listing.location_area}${listing.nearest_landmark ? ' · ' + listing.nearest_landmark : ''}`;
     document.getElementById('listingDescription').textContent = listing.description || 'No description provided.';
     renderAmenities(amenities);
     renderPriceBox(listing);
     renderReviews(reviews, listing.avg_rating, listing.review_count);
     initMap(listing.display_lat, listing.display_lng, listing.location_area);
+    if (typeof lucide !== 'undefined') lucide.createIcons();
   } catch (e) {
     document.getElementById('detailSkeleton').innerHTML = `<div class="alert alert-danger">Failed to load listing: ${e.message}</div>`;
   }
@@ -45,8 +69,8 @@ function renderGallery(images) {
 function renderBadges(listing) {
   const el = document.getElementById('listingBadges');
   const badges = [];
-  if (listing.owner_verified) badges.push('<span class="badge badge-verified">✓ Verified Owner</span>');
-  if (listing.is_featured) badges.push('<span class="badge badge-featured">⭐ Featured</span>');
+  if (listing.owner_verified) badges.push('<span class="badge badge-verified"><i data-lucide="badge-check" style="width:11px;height:11px"></i> Verified Owner</span>');
+  if (listing.is_featured) badges.push('<span class="badge badge-featured"><i data-lucide="star" style="width:11px;height:11px"></i> Featured</span>');
   el.innerHTML = badges.join('');
 }
 
@@ -59,12 +83,13 @@ function renderAmenities(a) {
     AMENITY_MAP.security[a.security],
     AMENITY_MAP.furnishing[a.furnishing],
     AMENITY_MAP.bathroom[a.bathroom],
-    a.wifi ? '📶 Wi-Fi Available' : null,
-    a.kitchen_access ? '🍳 Kitchen Access' : null,
-    a.parking ? '🚗 Parking Available' : null,
-    a.pet_friendly ? '🐾 Pet Friendly' : null
+    a.wifi ? { icon: 'wifi', label: 'Wi-Fi Available' } : null,
+    a.kitchen_access ? { icon: 'utensils', label: 'Kitchen Access' } : null,
+    a.parking ? { icon: 'car', label: 'Parking Available' } : null,
+    a.pet_friendly ? { icon: 'paw-print', label: 'Pet Friendly' } : null
   ].filter(Boolean);
-  grid.innerHTML = items.map(item => `<div class="amenity-item"><span class="icon">${item.split(' ')[0]}</span><span>${item.split(' ').slice(1).join(' ')}</span></div>`).join('');
+  grid.innerHTML = items.map(item => `<div class="amenity-item"><i data-lucide="${item.icon}"></i><span>${item.label}</span></div>`).join('');
+  if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [grid] });
 }
 
 function renderPriceBox(l) {
@@ -75,7 +100,7 @@ function renderPriceBox(l) {
   document.getElementById('ownerName').textContent = l.owner_name || 'Verified Owner';
   document.getElementById('viewCount').textContent = l.views_count || 0;
   document.getElementById('interestCount').textContent = l.interest_count || 0;
-  if (l.move_in_date) document.getElementById('moveInDate').textContent = `📅 Available from: ${new Date(l.move_in_date).toLocaleDateString()}`;
+  if (l.move_in_date) document.getElementById('moveInDate').innerHTML = `<i data-lucide="calendar" style="width:13px;height:13px"></i> Available from: ${new Date(l.move_in_date).toLocaleDateString()}`;
 }
 
 function renderReviews(reviews, avgRating, reviewCount) {
@@ -97,19 +122,16 @@ function renderReviews(reviews, avgRating, reviewCount) {
 function initMap(lat, lng, area) {
   const mapEl = document.getElementById('detail-map');
   if (!lat || !lng) {
-    mapEl.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-muted)">📍 ${area}</div>`;
+    mapEl.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-muted)">${area}</div>`;
     return;
   }
-  // Apply ~150-300m privacy jitter (already done server-side, but ensure map shows jittered coords)
   const map = L.map(mapEl).setView([lat, lng], 15);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
     maxZoom: 19
   }).addTo(map);
-
-  // Privacy circle instead of exact pin
-  L.circle([lat, lng], { radius: 200, color: 'var(--primary, #FF6B6B)', fillColor: '#FF6B6B', fillOpacity: 0.15, weight: 2 }).addTo(map)
-    .bindPopup(`📍 ${area}<br><small>Approximate area — exact address shared after booking</small>`).openPopup();
+  L.circle([lat, lng], { radius: 200, color: '#FF6B6B', fillColor: '#FF6B6B', fillOpacity: 0.15, weight: 2 }).addTo(map)
+    .bindPopup(`${area}<br><small>Approximate area — exact address shared after booking</small>`).openPopup();
 }
 
 function openInterestModal() { openModal('interestModal'); }
@@ -161,7 +183,10 @@ async function toggleFavorite() {
   try {
     const { favorited } = await api.post(`/api/listings/${listingUUID}/favorite`);
     const btn = document.getElementById('favBtn');
-    btn.textContent = favorited ? '❤️' : '🤍';
+    btn.innerHTML = favorited
+      ? '<i data-lucide="heart" style="width:20px;height:20px;fill:var(--primary);color:var(--primary)"></i>'
+      : '<i data-lucide="heart" style="width:20px;height:20px"></i>';
+    if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [btn] });
     showToast(favorited ? 'Saved to favorites' : 'Removed from favorites', 'success');
   } catch (e) { showToast(e.message, 'error'); }
 }
@@ -172,22 +197,20 @@ async function calcDistance() {
   const resultEl = document.getElementById('distanceResult');
   const textEl = document.getElementById('distanceText');
   resultEl.style.display = 'none';
-
-  // Use browser geolocation if "my location" typed
   if (from.toLowerCase().includes('my location') || from.toLowerCase().includes('current')) {
     navigator.geolocation?.getCurrentPosition(async pos => {
       await fetchDistance(pos.coords.latitude, pos.coords.longitude, resultEl, textEl);
     }, () => showToast('Could not get your location', 'error'));
     return;
   }
-  // Geocode via Google Maps Geocoding (requires API key in production)
-  showToast('Distance calculation requires coordinates. Use "my location" or enter lat/lng.', 'info');
+  showToast('Type "my location" to use GPS, or enter coordinates.', 'info');
 }
 
 async function fetchDistance(lat, lng, resultEl, textEl) {
   try {
     const data = await api.get(`/api/listings/${listingUUID}/distance?from_lat=${lat}&from_lng=${lng}`);
-    textEl.textContent = `📏 Approximately ${data.distance_km} km away · ~${data.estimated_travel_minutes} min by road`;
+    textEl.innerHTML = `<i data-lucide="ruler" style="width:14px;height:14px"></i> Approximately ${data.distance_km} km away · ~${data.estimated_travel_minutes} min by road`;
+    if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [textEl] });
     resultEl.style.display = 'block';
   } catch (e) { showToast(e.message, 'error'); }
 }

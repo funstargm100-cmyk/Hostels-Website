@@ -147,7 +147,7 @@ function placePin(lat, lng, reverseGeocode) {
   if (postMarker) postMap.removeLayer(postMarker);
 
   postMarker = L.marker([lat, lng], { draggable: true }).addTo(postMap);
-  postMarker.bindPopup('📍 Hostel location').openPopup();
+  postMarker.bindPopup('Hostel location').openPopup();
 
   postMarker.on('dragend', (e) => {
     const pos = e.target.getLatLng();
@@ -160,13 +160,13 @@ function placePin(lat, lng, reverseGeocode) {
 function setLocationFields(lat, lng, reverseGeocode) {
   document.getElementById('adLat').value = lat.toFixed(7);
   document.getElementById('adLng').value = lng.toFixed(7);
-  document.getElementById('pinStatus').textContent = `📍 Pin set at ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+  document.getElementById('pinStatus').textContent = 'Pin set at ' + lat.toFixed(5) + ', ' + lng.toFixed(5);
 
   if (reverseGeocode) reverseGeocodePin(lat, lng);
 }
 
 async function reverseGeocodePin(lat, lng) {
-  document.getElementById('pinStatus').textContent = '🔄 Looking up address...';
+  document.getElementById('pinStatus').textContent = 'Looking up address...';
   try {
     const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1`, {
       headers: { 'Accept-Language': 'en' }
@@ -186,15 +186,15 @@ async function reverseGeocodePin(lat, lng) {
     if (areaFull) document.getElementById('adLocationArea').value = areaFull;
     if (fullAddress) document.getElementById('adFullAddress').value = fullAddress;
 
-    document.getElementById('pinStatus').textContent = `📍 ${areaFull || 'Location pinned'}`;
+    document.getElementById('pinStatus').textContent = areaFull || 'Location pinned';
   } catch {
-    document.getElementById('pinStatus').textContent = `📍 Pin set at ${parseFloat(document.getElementById('adLat').value).toFixed(5)}, ${parseFloat(document.getElementById('adLng').value).toFixed(5)}`;
+    document.getElementById('pinStatus').textContent = 'Pin set at ' + parseFloat(document.getElementById('adLat').value).toFixed(5) + ', ' + parseFloat(document.getElementById('adLng').value).toFixed(5);
   }
 }
 
 function getMyLocation() {
   if (!navigator.geolocation) return showToast('Geolocation not supported', 'error');
-  document.getElementById('pinStatus').textContent = '🔄 Getting your location...';
+  document.getElementById('pinStatus').textContent = 'Getting your location...';
   navigator.geolocation.getCurrentPosition(pos => {
     const { latitude: lat, longitude: lng } = pos.coords;
     if (!postMap) initPostMap();

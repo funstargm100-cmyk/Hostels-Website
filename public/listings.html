@@ -12,7 +12,7 @@
 <body>
   <nav class="navbar">
     <div class="container">
-      <a href="/" class="navbar-brand">🏠 Hostel<span>Hub</span></a>
+      <a href="/" class="navbar-brand"><i data-lucide="home"></i> Hostel<span>Hub</span></a>
       <ul class="navbar-nav" id="navMenu">
         <li><a href="/">Home</a></li>
         <li><a href="/listings" class="active">Browse Rooms</a></li>
@@ -26,7 +26,7 @@
         </li>
       </ul>
       <div class="navbar-actions">
-        <button class="theme-toggle" id="themeToggle">🌙</button>
+        <button class="theme-toggle" id="themeToggle"><i data-lucide="moon"></i></button>
         <a href="/login" class="btn btn-ghost btn-sm" id="loginBtn">Login</a>
         <a href="/signup" class="btn btn-primary btn-sm" id="signupBtn">Sign Up Free</a>
         <a href="/dashboard" class="btn btn-outline btn-sm" id="dashboardBtn" style="display:none">Dashboard</a>
@@ -40,15 +40,15 @@
     <div class="container">
       <div style="display:flex;gap:0.75rem;flex-wrap:wrap;align-items:center">
         <div class="input-group" style="flex:1;min-width:180px">
-          <span class="input-icon">📍</span>
+          <span class="input-icon"><i data-lucide="map-pin"></i></span>
           <input type="text" class="form-control" id="searchLocation" placeholder="Location or university..." />
         </div>
-        <button class="btn btn-primary" onclick="applyFilters()">🔍 Search</button>
-        <button class="btn btn-ghost" onclick="toggleFilters()">⚙️ Filters</button>
-        <button class="btn btn-ghost" id="nearMeBtn" onclick="filterNearMe()" title="Show rooms near me">📍 Near Me</button>
+        <button class="btn btn-primary" onclick="applyFilters()"><i data-lucide="search"></i> Search</button>
+        <button class="btn btn-ghost" onclick="toggleFilters()"><i data-lucide="sliders-horizontal"></i> Filters</button>
+        <button class="btn btn-ghost" id="nearMeBtn" onclick="filterNearMe()" title="Show rooms near me"><i data-lucide="navigation"></i> Near Me</button>
         <div style="display:flex;gap:0.4rem;margin-left:auto">
-          <button class="btn btn-ghost btn-sm" onclick="setView('grid')" title="Grid">⊞</button>
-          <button class="btn btn-ghost btn-sm" onclick="setView('list')" title="List">☰</button>
+          <button class="btn btn-ghost btn-sm" onclick="setView('grid')" title="Grid"><i data-lucide="layout-grid"></i></button>
+          <button class="btn btn-ghost btn-sm" onclick="setView('list')" title="List"><i data-lucide="list"></i></button>
         </div>
         <select class="form-control" id="sortSelect" style="width:auto" onchange="applyFilters()">
           <option value="">Sort: Featured</option>
@@ -98,8 +98,8 @@
         <div class="filter-section">
           <div class="filter-title">Amenities</div>
           <div class="checkbox-group" style="flex-direction:column">
-            <label class="checkbox-item"><input type="checkbox" id="filterWifi" onchange="applyFilters()"> 📶 Wi-Fi</label>
-            <label class="checkbox-item"><input type="checkbox" id="filterParking" onchange="applyFilters()"> 🚗 Parking</label>
+            <label class="checkbox-item"><input type="checkbox" id="filterWifi" onchange="applyFilters()"> <i data-lucide="wifi"></i> Wi-Fi</label>
+            <label class="checkbox-item"><input type="checkbox" id="filterParking" onchange="applyFilters()"> <i data-lucide="car"></i> Parking</label>
           </div>
         </div>
         <div class="filter-section">
@@ -150,7 +150,9 @@
 
   <div class="toast-container" id="toastContainer"></div>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   <script src="/js/app.js"></script>
   <script src="/js/listings.js"></script>
+  <script>lucide.createIcons();</script>
 </body>
 </html>
