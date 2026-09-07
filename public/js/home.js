@@ -18,18 +18,5 @@ async function loadStats() {
   } catch {}
 }
 
-function heroSearch() {
-  const location = document.getElementById('heroLocation').value;
-  const maxPrice = document.getElementById('heroMaxPrice').value;
-  const occupancy = document.getElementById('heroOccupancy').value;
-  const params = new URLSearchParams();
-  if (location) params.set('location', location);
-  if (maxPrice) params.set('max_price', maxPrice);
-  if (occupancy) params.set('occupancy', occupancy);
-  location.href = '/listings?' + params.toString();
-}
-
-document.getElementById('heroLocation')?.addEventListener('keydown', e => { if (e.key === 'Enter') heroSearch(); });
-
 loadFeatured();
 loadStats();
