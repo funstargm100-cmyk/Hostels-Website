@@ -12,8 +12,8 @@ CREATE TABLE IF NOT EXISTS users (
   role VARCHAR(20) DEFAULT 'seeker' CHECK (role IN ('seeker','owner','agent','admin')),
   is_verified BOOLEAN DEFAULT FALSE,
   is_kyc_verified BOOLEAN DEFAULT FALSE,
-  kyc_doc_path VARCHAR(255),
-  kyc_selfie_path VARCHAR(255),
+  kyc_doc_path TEXT,
+  kyc_selfie_path TEXT,
   otp_code VARCHAR(10),
   otp_expires_at TIMESTAMPTZ,
   reset_token VARCHAR(100),
@@ -55,7 +55,7 @@ CREATE TABLE IF NOT EXISTS listings (
 CREATE TABLE IF NOT EXISTS listing_images (
   id SERIAL PRIMARY KEY,
   listing_id INT NOT NULL REFERENCES listings(id) ON DELETE CASCADE,
-  image_path VARCHAR(255) NOT NULL,
+  image_path TEXT NOT NULL,
   is_primary BOOLEAN DEFAULT FALSE,
   sort_order INT DEFAULT 0
 );

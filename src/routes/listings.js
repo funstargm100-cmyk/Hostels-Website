@@ -1,19 +1,17 @@
 const router = require('express').Router();
 const multer = require('multer');
-const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 const db = require('../utils/db');
 const { requireAuth, requireRole } = require('../middleware/auth');
 const { validateAdContent } = require('../utils/contactDetector');
 const { applyLocationJitter, calculateDistance } = require('../utils/location');
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, path.join(__dirname, '../../uploads/listings')),
-  filename: (req, file, cb) => cb(null, `${uuidv4()}${path.extname(file.originalname)}`)
+// Use memory storage — Vercel has no writable filesystem
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => cb(null, /image\/(jpeg|jpg|png|webp)/.test(file.mimetype))
 });
-const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 }, fileFilter: (req, file, cb) => {
-  cb(null, /image\/(jpeg|jpg|png|webp)/.test(file.mimetype));
-}});
 
 const COMMISSION_RATE = 0.10;
 
@@ -138,8 +136,9 @@ router.post('/', requireAuth, requireRole('owner', 'agent', 'admin'), upload.arr
     );
 
     for (let i = 0; i < req.files.length; i++) {
+      const b64 = `data:${req.files[i].mimetype};base64,${req.files[i].buffer.toString('base64')}`;
       await db.query('INSERT INTO listing_images (listing_id, image_path, is_primary, sort_order) VALUES ($1,$2,$3,$4)',
-        [listingId, `/uploads/listings/${req.files[i].filename}`, i === 0, i]);
+        [listingId, b64, i === 0, i]);
     }
 
     res.status(201).json({ message: 'Listing submitted for review', uuid });

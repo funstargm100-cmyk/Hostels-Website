@@ -1,15 +1,13 @@
 const router = require('express').Router();
 const multer = require('multer');
-const path = require('path');
-const { v4: uuidv4 } = require('uuid');
 const db = require('../utils/db');
 const { requireAuth } = require('../middleware/auth');
 
-const kycStorage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, path.join(__dirname, '../../uploads/kyc')),
-  filename: (req, file, cb) => cb(null, `${uuidv4()}${path.extname(file.originalname)}`)
+// Memory storage — Vercel has no writable filesystem
+const kycUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }
 });
-const kycUpload = multer({ storage: kycStorage, limits: { fileSize: 5 * 1024 * 1024 } });
 
 // GET /api/user/profile
 router.get('/profile', requireAuth, async (req, res) => {
@@ -61,11 +59,9 @@ router.get('/notifications', requireAuth, async (req, res) => {
 router.post('/kyc', requireAuth, kycUpload.fields([{ name: 'id_doc', maxCount: 1 }, { name: 'selfie', maxCount: 1 }]), async (req, res) => {
   if (!req.files?.id_doc || !req.files?.selfie) return res.status(400).json({ error: 'Both ID document and selfie required' });
   try {
-    await db.query('UPDATE users SET kyc_doc_path=$1, kyc_selfie_path=$2 WHERE id=$3', [
-      `/uploads/kyc/${req.files.id_doc[0].filename}`,
-      `/uploads/kyc/${req.files.selfie[0].filename}`,
-      req.session.user.id
-    ]);
+    const docB64 = `data:${req.files.id_doc[0].mimetype};base64,${req.files.id_doc[0].buffer.toString('base64')}`;
+    const selfieB64 = `data:${req.files.selfie[0].mimetype};base64,${req.files.selfie[0].buffer.toString('base64')}`;
+    await db.query('UPDATE users SET kyc_doc_path=$1, kyc_selfie_path=$2 WHERE id=$3', [docB64, selfieB64, req.session.user.id]);
     res.json({ message: 'KYC documents submitted for review' });
   } catch (err) { res.status(500).json({ error: 'Server error' }); }
 });
