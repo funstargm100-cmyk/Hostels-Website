@@ -1,11 +1,9 @@
 require('dotenv').config();
 const express = require('express');
 const session = require('express-session');
-const pgSession = require('connect-pg-simple')(session);
 const cors = require('cors');
 const path = require('path');
 const rateLimit = require('express-rate-limit');
-const { Pool } = require('pg');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -17,17 +15,15 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-const pgPool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false }
-});
-
 app.use(session({
-  store: new pgSession({ pool: pgPool, createTableIfMissing: true }),
   secret: process.env.SESSION_SECRET || 'hostel_secret',
   resave: false,
   saveUninitialized: false,
-  cookie: { secure: process.env.NODE_ENV === 'production', maxAge: 7 * 24 * 60 * 60 * 1000, sameSite: 'none' }
+  cookie: {
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    maxAge: 7 * 24 * 60 * 60 * 1000
+  }
 }));
 
 // Rate limiting
@@ -54,5 +50,11 @@ pages.forEach(page => {
 
 // Catch-all
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
+
+// Global error handler — always return JSON
+app.use((err, req, res, next) => {
+  console.error('UNHANDLED ERROR:', err.message);
+  res.status(500).json({ error: err.message || 'Server error' });
+});
 
 app.listen(PORT, () => console.log(`Hostels Marketplace running on http://localhost:${PORT}`));
