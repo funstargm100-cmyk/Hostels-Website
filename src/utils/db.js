@@ -1,12 +1,15 @@
-const mysql = require('mysql2/promise');
+const { Pool } = require('pg');
 
-const pool = mysql.createPool({
-  host: process.env.DB_HOST || 'localhost',
-  user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_NAME || 'hostels_db',
-  waitForConnections: true,
-  connectionLimit: 10
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false }
 });
+
+// Helper that mimics mysql2's [rows] destructuring pattern
+// Returns rows array directly
+pool.query2 = async (text, params) => {
+  const res = await pool.query(text, params);
+  return [res.rows];
+};
 
 module.exports = pool;

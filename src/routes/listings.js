@@ -5,7 +5,7 @@ const { v4: uuidv4 } = require('uuid');
 const db = require('../utils/db');
 const { requireAuth, requireRole } = require('../middleware/auth');
 const { validateAdContent } = require('../utils/contactDetector');
-const { applyLocationJitter } = require('../utils/location');
+const { applyLocationJitter, calculateDistance } = require('../utils/location');
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, path.join(__dirname, '../../uploads/listings')),
@@ -17,50 +17,52 @@ const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 }, fileFilt
 
 const COMMISSION_RATE = 0.10;
 
-// GET /api/listings — search & filter
+// GET /api/listings
 router.get('/', async (req, res) => {
   try {
     const { location, min_price, max_price, occupancy, gender, water, electricity, wifi, parking, furnished, bathroom, sort, page = 1, limit = 12 } = req.query;
     const offset = (page - 1) * limit;
-    let where = ['l.status = "active"'];
+    const where = ['l.status = \'active\''];
     const params = [];
+    let p = 1;
 
-    if (location) { where.push('(l.location_area LIKE ? OR l.nearest_landmark LIKE ?)'); params.push(`%${location}%`, `%${location}%`); }
-    if (min_price) { where.push('l.listed_price >= ?'); params.push(min_price); }
-    if (max_price) { where.push('l.listed_price <= ?'); params.push(max_price); }
-    if (occupancy) { where.push('l.occupancy_type = ?'); params.push(occupancy); }
-    if (gender) { where.push('l.gender_preference = ?'); params.push(gender); }
-    if (wifi === '1') { where.push('a.wifi = 1'); }
-    if (parking === '1') { where.push('a.parking = 1'); }
-    if (water) { where.push('a.water = ?'); params.push(water); }
-    if (electricity) { where.push('a.electricity = ?'); params.push(electricity); }
-    if (furnished) { where.push('a.furnishing = ?'); params.push(furnished); }
-    if (bathroom) { where.push('a.bathroom = ?'); params.push(bathroom); }
+    if (location) { where.push(`(l.location_area ILIKE $${p} OR l.nearest_landmark ILIKE $${p+1})`); params.push(`%${location}%`, `%${location}%`); p += 2; }
+    if (min_price) { where.push(`l.listed_price >= $${p++}`); params.push(min_price); }
+    if (max_price) { where.push(`l.listed_price <= $${p++}`); params.push(max_price); }
+    if (occupancy) { where.push(`l.occupancy_type = $${p++}`); params.push(occupancy); }
+    if (gender) { where.push(`l.gender_preference = $${p++}`); params.push(gender); }
+    if (wifi === '1') { where.push('a.wifi = TRUE'); }
+    if (parking === '1') { where.push('a.parking = TRUE'); }
+    if (water) { where.push(`a.water = $${p++}`); params.push(water); }
+    if (electricity) { where.push(`a.electricity = $${p++}`); params.push(electricity); }
+    if (furnished) { where.push(`a.furnishing = $${p++}`); params.push(furnished); }
+    if (bathroom) { where.push(`a.bathroom = $${p++}`); params.push(bathroom); }
 
-    const orderMap = { price_asc: 'l.listed_price ASC', price_desc: 'l.listed_price DESC', newest: 'l.created_at DESC', rating: 'avg_rating DESC' };
+    const orderMap = { price_asc: 'l.listed_price ASC', price_desc: 'l.listed_price DESC', newest: 'l.created_at DESC', rating: 'avg_rating DESC NULLS LAST' };
     const orderBy = orderMap[sort] || 'l.is_featured DESC, l.created_at DESC';
+    const whereStr = `WHERE ${where.join(' AND ')}`;
 
-    const whereStr = where.length ? `WHERE ${where.join(' AND ')}` : '';
     const sql = `
       SELECT l.id, l.uuid, l.title, l.location_area, l.nearest_landmark, l.listed_price, l.price_per_head,
              l.occupancy_type, l.gender_preference, l.is_featured, l.views_count, l.interest_count,
              l.move_in_date, l.created_at,
              u.is_kyc_verified as owner_verified,
              img.image_path as primary_image,
-             ROUND(AVG(r.rating), 1) as avg_rating, COUNT(r.id) as review_count,
+             ROUND(AVG(r.rating)::numeric, 1) as avg_rating, COUNT(r.id) as review_count,
              a.wifi, a.water, a.electricity, a.security, a.furnishing, a.bathroom, a.parking
       FROM listings l
       LEFT JOIN users u ON l.owner_id = u.id
-      LEFT JOIN listing_images img ON img.listing_id = l.id AND img.is_primary = 1
+      LEFT JOIN listing_images img ON img.listing_id = l.id AND img.is_primary = TRUE
       LEFT JOIN reviews r ON r.listing_id = l.id
       LEFT JOIN amenities a ON a.listing_id = l.id
       ${whereStr}
-      GROUP BY l.id
+      GROUP BY l.id, u.is_kyc_verified, img.image_path, a.wifi, a.water, a.electricity, a.security, a.furnishing, a.bathroom, a.parking
       ORDER BY ${orderBy}
-      LIMIT ? OFFSET ?`;
+      LIMIT $${p} OFFSET $${p+1}`;
 
-    const [listings] = await db.query(sql, [...params, parseInt(limit), parseInt(offset)]);
-    const [[{ total }]] = await db.query(`SELECT COUNT(DISTINCT l.id) as total FROM listings l LEFT JOIN amenities a ON a.listing_id = l.id ${whereStr}`, params);
+    const [listings] = await db.query2(sql, [...params, parseInt(limit), parseInt(offset)]);
+    const countRes = await db.query(`SELECT COUNT(DISTINCT l.id) as total FROM listings l LEFT JOIN amenities a ON a.listing_id = l.id ${whereStr}`, params);
+    const total = parseInt(countRes.rows[0].total);
 
     res.json({ listings, total, page: parseInt(page), pages: Math.ceil(total / limit) });
   } catch (err) {
@@ -69,37 +71,36 @@ router.get('/', async (req, res) => {
   }
 });
 
-// GET /api/listings/:uuid — single listing detail
+// GET /api/listings/:uuid
 router.get('/:uuid', async (req, res) => {
   try {
-    const [[listing]] = await db.query(`
+    const result = await db.query(`
       SELECT l.*, u.name as owner_name, u.is_kyc_verified as owner_verified,
-             ROUND(AVG(r.rating), 1) as avg_rating, COUNT(r.id) as review_count
+             ROUND(AVG(r.rating)::numeric, 1) as avg_rating, COUNT(r.id) as review_count
       FROM listings l
       LEFT JOIN users u ON l.owner_id = u.id
       LEFT JOIN reviews r ON r.listing_id = l.id
-      WHERE l.uuid = ? AND l.status = 'active'
-      GROUP BY l.id`, [req.params.uuid]);
+      WHERE l.uuid=$1 AND l.status='active'
+      GROUP BY l.id, u.name, u.is_kyc_verified`, [req.params.uuid]);
 
+    const listing = result.rows[0];
     if (!listing) return res.status(404).json({ error: 'Listing not found' });
 
-    const [images] = await db.query('SELECT image_path, is_primary FROM listing_images WHERE listing_id=? ORDER BY sort_order', [listing.id]);
-    const [[amenities]] = await db.query('SELECT * FROM amenities WHERE listing_id=?', [listing.id]);
-    const [reviews] = await db.query(`
+    const [images] = await db.query2('SELECT image_path, is_primary FROM listing_images WHERE listing_id=$1 ORDER BY sort_order', [listing.id]);
+    const amenitiesRes = await db.query('SELECT * FROM amenities WHERE listing_id=$1', [listing.id]);
+    const amenities = amenitiesRes.rows[0];
+    const [reviews] = await db.query2(`
       SELECT r.rating, r.comment, r.created_at, u.name as reviewer_name
       FROM reviews r JOIN users u ON r.reviewer_id = u.id
-      WHERE r.listing_id=? ORDER BY r.created_at DESC LIMIT 10`, [listing.id]);
+      WHERE r.listing_id=$1 ORDER BY r.created_at DESC LIMIT 10`, [listing.id]);
 
-    // Apply location jitter for privacy
-    const jittered = applyLocationJitter(listing.location_lat, listing.location_lng);
+    const jittered = applyLocationJitter(parseFloat(listing.location_lat), parseFloat(listing.location_lng));
     listing.display_lat = jittered.lat;
     listing.display_lng = jittered.lng;
     delete listing.location_lat;
     delete listing.location_lng;
 
-    // Increment view count
-    await db.query('UPDATE listings SET views_count = views_count + 1 WHERE id=?', [listing.id]);
-
+    await db.query('UPDATE listings SET views_count = views_count + 1 WHERE id=$1', [listing.id]);
     res.json({ listing, images, amenities, reviews });
   } catch (err) {
     console.error(err);
@@ -107,7 +108,7 @@ router.get('/:uuid', async (req, res) => {
   }
 });
 
-// POST /api/listings — create listing (owner only)
+// POST /api/listings
 router.post('/', requireAuth, requireRole('owner', 'agent', 'admin'), upload.array('images', 10), async (req, res) => {
   const { title, description, occupancy_type, original_price, location_area, location_lat, location_lng, nearest_landmark, gender_preference, move_in_date, water, electricity, security, furnishing, bathroom, kitchen_access, wifi, parking, pet_friendly } = req.body;
 
@@ -115,32 +116,30 @@ router.post('/', requireAuth, requireRole('owner', 'agent', 'admin'), upload.arr
 
   const contentCheck = validateAdContent(title, description);
   if (!contentCheck.isClean) return res.status(400).json({ error: 'Ad contains contact information. Remove it and resubmit.', violations: contentCheck.violations });
-
-  if (!req.files || req.files.length === 0) return res.status(400).json({ error: 'At least one image required' });
+  if (!req.files || !req.files.length) return res.status(400).json({ error: 'At least one image required' });
 
   try {
     const price = parseFloat(original_price);
     const listed_price = parseFloat((price * (1 + COMMISSION_RATE)).toFixed(2));
     const price_per_head = parseFloat((listed_price / parseInt(occupancy_type)).toFixed(2));
-    const uuid = uuidv4();
-    const expires_at = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
+    const expires_at = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
-    const [result] = await db.query(
-      `INSERT INTO listings (uuid, owner_id, title, description, occupancy_type, original_price, listed_price, price_per_head, location_area, location_lat, location_lng, nearest_landmark, gender_preference, move_in_date, expires_at)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-      [uuid, req.session.user.id, title, description, occupancy_type, price, listed_price, price_per_head, location_area, location_lat || null, location_lng || null, nearest_landmark || null, gender_preference || 'mixed', move_in_date || null, expires_at]
+    const result = await db.query(
+      `INSERT INTO listings (owner_id, title, description, occupancy_type, original_price, listed_price, price_per_head, location_area, location_lat, location_lng, nearest_landmark, gender_preference, move_in_date, expires_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING id, uuid`,
+      [req.session.user.id, title, description, occupancy_type, price, listed_price, price_per_head, location_area, location_lat || null, location_lng || null, nearest_landmark || null, gender_preference || 'mixed', move_in_date || null, expires_at]
     );
-
-    const listingId = result.insertId;
+    const { id: listingId, uuid } = result.rows[0];
 
     await db.query(
-      `INSERT INTO amenities (listing_id, water, electricity, security, furnishing, bathroom, kitchen_access, wifi, parking, pet_friendly) VALUES (?,?,?,?,?,?,?,?,?,?)`,
-      [listingId, water || 'none', electricity || 'none', security || 'none', furnishing || 'unfurnished', bathroom || 'shared', kitchen_access ? 1 : 0, wifi ? 1 : 0, parking ? 1 : 0, pet_friendly ? 1 : 0]
+      `INSERT INTO amenities (listing_id, water, electricity, security, furnishing, bathroom, kitchen_access, wifi, parking, pet_friendly)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+      [listingId, water || 'none', electricity || 'none', security || 'none', furnishing || 'unfurnished', bathroom || 'shared', !!kitchen_access, !!wifi, !!parking, !!pet_friendly]
     );
 
     for (let i = 0; i < req.files.length; i++) {
-      await db.query('INSERT INTO listing_images (listing_id, image_path, is_primary, sort_order) VALUES (?,?,?,?)',
-        [listingId, `/uploads/listings/${req.files[i].filename}`, i === 0 ? 1 : 0, i]);
+      await db.query('INSERT INTO listing_images (listing_id, image_path, is_primary, sort_order) VALUES ($1,$2,$3,$4)',
+        [listingId, `/uploads/listings/${req.files[i].filename}`, i === 0, i]);
     }
 
     res.status(201).json({ message: 'Listing submitted for review', uuid });
@@ -150,10 +149,11 @@ router.post('/', requireAuth, requireRole('owner', 'agent', 'admin'), upload.arr
   }
 });
 
-// PUT /api/listings/:uuid — update listing
+// PUT /api/listings/:uuid
 router.put('/:uuid', requireAuth, async (req, res) => {
   try {
-    const [[listing]] = await db.query('SELECT * FROM listings WHERE uuid=? AND owner_id=?', [req.params.uuid, req.session.user.id]);
+    const result = await db.query('SELECT * FROM listings WHERE uuid=$1 AND owner_id=$2', [req.params.uuid, req.session.user.id]);
+    const listing = result.rows[0];
     if (!listing && req.session.user.role !== 'admin') return res.status(404).json({ error: 'Listing not found' });
 
     const { title, description, original_price, occupancy_type } = req.body;
@@ -162,30 +162,31 @@ router.put('/:uuid', requireAuth, async (req, res) => {
       if (!check.isClean) return res.status(400).json({ error: 'Contains contact info', violations: check.violations });
     }
 
-    const updates = {};
-    if (title) updates.title = title;
-    if (description) updates.description = description;
+    const fields = []; const vals = []; let p = 1;
+    if (title) { fields.push(`title=$${p++}`); vals.push(title); }
+    if (description) { fields.push(`description=$${p++}`); vals.push(description); }
     if (original_price) {
-      updates.original_price = parseFloat(original_price);
-      updates.listed_price = parseFloat((updates.original_price * 1.10).toFixed(2));
-      updates.price_per_head = parseFloat((updates.listed_price / (occupancy_type || listing.occupancy_type)).toFixed(2));
+      const op = parseFloat(original_price);
+      const lp = parseFloat((op * 1.10).toFixed(2));
+      const pph = parseFloat((lp / (occupancy_type || listing.occupancy_type)).toFixed(2));
+      fields.push(`original_price=$${p++}`, `listed_price=$${p++}`, `price_per_head=$${p++}`);
+      vals.push(op, lp, pph);
     }
-    updates.status = 'pending'; // re-moderate on edit
-
-    const fields = Object.keys(updates).map(k => `${k}=?`).join(', ');
-    await db.query(`UPDATE listings SET ${fields} WHERE uuid=?`, [...Object.values(updates), req.params.uuid]);
+    fields.push(`status='pending'`);
+    vals.push(req.params.uuid);
+    await db.query(`UPDATE listings SET ${fields.join(', ')} WHERE uuid=$${p}`, vals);
     res.json({ message: 'Listing updated and resubmitted for review' });
   } catch (err) {
     res.status(500).json({ error: 'Server error' });
   }
 });
 
-// DELETE /api/listings/:uuid — deactivate
+// DELETE /api/listings/:uuid
 router.delete('/:uuid', requireAuth, async (req, res) => {
   try {
-    const [[listing]] = await db.query('SELECT id FROM listings WHERE uuid=? AND owner_id=?', [req.params.uuid, req.session.user.id]);
-    if (!listing && req.session.user.role !== 'admin') return res.status(404).json({ error: 'Not found' });
-    await db.query('UPDATE listings SET status="deactivated" WHERE uuid=?', [req.params.uuid]);
+    const result = await db.query('SELECT id FROM listings WHERE uuid=$1 AND owner_id=$2', [req.params.uuid, req.session.user.id]);
+    if (!result.rows.length && req.session.user.role !== 'admin') return res.status(404).json({ error: 'Not found' });
+    await db.query("UPDATE listings SET status='deactivated' WHERE uuid=$1", [req.params.uuid]);
     res.json({ message: 'Listing deactivated' });
   } catch (err) {
     res.status(500).json({ error: 'Server error' });
@@ -195,14 +196,15 @@ router.delete('/:uuid', requireAuth, async (req, res) => {
 // POST /api/listings/:uuid/favorite
 router.post('/:uuid/favorite', requireAuth, async (req, res) => {
   try {
-    const [[listing]] = await db.query('SELECT id FROM listings WHERE uuid=?', [req.params.uuid]);
+    const lr = await db.query('SELECT id FROM listings WHERE uuid=$1', [req.params.uuid]);
+    const listing = lr.rows[0];
     if (!listing) return res.status(404).json({ error: 'Not found' });
-    const [[existing]] = await db.query('SELECT id FROM favorites WHERE user_id=? AND listing_id=?', [req.session.user.id, listing.id]);
-    if (existing) {
-      await db.query('DELETE FROM favorites WHERE user_id=? AND listing_id=?', [req.session.user.id, listing.id]);
+    const existing = await db.query('SELECT id FROM favorites WHERE user_id=$1 AND listing_id=$2', [req.session.user.id, listing.id]);
+    if (existing.rows.length) {
+      await db.query('DELETE FROM favorites WHERE user_id=$1 AND listing_id=$2', [req.session.user.id, listing.id]);
       return res.json({ favorited: false });
     }
-    await db.query('INSERT INTO favorites (user_id, listing_id) VALUES (?,?)', [req.session.user.id, listing.id]);
+    await db.query('INSERT INTO favorites (user_id, listing_id) VALUES ($1,$2)', [req.session.user.id, listing.id]);
     res.json({ favorited: true });
   } catch (err) {
     res.status(500).json({ error: 'Server error' });
@@ -213,9 +215,10 @@ router.post('/:uuid/favorite', requireAuth, async (req, res) => {
 router.post('/:uuid/report', requireAuth, async (req, res) => {
   const { reason, details } = req.body;
   try {
-    const [[listing]] = await db.query('SELECT id FROM listings WHERE uuid=?', [req.params.uuid]);
+    const lr = await db.query('SELECT id FROM listings WHERE uuid=$1', [req.params.uuid]);
+    const listing = lr.rows[0];
     if (!listing) return res.status(404).json({ error: 'Not found' });
-    await db.query('INSERT INTO reports (reporter_id, listing_id, reason, details) VALUES (?,?,?,?)', [req.session.user.id, listing.id, reason, details || null]);
+    await db.query('INSERT INTO reports (reporter_id, listing_id, reason, details) VALUES ($1,$2,$3,$4)', [req.session.user.id, listing.id, reason, details || null]);
     res.json({ message: 'Report submitted' });
   } catch (err) {
     res.status(500).json({ error: 'Server error' });
@@ -226,15 +229,12 @@ router.post('/:uuid/report', requireAuth, async (req, res) => {
 router.get('/:uuid/distance', async (req, res) => {
   const { from_lat, from_lng } = req.query;
   try {
-    const [[listing]] = await db.query('SELECT location_lat, location_lng FROM listings WHERE uuid=? AND status="active"', [req.params.uuid]);
+    const result = await db.query("SELECT location_lat, location_lng FROM listings WHERE uuid=$1 AND status='active'", [req.params.uuid]);
+    const listing = result.rows[0];
     if (!listing || !listing.location_lat) return res.status(404).json({ error: 'Location not available' });
-
-    const { calculateDistance } = require('../utils/location');
-    const jittered = applyLocationJitter(listing.location_lat, listing.location_lng);
+    const jittered = applyLocationJitter(parseFloat(listing.location_lat), parseFloat(listing.location_lng));
     const dist = calculateDistance(parseFloat(from_lat), parseFloat(from_lng), jittered.lat, jittered.lng);
-    const travelMinutes = Math.round(dist / 40 * 60); // ~40km/h average
-
-    res.json({ distance_km: dist.toFixed(2), estimated_travel_minutes: travelMinutes });
+    res.json({ distance_km: dist.toFixed(2), estimated_travel_minutes: Math.round(dist / 40 * 60) });
   } catch (err) {
     res.status(500).json({ error: 'Server error' });
   }
