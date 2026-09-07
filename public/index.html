@@ -12,8 +12,9 @@
   <meta name="theme-color" content="#FF6B6B" />
 </head>
 <body>
+
   <!-- NAVBAR -->
-  <nav class="navbar">
+  <nav class="navbar navbar-transparent" id="mainNav">
     <div class="container">
       <a href="/" class="navbar-brand"><i data-lucide="home"></i> Hostel<span>Hub</span></a>
       <ul class="navbar-nav" id="navMenu">
@@ -41,29 +42,44 @@
     </div>
   </nav>
 
-  <!-- HERO -->
-  <section class="hero">
-    <div class="container">
-      <h1 class="hero-title">Find & Post Hostels —<br><span>Get Paid.</span></h1>
-      <p class="hero-subtitle">No need to walk around looking for hostels or rooms to rent. Do it all from your phone with ease.</p>
-
-      <div class="hero-stats">
-        <div class="hero-stat"><div class="hero-stat-num" id="statListings">—</div><div class="hero-stat-label">Active Listings</div></div>
-        <div class="hero-stat"><div class="hero-stat-num" id="statCities">10+</div><div class="hero-stat-label">Cities Covered</div></div>
-        <div class="hero-stat"><div class="hero-stat-num" id="statOwners">—</div><div class="hero-stat-label">Verified Owners</div></div>
+  <!-- HERO SPLIT -->
+  <section class="hero-split">
+    <div class="hero-split-content">
+      <span class="hero-eyebrow"><i data-lucide="map-pin" style="width:14px;height:14px"></i> Ghana's #1 Hostel Marketplace</span>
+      <h1 class="hero-split-title">Find Your Perfect<br><span>Room.</span> Get Settled.</h1>
+      <p class="hero-split-sub">Browse verified hostels near your university or workplace. No middlemen, no stress — just move in.</p>
+      <div class="hero-split-actions">
+        <a href="/listings" class="btn btn-primary btn-lg"><i data-lucide="search"></i> Browse Rooms</a>
+        <a href="/post-ad" class="btn btn-white btn-lg"><i data-lucide="plus-circle"></i> Post a Room</a>
+      </div>
+      <div class="hero-split-stats">
+        <div class="hero-split-stat">
+          <span class="hero-split-stat-num" id="statListings">—</span>
+          <span class="hero-split-stat-label">Active Listings</span>
+        </div>
+        <div class="hero-split-divider"></div>
+        <div class="hero-split-stat">
+          <span class="hero-split-stat-num">10+</span>
+          <span class="hero-split-stat-label">Cities Covered</span>
+        </div>
+        <div class="hero-split-divider"></div>
+        <div class="hero-split-stat">
+          <span class="hero-split-stat-num" id="statOwners">—</span>
+          <span class="hero-split-stat-label">Verified Owners</span>
+        </div>
+      </div>
+    </div>
+    <div class="hero-split-image">
+      <img src="/images/herobg.jpg" alt="Modern hostel room" />
+      <div class="hero-image-badge">
+        <i data-lucide="shield-check" style="width:18px;height:18px;color:#10b981"></i>
+        <div>
+          <div style="font-weight:700;font-size:0.85rem">Verified Listings</div>
+          <div style="font-size:0.75rem;opacity:0.7">KYC-checked owners</div>
+        </div>
       </div>
     </div>
   </section>
-
-  <!-- SCAM AWARENESS BANNER -->
-  <div class="container mt-3">
-    <div class="scam-banner">
-      <i data-lucide="shield-check" style="flex-shrink:0;width:24px;height:24px;color:#d97706"></i>
-      <div>
-        <strong>Stay Safe:</strong> Never pay anyone directly before inspecting a room. All transactions go through HostelHub. <a href="/about#safety" style="color:var(--primary);font-weight:600">Learn more →</a>
-      </div>
-    </div>
-  </div>
 
   <!-- FEATURED LISTINGS -->
   <section class="section">
@@ -73,7 +89,7 @@
           <h2>Featured Rooms</h2>
           <p class="text-muted">Verified, top-rated listings near you</p>
         </div>
-        <a href="/listings" class="btn btn-outline">View All →</a>
+        <a href="/listings" class="btn btn-outline">View All <i data-lucide="arrow-right" style="width:15px;height:15px"></i></a>
       </div>
       <div class="grid-2" id="featuredListings">
         <div class="skeleton-card"><div class="skeleton skeleton-img"></div><div style="padding:1rem"><div class="skeleton skeleton-text w-80"></div><div class="skeleton skeleton-text w-60 mt-1"></div><div class="skeleton skeleton-text w-40 mt-1"></div></div></div>
@@ -85,36 +101,52 @@
   </section>
 
   <!-- HOW IT WORKS -->
-  <section class="section" style="background:var(--bg-secondary)">
+  <section class="section how-it-works">
     <div class="container">
-      <h2 class="text-center section-title">How It Works</h2>
-      <div class="grid-3" style="max-width:800px;margin:0 auto">
-        <div class="card" style="text-align:center;padding:2rem 1.5rem">
-          <div style="display:flex;justify-content:center;margin-bottom:1rem"><i data-lucide="search" style="width:48px;height:48px;color:var(--primary)"></i></div>
+      <div class="text-center section-title">
+        <h2>How It Works</h2>
+        <p class="text-muted" style="max-width:480px;margin:0.5rem auto 0">Three simple steps to your next home</p>
+      </div>
+      <div class="how-steps">
+        <div class="how-step">
+          <div class="how-step-num">01</div>
+          <div class="how-step-icon"><i data-lucide="search" style="width:28px;height:28px;color:var(--primary)"></i></div>
           <h3>Search & Browse</h3>
-          <p class="text-muted mt-1" style="font-size:0.875rem">Filter by location, price, occupancy, and amenities to find your perfect room.</p>
+          <p>Filter by location, price, occupancy, and amenities to find your perfect room.</p>
         </div>
-        <div class="card" style="text-align:center;padding:2rem 1.5rem">
-          <div style="display:flex;justify-content:center;margin-bottom:1rem"><i data-lucide="message-circle" style="width:48px;height:48px;color:var(--primary)"></i></div>
+        <div class="how-step-arrow"><i data-lucide="arrow-right" style="width:24px;height:24px;color:var(--border)"></i></div>
+        <div class="how-step">
+          <div class="how-step-num">02</div>
+          <div class="how-step-icon"><i data-lucide="message-circle" style="width:28px;height:28px;color:var(--primary)"></i></div>
           <h3>Express Interest</h3>
-          <p class="text-muted mt-1" style="font-size:0.875rem">Click "I'm Interested" and we handle the connection — your privacy is protected.</p>
+          <p>Click "I'm Interested" and we handle the connection — your privacy is protected.</p>
         </div>
-        <div class="card" style="text-align:center;padding:2rem 1.5rem">
-          <div style="display:flex;justify-content:center;margin-bottom:1rem"><i data-lucide="door-open" style="width:48px;height:48px;color:var(--primary)"></i></div>
+        <div class="how-step-arrow"><i data-lucide="arrow-right" style="width:24px;height:24px;color:var(--border)"></i></div>
+        <div class="how-step">
+          <div class="how-step-num">03</div>
+          <div class="how-step-icon"><i data-lucide="door-open" style="width:28px;height:28px;color:var(--primary)"></i></div>
           <h3>Move In Safely</h3>
-          <p class="text-muted mt-1" style="font-size:0.875rem">We verify, connect, and support you through the entire process.</p>
+          <p>We verify, connect, and support you through the entire process.</p>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- FOR OWNERS CTA -->
+  <!-- OWNER CTA -->
   <section class="section">
     <div class="container">
-      <div class="card cta-card" style="background:linear-gradient(135deg,var(--primary),var(--secondary));color:#fff;text-align:center;border:none">
-        <h2 style="color:#fff">Have a Room to Rent?</h2>
-        <p style="opacity:0.9;margin:0.75rem 0 1.5rem;max-width:500px;margin-left:auto;margin-right:auto">Post your listing for free. Earn 5% commission on every successful booking. We handle the marketing and connections.</p>
-        <a href="/post-ad" class="btn btn-lg" style="background:#fff;color:var(--primary)">Post a Room Free →</a>
+      <div class="owner-cta">
+        <div class="owner-cta-text">
+          <h2>Have a Room to Rent?</h2>
+          <p>Post your listing for free. Earn 5% on every successful booking. We handle the marketing and connections.</p>
+          <a href="/post-ad" class="btn btn-white btn-lg">Post a Room Free <i data-lucide="arrow-right" style="width:16px;height:16px"></i></a>
+        </div>
+        <div class="owner-cta-perks">
+          <div class="owner-perk"><i data-lucide="check-circle" style="width:20px;height:20px;color:var(--accent)"></i><span>Free to list</span></div>
+          <div class="owner-perk"><i data-lucide="check-circle" style="width:20px;height:20px;color:var(--accent)"></i><span>5% earnings per booking</span></div>
+          <div class="owner-perk"><i data-lucide="check-circle" style="width:20px;height:20px;color:var(--accent)"></i><span>We handle all connections</span></div>
+          <div class="owner-perk"><i data-lucide="check-circle" style="width:20px;height:20px;color:var(--accent)"></i><span>KYC-verified badge</span></div>
+        </div>
       </div>
     </div>
   </section>
