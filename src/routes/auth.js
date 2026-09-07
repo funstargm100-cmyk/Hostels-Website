@@ -30,7 +30,7 @@ router.post('/signup', async (req, res) => {
     const uuid = result.rows[0].uuid;
 
     if (email) sendEmail(email, 'Verify your account', templates.otp(otp)).catch(console.error);
-    res.json({ message: 'Account created. Check your email/phone for OTP.', uuid });
+    res.json({ message: 'Account created. Check your email for OTP.', uuid, otp });
   } catch (err) {
     console.error('SIGNUP ERROR:', err.message);
     res.status(500).json({ error: err.message || 'Server error' });

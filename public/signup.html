@@ -122,6 +122,10 @@
           role: document.getElementById('selectedRole').value
         });
         pendingUUID = res.uuid;
+        if (res.otp) {
+          document.getElementById('otpCode').value = res.otp;
+          document.querySelector('#otpStep .alert').innerHTML = `Your OTP is: <strong>${res.otp}</strong> (auto-filled). Click verify.`;
+        }
         document.getElementById('signupStep').style.display = 'none';
         document.getElementById('otpStep').style.display = 'block';
       } catch (ex) {
