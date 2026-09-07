@@ -75,36 +75,41 @@ function toggleTheme() {
 document.getElementById('themeToggle')?.addEventListener('click', toggleTheme);
 
 // ─── NAVBAR AUTH STATE ────────────────────────────────────────────────────────
+function setNavAuth(loggedIn) {
+  const show = (id) => { const el = document.getElementById(id); if (el) el.style.display = ''; };
+  const hide = (id) => { const el = document.getElementById(id); if (el) el.style.display = 'none'; };
+  if (loggedIn) {
+    hide('loginBtn'); hide('signupBtn'); hide('loginBtnMobile'); hide('signupBtnMobile');
+    show('dashboardBtn'); show('logoutBtn'); show('dashboardBtnMobile'); show('logoutBtnMobile');
+  } else {
+    hide('dashboardBtn'); hide('logoutBtn'); hide('dashboardBtnMobile'); hide('logoutBtnMobile');
+    show('loginBtn'); show('signupBtn'); show('loginBtnMobile'); show('signupBtnMobile');
+  }
+}
+
 async function initNavAuth() {
   const token = localStorage.getItem('token');
-  if (!token) {
-    localStorage.removeItem('user');
-    document.getElementById('dashboardBtn')?.style && (document.getElementById('dashboardBtn').style.display = 'none');
-    document.getElementById('logoutBtn')?.style && (document.getElementById('logoutBtn').style.display = 'none');
-    return null;
-  }
+  if (!token) { localStorage.removeItem('user'); setNavAuth(false); return null; }
   try {
     const { user } = await api.get('/api/auth/me');
     localStorage.setItem('user', JSON.stringify(user));
-    document.getElementById('loginBtn')?.style && (document.getElementById('loginBtn').style.display = 'none');
-    document.getElementById('signupBtn')?.style && (document.getElementById('signupBtn').style.display = 'none');
-    document.getElementById('dashboardBtn')?.style && (document.getElementById('dashboardBtn').style.display = '');
-    document.getElementById('logoutBtn')?.style && (document.getElementById('logoutBtn').style.display = '');
+    setNavAuth(true);
     return user;
   } catch {
     localStorage.removeItem('user');
     localStorage.removeItem('token');
-    document.getElementById('dashboardBtn')?.style && (document.getElementById('dashboardBtn').style.display = 'none');
-    document.getElementById('logoutBtn')?.style && (document.getElementById('logoutBtn').style.display = 'none');
+    setNavAuth(false);
     return null;
   }
 }
 
-document.getElementById('logoutBtn')?.addEventListener('click', () => {
+function handleLogout() {
   localStorage.removeItem('token');
   localStorage.removeItem('user');
   location.href = '/';
-});
+}
+document.getElementById('logoutBtn')?.addEventListener('click', handleLogout);
+document.getElementById('logoutBtnMobile')?.addEventListener('click', handleLogout);
 
 // ─── HAMBURGER ────────────────────────────────────────────────────────────────
 document.getElementById('hamburger')?.addEventListener('click', () => {
