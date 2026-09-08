@@ -84,14 +84,14 @@
   <!-- FEATURED LISTINGS -->
   <section class="section">
     <div class="container">
-      <div class="flex-between section-title">
+      <div class="flex-between section-title reveal">
         <div>
           <h2>Featured Rooms</h2>
           <p class="text-muted">Verified, top-rated listings near you</p>
         </div>
         <a href="/listings" class="btn btn-outline">View All <i data-lucide="arrow-right" style="width:15px;height:15px"></i></a>
       </div>
-      <div class="grid-2" id="featuredListings">
+      <div class="grid-2 reveal-stagger" id="featuredListings">
         <div class="skeleton-card"><div class="skeleton skeleton-img"></div><div style="padding:1rem"><div class="skeleton skeleton-text w-80"></div><div class="skeleton skeleton-text w-60 mt-1"></div><div class="skeleton skeleton-text w-40 mt-1"></div></div></div>
         <div class="skeleton-card"><div class="skeleton skeleton-img"></div><div style="padding:1rem"><div class="skeleton skeleton-text w-80"></div><div class="skeleton skeleton-text w-60 mt-1"></div><div class="skeleton skeleton-text w-40 mt-1"></div></div></div>
         <div class="skeleton-card"><div class="skeleton skeleton-img"></div><div style="padding:1rem"><div class="skeleton skeleton-text w-80"></div><div class="skeleton skeleton-text w-60 mt-1"></div><div class="skeleton skeleton-text w-40 mt-1"></div></div></div>
@@ -103,11 +103,11 @@
   <!-- HOW IT WORKS -->
   <section class="section how-it-works">
     <div class="container">
-      <div class="text-center section-title">
+      <div class="text-center section-title reveal">
         <h2>How It Works</h2>
         <p class="text-muted" style="max-width:480px;margin:0.5rem auto 0">Three simple steps to your next home</p>
       </div>
-      <div class="how-steps">
+      <div class="how-steps reveal-stagger">
         <div class="how-step">
           <div class="how-step-num">01</div>
           <div class="how-step-icon"><i data-lucide="search" style="width:28px;height:28px;color:var(--primary)"></i></div>
@@ -135,7 +135,7 @@
   <!-- OWNER CTA -->
   <section class="section">
     <div class="container">
-      <div class="owner-cta">
+      <div class="owner-cta reveal reveal-scale">
         <div class="owner-cta-text">
           <h2>Have a Room to Rent?</h2>
           <p>Post your listing for free. We handle the marketing and connections.</p>
@@ -153,7 +153,7 @@
   <!-- FOOTER -->
   <footer class="footer">
     <div class="container">
-      <div class="footer-grid">
+      <div class="footer-grid reveal-stagger">
         <div class="footer-brand">
           <div class="navbar-brand" style="font-size:1.2rem"><i data-lucide="home"></i> <span class="brand-roomy">Roomy</span></div>
           <p>Find and post hostels — get paid. Ghana's trusted room rental marketplace.</p>
@@ -196,5 +196,6 @@
   <script src="/js/app.js"></script>
   <script src="/js/home.js"></script>
   <script>lucide.createIcons();</script>
+  <script src="/js/animations.js"></script>
 </body>
 </html>
