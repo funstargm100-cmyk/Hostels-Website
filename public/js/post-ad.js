@@ -147,9 +147,9 @@ function compressImage(file, maxBytes = 300 * 1024) {
           } else if (dimIdx < maxDims.length - 1) {
             qIdx = 0; dimIdx++;
           } else {
-            // Exhausted everything — only accept if small enough for the payload cap
+            // Exhausted everything — only accept if it fits the payload budget
             URL.revokeObjectURL(url);
-            if (best.size > 800 * 1024) {
+            if (best.size > maxBytes * 2) {
               return reject(new Error(`"${file.name}" is too complex to compress under the size limit. Try a different photo.`));
             }
             return resolve(new File([best], file.name.replace(/\.\w+$/, '') + '.jpg', { type: 'image/jpeg' }));
@@ -169,8 +169,13 @@ function compressImage(file, maxBytes = 300 * 1024) {
 }
 
 async function compressSelectedFiles() {
+  // Budget dynamically: the more photos, the smaller each one is allowed to
+  // be, so the total always stays under the ~4.5MB Vercel function cap with
+  // headroom for form fields and multipart overhead.
+  const n = Math.max(selectedFiles.length, 1);
+  const perImageBudget = Math.min(300 * 1024, Math.floor(3 * 1024 * 1024 / n));
   const out = [];
-  for (const f of selectedFiles) out.push(await compressImage(f));
+  for (const f of selectedFiles) out.push(await compressImage(f, perImageBudget));
   return out;
 }
 
