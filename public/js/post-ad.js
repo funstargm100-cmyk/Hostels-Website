@@ -93,14 +93,14 @@ function calcPrice() {
 }
 
 // ─── PHOTO HANDLING ───────────────────────────────────────────────────────────
-function compressImage(file, maxDim = 1600, quality = 0.8) {
+function compressImage(file, maxDim = 1400, quality = 0.75, maxBytes = 300 * 1024) {
   return new Promise((resolve) => {
     if (!file.type.startsWith('image/')) return resolve(file);
     const img = new Image();
     const url = URL.createObjectURL(file);
     img.onload = () => {
       URL.revokeObjectURL(url);
-      let { width, height } = img;
+      let width = img.width, height = img.height;
       if (width > maxDim || height > maxDim) {
         const scale = Math.min(maxDim / width, maxDim / height);
         width = Math.round(width * scale);
@@ -109,12 +109,21 @@ function compressImage(file, maxDim = 1600, quality = 0.8) {
       const canvas = document.createElement('canvas');
       canvas.width = width; canvas.height = height;
       canvas.getContext('2d').drawImage(img, 0, 0, width, height);
-      canvas.toBlob(blob => {
-        // Keep original if compression didn't help (e.g. PNG logos)
-        resolve(blob && blob.size < file.size
-          ? new File([blob], file.name.replace(/\.\w+$/, '') + '.jpg', { type: 'image/jpeg' })
-          : file);
-      }, 'image/jpeg', quality);
+      // Re-encode with progressively lower quality until under the size budget
+      let q = quality;
+      const attempt = () => canvas.toBlob(blob => {
+        if (blob && blob.size > maxBytes && q > 0.35) {
+          q -= 0.15;
+          attempt();
+          return;
+        }
+        if (blob && blob.size < file.size) {
+          resolve(new File([blob], file.name.replace(/\.\w+$/, '') + '.jpg', { type: 'image/jpeg' }));
+        } else {
+          resolve(file);
+        }
+      }, 'image/jpeg', q);
+      attempt();
     };
     img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
     img.src = url;
@@ -268,6 +277,10 @@ document.getElementById('postAdForm').addEventListener('submit', async (e) => {
   try {
     const formData = new FormData(e.target);
     const files = await compressSelectedFiles();
+    const totalSize = files.reduce((s, f) => s + f.size, 0);
+    if (totalSize > 4 * 1024 * 1024) {
+      throw new Error('Photos are still too large after compression. Try fewer photos (max 8 recommended).');
+    }
     files.forEach(f => formData.append('images', f));
     await api.upload('/api/listings', formData);
     showToast('Listing submitted for review!', 'success');
