@@ -11,7 +11,16 @@ const api = {
     if (body) opts.body = JSON.stringify(body);
     const res = await fetch(url, opts);
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Request failed');
+    if (!res.ok) {
+      // Suspended accounts: force logout so the block takes effect immediately
+      if (res.status === 403 && /suspended/i.test(data.error || '')) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        alert(data.error);
+        location.href = '/login';
+      }
+      throw new Error(data.error || 'Request failed');
+    }
     return data;
   },
   get: (url) => api.request('GET', url),
