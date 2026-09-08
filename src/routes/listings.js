@@ -5,6 +5,7 @@ const db = require('../utils/db');
 const { requireAuth, requireRole } = require('../middleware/auth');
 const { validateAdContent } = require('../utils/contactDetector');
 const { applyLocationJitter, calculateDistance } = require('../utils/location');
+const { storeImage } = require('../utils/imageStorage');
 
 // Use memory storage — Vercel has no writable filesystem
 const upload = multer({
@@ -148,9 +149,14 @@ router.post('/', requireAuth, requireRole('owner', 'agent', 'admin'), upload.arr
     );
 
     for (let i = 0; i < req.files.length; i++) {
-      const b64 = `data:${req.files[i].mimetype};base64,${req.files[i].buffer.toString('base64')}`;
-      await db.query('INSERT INTO listing_images (listing_id, image_path, is_primary, sort_order) VALUES ($1,$2,$3,$4)',
-        [listingId, b64, i === 0, i]);
+      try {
+        const imagePath = await storeImage(req.files[i].buffer, req.files[i].originalname);
+        await db.query('INSERT INTO listing_images (listing_id, image_path, is_primary, sort_order) VALUES ($1,$2,$3,$4)',
+          [listingId, imagePath, i === 0, i]);
+      } catch (imgErr) {
+        console.error('Image processing failed:', imgErr.message);
+        return res.status(400).json({ error: `Could not process image "${req.files[i].originalname}". Please use a JPG or PNG photo.` });
+      }
     }
 
     res.status(201).json({ message: 'Listing submitted for review', uuid });
