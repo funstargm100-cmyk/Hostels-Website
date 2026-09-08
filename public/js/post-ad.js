@@ -319,6 +319,11 @@ document.getElementById('postAdForm').addEventListener('submit', async (e) => {
 
   try {
     const formData = new FormData(e.target);
+    // The file input has name="images" and lives inside the form, so
+    // FormData(e.target) already contains the ORIGINAL raw files. Remove
+    // them — only the compressed copies must be uploaded, or the raw
+    // originals blow straight through Vercel's ~4.5MB function cap.
+    formData.delete('images');
     const files = await compressSelectedFiles();
     const totalSize = files.reduce((s, f) => s + f.size, 0);
     // Vercel kills function payloads over ~4.5MB — keep the whole request
