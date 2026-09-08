@@ -11,9 +11,9 @@
 <body>
   <nav class="navbar">
     <div class="container">
-      <a href="/" class="navbar-brand">🏠 Hostel<span>Hub</span> <span class="badge badge-primary" style="font-size:0.65rem">ADMIN</span></a>
+      <a href="/" class="navbar-brand"><i data-lucide="home"></i> Hostel<span>Hub</span> <span class="badge badge-primary" style="font-size:0.65rem">ADMIN</span></a>
       <div class="navbar-actions">
-        <button class="theme-toggle" id="themeToggle">🌙</button>
+        <button class="theme-toggle" id="themeToggle"><i data-lucide="moon"></i></button>
         <a href="/" class="btn btn-ghost btn-sm">← Site</a>
         <button class="btn btn-ghost btn-sm" id="logoutBtn">Logout</button>
       </div>
@@ -24,13 +24,13 @@
     <div class="dashboard-layout">
       <aside class="sidebar">
         <ul class="sidebar-nav">
-          <li><a href="#overview" class="active" onclick="showAdminTab('overview',this)">📊 Overview</a></li>
-          <li><a href="#listings" onclick="showAdminTab('listings',this)">🏠 Listings Queue</a></li>
-          <li><a href="#requests" onclick="showAdminTab('requests',this)">💬 Contact Requests</a></li>
-          <li><a href="#users" onclick="showAdminTab('users',this)">👥 Users</a></li>
-          <li><a href="#reports" onclick="showAdminTab('reports',this)">🚩 Reports</a></li>
-          <li><a href="#payouts" onclick="showAdminTab('payouts',this)">💰 Payouts</a></li>
-          <li><a href="#logs" onclick="showAdminTab('logs',this)">📋 Audit Logs</a></li>
+          <li><a href="#overview" class="active" onclick="showAdminTab('overview',this)"><i data-lucide="layout-dashboard"></i> Overview</a></li>
+          <li><a href="#listings" onclick="showAdminTab('listings',this)"><i data-lucide="building-2"></i> Listings Queue</a></li>
+          <li><a href="#requests" onclick="showAdminTab('requests',this)"><i data-lucide="message-circle"></i> Contact Requests</a></li>
+          <li><a href="#users" onclick="showAdminTab('users',this)"><i data-lucide="users"></i> Users</a></li>
+          <li><a href="#reports" onclick="showAdminTab('reports',this)"><i data-lucide="flag"></i> Reports</a></li>
+          <li><a href="#payouts" onclick="showAdminTab('payouts',this)"><i data-lucide="wallet"></i> Payouts</a></li>
+          <li><a href="#logs" onclick="showAdminTab('logs',this)"><i data-lucide="clipboard-list"></i> Audit Logs</a></li>
         </ul>
       </aside>
 
@@ -145,7 +145,9 @@
   </div>
 
   <div class="toast-container" id="toastContainer"></div>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   <script src="/js/app.js"></script>
   <script src="/js/admin.js"></script>
+  <script>lucide.createIcons();</script>
 </body>
 </html>

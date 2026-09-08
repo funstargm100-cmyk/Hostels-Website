@@ -43,10 +43,11 @@ async function loadAdminListings() {
         <td>GHS ${Number(l.listed_price).toLocaleString()}</td>
         <td>${new Date(l.created_at).toLocaleDateString()}</td>
         <td style="display:flex;gap:0.4rem;flex-wrap:wrap">
-          ${status === 'pending' ? `<button class="btn btn-secondary btn-sm" onclick="approveListing(${l.id})">✓ Approve</button><button class="btn btn-sm" style="background:#fee2e2;color:#991b1b" onclick="openRejectModal(${l.id})">✗ Reject</button>` : ''}
+          ${status === 'pending' ? `<button class="btn btn-secondary btn-sm" onclick="approveListing(${l.id})"><i data-lucide="check" style="width:14px;height:14px"></i> Approve</button><button class="btn btn-sm" style="background:#fee2e2;color:#991b1b" onclick="openRejectModal(${l.id})"><i data-lucide="x" style="width:14px;height:14px"></i> Reject</button>` : ''}
           ${status === 'active' ? `<button class="btn btn-ghost btn-sm" onclick="rejectListing(${l.id},'Removed by admin')">Remove</button>` : ''}
         </td>
       </tr>`).join('') + '</tbody></table></div>';
+    if (typeof lucide !== 'undefined') lucide.createIcons();
   } catch (e) { el.innerHTML = `<p class="text-muted">${e.message}</p>`; }
 }
 
@@ -172,8 +173,9 @@ async function loadAdminPayouts() {
         <td>${p.payment_method.replace('_', ' ')}</td>
         <td>${p.account_number}</td>
         <td>${new Date(p.created_at).toLocaleDateString()}</td>
-        <td><button class="btn btn-secondary btn-sm" onclick="approvePayout(${p.id})">✓ Pay</button></td>
+        <td><button class="btn btn-secondary btn-sm" onclick="approvePayout(${p.id})"><i data-lucide="check" style="width:14px;height:14px"></i> Pay</button></td>
       </tr>`).join('') + '</tbody></table></div>';
+    if (typeof lucide !== 'undefined') lucide.createIcons();
   } catch (e) { el.innerHTML = `<p class="text-muted">${e.message}</p>`; }
 }
 
