@@ -1,3 +1,11 @@
+@font-face {
+  font-family: 'Quadrillion';
+  src: url('/fonts/Quadrillion.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+.brand-roomy { font-family: 'Quadrillion', var(--font-head); }
 :root {
   --primary: #FF6B6B;
   --primary-dark: #e05555;
