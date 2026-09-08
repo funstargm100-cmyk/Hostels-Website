@@ -95,7 +95,11 @@ function calcPrice() {
 // ─── PHOTO HANDLING ───────────────────────────────────────────────────────────
 function compressImage(file, maxBytes = 300 * 1024) {
   return new Promise((resolve, reject) => {
-    if (!file.type.startsWith('image/')) return resolve(file);
+    if (!file.type.startsWith('image/')) {
+      return file.size > maxBytes
+        ? reject(new Error(`"${file.name}" is not a supported image format.`))
+        : resolve(file);
+    }
     const img = new Image();
     const url = URL.createObjectURL(file);
     img.onload = () => {
@@ -115,24 +119,40 @@ function compressImage(file, maxBytes = 300 * 1024) {
         }
         const canvas = document.createElement('canvas');
         canvas.width = width; canvas.height = height;
-        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+        try {
+          canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+        } catch {
+          URL.revokeObjectURL(url);
+          return reject(new Error(`"${file.name}" could not be processed. Please convert it to JPG and try again.`));
+        }
         canvas.toBlob(blob => {
-          if (!blob) return resolve(file);
+          if (!blob) {
+            // toBlob can return null on some mobile browsers — never fall back
+            // to the original file if it would blow the payload limit.
+            if (best) blob = best;
+            else if (file.size > maxBytes) {
+              URL.revokeObjectURL(url);
+              return reject(new Error(`"${file.name}" could not be compressed (browser limitation). Please convert it to JPG and try again.`));
+            } else {
+              return resolve(file);
+            }
+          }
           if (!best || blob.size < best.size) best = blob;
-          if (blob.size > maxBytes && qIdx < qualities.length - 1) {
-            qIdx++;
-          } else if (blob.size > maxBytes && dimIdx < maxDims.length - 1) {
-            qIdx = 0;
-            dimIdx++;
-          } else {
-            // Under budget, or nothing more we can shrink — pick the smallest we got
-            blob = best;
-          }
-          if (blob.size > maxBytes && dimIdx >= maxDims.length - 1 && qIdx >= qualities.length - 1) {
-            return resolve(new File([blob], file.name.replace(/\.\w+$/, '') + '.jpg', { type: 'image/jpeg' }));
-          }
           if (blob.size <= maxBytes) {
+            URL.revokeObjectURL(url);
             return resolve(new File([blob], file.name.replace(/\.\w+$/, '') + '.jpg', { type: 'image/jpeg' }));
+          }
+          if (qIdx < qualities.length - 1) {
+            qIdx++;
+          } else if (dimIdx < maxDims.length - 1) {
+            qIdx = 0; dimIdx++;
+          } else {
+            // Exhausted everything — only accept if small enough for the payload cap
+            URL.revokeObjectURL(url);
+            if (best.size > 800 * 1024) {
+              return reject(new Error(`"${file.name}" is too complex to compress under the size limit. Try a different photo.`));
+            }
+            return resolve(new File([best], file.name.replace(/\.\w+$/, '') + '.jpg', { type: 'image/jpeg' }));
           }
           attempt();
         }, 'image/jpeg', qualities[qIdx]);
@@ -141,12 +161,8 @@ function compressImage(file, maxBytes = 300 * 1024) {
     };
     img.onerror = () => {
       URL.revokeObjectURL(url);
-      // Browser can't decode this image (e.g. HEIC) — don't silently send a huge original file
-      if (file.size > 1024 * 1024) {
-        reject(new Error(`"${file.name}" could not be processed (${(file.size / 1024 / 1024).toFixed(1)} MB, unsupported format). Please convert it to JPG and try again.`));
-      } else {
-        resolve(file);
-      }
+      // Browser can't decode this image (e.g. HEIC) — never silently send the huge original
+      reject(new Error(`"${file.name}" could not be processed (${(file.size / 1024 / 1024).toFixed(1)} MB, unsupported format). Please convert it to JPG and try again.`));
     };
     img.src = url;
   });
@@ -300,8 +316,10 @@ document.getElementById('postAdForm').addEventListener('submit', async (e) => {
     const formData = new FormData(e.target);
     const files = await compressSelectedFiles();
     const totalSize = files.reduce((s, f) => s + f.size, 0);
-    if (totalSize > 4 * 1024 * 1024) {
-      throw new Error('Photos are still too large after compression. Try fewer photos (max 8 recommended).');
+    // Vercel kills function payloads over ~4.5MB — keep the whole request
+    // (photos + form fields + multipart overhead) well under that.
+    if (totalSize > 3.5 * 1024 * 1024) {
+      throw new Error(`Total photo size (${(totalSize / 1024 / 1024).toFixed(1)} MB) is too large. Please remove some photos and try again.`);
     }
     files.forEach(f => formData.append('images', f));
     await api.upload('/api/listings', formData);
