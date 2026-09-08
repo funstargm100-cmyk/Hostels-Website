@@ -1,7 +1,7 @@
 {
-  "name": "roomy",
+  "name": "hostels-marketplace",
   "version": "1.0.0",
-  "description": "Roomy — Hostel & Room Rental Marketplace",
+  "description": "Hostel & Room Rental Marketplace",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

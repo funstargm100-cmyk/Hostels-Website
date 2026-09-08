@@ -181,7 +181,6 @@ select.form-control { appearance: none; background-image: url("data:image/svg+xm
 .navbar-transparent .btn-outline { border-color: rgba(255,255,255,0.6); color: #fff; }
 .navbar-transparent .hamburger span { background: #fff; }
 .navbar-transparent .theme-toggle { background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.3); }
-.navbar-transparent .navbar-brand img { filter: brightness(0) invert(1); }
 
 /* HERO SPLIT */
 .hero-split { display: grid; grid-template-columns: 1fr 1fr; min-height: 100vh; }
