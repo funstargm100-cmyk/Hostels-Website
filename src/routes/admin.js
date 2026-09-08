@@ -78,6 +78,39 @@ router.put('/listings/:id/reject', admin, async (req, res) => {
   }
 });
 
+// DELETE /api/admin/listings/:id  (hard delete)
+router.delete('/listings/:id', admin, async (req, res) => {
+  try {
+    const existing = await db.query('SELECT id FROM listings WHERE id=$1', [req.params.id]);
+    if (!existing.rows.length) return res.status(404).json({ error: 'Listing not found' });
+    await db.query('DELETE FROM listings WHERE id=$1', [req.params.id]);
+    await logAction(req.session.user.id, 'delete_listing', 'listing', req.params.id);
+    res.json({ message: 'Listing deleted' });
+  } catch (err) { res.status(500).json({ error: 'Server error' }); }
+});
+
+// PUT /api/admin/listings/:id/deactivate  (mark as unavailable)
+router.put('/listings/:id/deactivate', admin, async (req, res) => {
+  try {
+    const existing = await db.query('SELECT id FROM listings WHERE id=$1', [req.params.id]);
+    if (!existing.rows.length) return res.status(404).json({ error: 'Listing not found' });
+    await db.query("UPDATE listings SET status='deactivated' WHERE id=$1", [req.params.id]);
+    await logAction(req.session.user.id, 'deactivate_listing', 'listing', req.params.id);
+    res.json({ message: 'Listing marked as unavailable' });
+  } catch (err) { res.status(500).json({ error: 'Server error' }); }
+});
+
+// PUT /api/admin/listings/:id/reactivate  (restore availability)
+router.put('/listings/:id/reactivate', admin, async (req, res) => {
+  try {
+    const existing = await db.query('SELECT id FROM listings WHERE id=$1', [req.params.id]);
+    if (!existing.rows.length) return res.status(404).json({ error: 'Listing not found' });
+    await db.query("UPDATE listings SET status='active' WHERE id=$1", [req.params.id]);
+    await logAction(req.session.user.id, 'reactivate_listing', 'listing', req.params.id);
+    res.json({ message: 'Listing reactivated' });
+  } catch (err) { res.status(500).json({ error: 'Server error' }); }
+});
+
 // GET /api/admin/requests
 router.get('/requests', admin, async (req, res) => {
   const { status, page = 1, limit = 20 } = req.query;
