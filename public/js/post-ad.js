@@ -93,6 +93,40 @@ function calcPrice() {
 }
 
 // ─── PHOTO HANDLING ───────────────────────────────────────────────────────────
+function compressImage(file, maxDim = 1600, quality = 0.8) {
+  return new Promise((resolve) => {
+    if (!file.type.startsWith('image/')) return resolve(file);
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      let { width, height } = img;
+      if (width > maxDim || height > maxDim) {
+        const scale = Math.min(maxDim / width, maxDim / height);
+        width = Math.round(width * scale);
+        height = Math.round(height * scale);
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = width; canvas.height = height;
+      canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+      canvas.toBlob(blob => {
+        // Keep original if compression didn't help (e.g. PNG logos)
+        resolve(blob && blob.size < file.size
+          ? new File([blob], file.name.replace(/\.\w+$/, '') + '.jpg', { type: 'image/jpeg' })
+          : file);
+      }, 'image/jpeg', quality);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
+    img.src = url;
+  });
+}
+
+async function compressSelectedFiles() {
+  const out = [];
+  for (const f of selectedFiles) out.push(await compressImage(f));
+  return out;
+}
+
 function handlePhotoSelect(files) {
   selectedFiles = [...selectedFiles, ...Array.from(files)].slice(0, 10);
   renderPhotoPreview();
@@ -233,7 +267,8 @@ document.getElementById('postAdForm').addEventListener('submit', async (e) => {
 
   try {
     const formData = new FormData(e.target);
-    selectedFiles.forEach(f => formData.append('images', f));
+    const files = await compressSelectedFiles();
+    files.forEach(f => formData.append('images', f));
     await api.upload('/api/listings', formData);
     showToast('Listing submitted for review!', 'success');
     setTimeout(() => location.href = '/dashboard', 1500);

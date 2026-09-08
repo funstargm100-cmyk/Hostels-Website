@@ -35,8 +35,16 @@ const api = {
       body: formData,
       headers: token ? { Authorization: `Bearer ${token}` } : {}
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Upload failed');
+    // Server may return HTML/plain text on errors (e.g. 413 body too large)
+    const contentType = res.headers.get('content-type') || '';
+    const data = contentType.includes('application/json') ? await res.json() : { error: await res.text() };
+    if (!res.ok) {
+      const msg = (data.error || '').replace(/<[^>]*>/g, '').trim();
+      throw new Error(res.status === 413
+        ? 'Upload too large. Try fewer or smaller photos.'
+        : (msg || 'Upload failed'));
+    }
+    return data;
     return data;
   }
 };
