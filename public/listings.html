@@ -38,25 +38,27 @@
 
   <div class="search-sticky">
     <div class="container">
-      <div style="display:flex;gap:0.75rem;flex-wrap:wrap;align-items:center">
+      <div class="search-bar-row" style="display:flex;gap:0.75rem;flex-wrap:wrap;align-items:center">
         <div class="input-group" style="flex:1;min-width:180px">
           <span class="input-icon"><i data-lucide="map-pin"></i></span>
           <input type="text" class="form-control" id="searchLocation" placeholder="Location or university..." />
         </div>
-        <button class="btn btn-primary" onclick="applyFilters()"><i data-lucide="search"></i> Search</button>
-        <button class="btn btn-ghost" onclick="toggleFilters()"><i data-lucide="sliders-horizontal"></i> Filters</button>
-        <button class="btn btn-ghost" id="nearMeBtn" onclick="filterNearMe()" title="Show rooms near me"><i data-lucide="navigation"></i> Near Me</button>
-        <div style="display:flex;gap:0.4rem;margin-left:auto">
+        <div class="search-actions" style="display:flex;gap:0.4rem;flex-wrap:wrap">
+          <button class="btn btn-primary" onclick="applyFilters()"><i data-lucide="search"></i> Search</button>
+          <button class="btn btn-ghost" onclick="toggleFilters()"><i data-lucide="sliders-horizontal"></i> Filters</button>
+          <button class="btn btn-ghost" id="nearMeBtn" onclick="filterNearMe()" title="Show rooms near me"><i data-lucide="navigation"></i> Near Me</button>
+        </div>
+        <div class="view-sort-row" style="display:flex;gap:0.4rem;margin-left:auto;align-items:center">
           <button class="btn btn-ghost btn-sm" onclick="setView('grid')" title="Grid"><i data-lucide="layout-grid"></i></button>
           <button class="btn btn-ghost btn-sm" onclick="setView('list')" title="List"><i data-lucide="list"></i></button>
+          <select class="form-control" id="sortSelect" style="width:auto" onchange="applyFilters()">
+            <option value="">Sort: Featured</option>
+            <option value="newest">Newest</option>
+            <option value="price_asc">Price: Low → High</option>
+            <option value="price_desc">Price: High → Low</option>
+            <option value="rating">Top Rated</option>
+          </select>
         </div>
-        <select class="form-control" id="sortSelect" style="width:auto" onchange="applyFilters()">
-          <option value="">Sort: Featured</option>
-          <option value="newest">Newest</option>
-          <option value="price_asc">Price: Low → High</option>
-          <option value="price_desc">Price: High → Low</option>
-          <option value="rating">Top Rated</option>
-        </select>
       </div>
     </div>
   </div>
@@ -142,7 +144,7 @@
 
       <div>
         <p class="text-muted mb-2" id="resultsCount">Loading...</p>
-        <div class="grid-2" id="listingsGrid"></div>
+        <div class="grid-2 reveal-stagger" id="listingsGrid"></div>
         <div class="pagination" id="pagination"></div>
       </div>
     </div>
@@ -154,5 +156,6 @@
   <script src="/js/app.js"></script>
   <script src="/js/listings.js"></script>
   <script>lucide.createIcons();</script>
+  <script src="/js/animations.js"></script>
 </body>
 </html>
