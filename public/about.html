@@ -17,6 +17,12 @@
         <li><a href="/listings">Browse Rooms</a></li>
         <li><a href="/post-ad">Post a Room</a></li>
         <li><a href="/about" class="active">About</a></li>
+        <li class="nav-auth-mobile">
+          <a href="/login" class="btn btn-ghost" id="loginBtnMobile">Login</a>
+          <a href="/signup" class="btn btn-primary" id="signupBtnMobile">Sign Up Free</a>
+          <a href="/dashboard" class="btn btn-outline" id="dashboardBtnMobile" style="display:none">Dashboard</a>
+          <button class="btn btn-ghost" id="logoutBtnMobile" style="display:none">Logout</button>
+        </li>
       </ul>
       <div class="navbar-actions">
         <button class="theme-toggle" id="themeToggle"><i data-lucide="moon"></i></button>
@@ -36,7 +42,7 @@
 
     <div class="card" style="padding:2rem;margin-bottom:2rem">
       <h2 class="mb-2">Our Mission</h2>
-      <p style="color:var(--text-muted);line-height:1.8">HostelHub connects students and young professionals with verified room owners — without the stress of walking around or falling victim to scams. We act as the trusted middleman for every contact and transaction, ensuring both seekers and owners are protected.</p>
+      <p style="color:var(--text-muted);line-height:1.8">HostelHub connects students and young professionals with verified room owners — without the stress of walking around or falling victim to scams. We act as the trusted middleman for every connection, ensuring both seekers and owners are protected.</p>
     </div>
 
     <div class="card" style="padding:2rem;margin-bottom:2rem" id="safety">
@@ -44,11 +50,11 @@
       <div style="display:flex;flex-direction:column;gap:1rem">
         <div style="display:flex;gap:0.75rem;align-items:flex-start">
           <i data-lucide="check-circle" style="width:20px;height:20px;color:#10b981;flex-shrink:0;margin-top:2px"></i>
-          <div><strong>Always transact through HostelHub.</strong> Never pay a room owner directly before we confirm the connection.</div>
+          <div><strong>Always use HostelHub to connect.</strong> Never deal with a room owner directly outside the platform.</div>
         </div>
         <div style="display:flex;gap:0.75rem;align-items:flex-start">
           <i data-lucide="check-circle" style="width:20px;height:20px;color:#10b981;flex-shrink:0;margin-top:2px"></i>
-          <div><strong>Inspect before you pay.</strong> We will arrange a viewing before any payment is made.</div>
+          <div><strong>Inspect before you commit.</strong> We will arrange a viewing before any agreement is made.</div>
         </div>
         <div style="display:flex;gap:0.75rem;align-items:flex-start">
           <i data-lucide="check-circle" style="width:20px;height:20px;color:#10b981;flex-shrink:0;margin-top:2px"></i>
@@ -56,24 +62,9 @@
         </div>
         <div style="display:flex;gap:0.75rem;align-items:flex-start">
           <i data-lucide="alert-triangle" style="width:20px;height:20px;color:#f59e0b;flex-shrink:0;margin-top:2px"></i>
-          <div><strong>Never share your payment details</strong> with anyone claiming to be a room owner outside the platform.</div>
-        </div>
-        <div style="display:flex;gap:0.75rem;align-items:flex-start">
-          <i data-lucide="alert-triangle" style="width:20px;height:20px;color:#f59e0b;flex-shrink:0;margin-top:2px"></i>
           <div><strong>Verified badge matters.</strong> Look for the green "Verified" badge — it means the owner has passed our KYC check.</div>
         </div>
       </div>
-    </div>
-
-    <div class="card" style="padding:2rem;margin-bottom:2rem">
-      <h2 class="mb-3"><i data-lucide="coins" style="width:22px;height:22px;color:var(--primary)"></i> How Commission Works</h2>
-      <p style="color:var(--text-muted);margin-bottom:1rem">HostelHub adds a transparent 10% platform fee to every listing price:</p>
-      <div style="background:var(--bg-secondary);border-radius:var(--radius-sm);padding:1.25rem;font-size:0.875rem">
-        <div style="display:flex;justify-content:space-between;margin-bottom:0.5rem"><span>Owner's original price</span><span>GHS 1,000</span></div>
-        <div style="display:flex;justify-content:space-between;margin-bottom:0.5rem;color:var(--text-muted)"><span>Platform fee (10%)</span><span>GHS 100</span></div>
-        <div style="display:flex;justify-content:space-between;font-weight:700;color:var(--primary);border-top:1px solid var(--border);padding-top:0.5rem"><span>Seeker pays</span><span>GHS 1,100</span></div>
-      </div>
-      <p style="color:var(--text-muted);margin-top:1rem;font-size:0.875rem">Of the 10%: 5% goes to the room owner/poster as a success fee, and 5% is retained by HostelHub to run the platform.</p>
     </div>
 
     <div class="card" style="padding:2rem;margin-bottom:2rem" id="terms">
@@ -92,8 +83,8 @@
       <h2 class="mb-3"><i data-lucide="lock" style="width:22px;height:22px;color:var(--primary)"></i> Privacy Policy</h2>
       <div style="color:var(--text-muted);font-size:0.875rem;line-height:1.8">
         <p class="mb-2"><strong>Data We Collect:</strong> Name, email, phone number, and KYC documents for account holders. Location data for listings (stored privately).</p>
-        <p class="mb-2"><strong>How We Use It:</strong> To facilitate room connections, verify identities, process payments, and send relevant notifications.</p>
-        <p class="mb-2"><strong>Location Privacy:</strong> Exact listing coordinates are never shown publicly. Seekers see only an approximate area (±150–300m offset). Exact address is shared only after a confirmed booking.</p>
+        <p class="mb-2"><strong>How We Use It:</strong> To facilitate room connections, verify identities, and send relevant notifications.</p>
+        <p class="mb-2"><strong>Location Privacy:</strong> Exact listing coordinates are never shown publicly. Seekers see only an approximate area (±150–300m offset). Exact address is shared only after a confirmed connection.</p>
         <p class="mb-2"><strong>Contact Privacy:</strong> Owner contact details are never displayed to seekers. Seeker contact details are never displayed to owners until the platform manually connects them.</p>
         <p><strong>Data Security:</strong> All passwords are hashed. KYC documents are stored securely and accessible only to admins.</p>
       </div>

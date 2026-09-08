@@ -13,7 +13,7 @@ function showAdminTab(tab, link) {
   const el = document.getElementById(`admin-tab-${tab}`);
   if (el) el.style.display = 'block';
   if (link) link.classList.add('active');
-  const loaders = { overview: loadAdminOverview, listings: loadAdminListings, requests: loadAdminRequests, users: loadAdminUsers, reports: loadAdminReports, payouts: loadAdminPayouts, logs: loadAdminLogs };
+  const loaders = { overview: loadAdminOverview, listings: loadAdminListings, requests: loadAdminRequests, users: loadAdminUsers, reports: loadAdminReports, logs: loadAdminLogs };
   loaders[tab]?.();
 }
 
@@ -25,8 +25,7 @@ async function loadAdminOverview() {
       <div class="stat-card"><div class="stat-card-value">${s.active_listings}</div><div class="stat-card-label">Active Listings</div></div>
       <div class="stat-card"><div class="stat-card-value" style="color:#f59e0b">${s.pending_listings}</div><div class="stat-card-label">Pending Review</div></div>
       <div class="stat-card"><div class="stat-card-value" style="color:#3b82f6">${s.new_requests}</div><div class="stat-card-label">New Requests</div></div>
-      <div class="stat-card"><div class="stat-card-value" style="color:#ef4444">${s.open_reports}</div><div class="stat-card-label">Open Reports</div></div>
-      <div class="stat-card"><div class="stat-card-value">GHS ${Number(s.total_revenue).toFixed(2)}</div><div class="stat-card-label">Platform Revenue</div></div>`;
+      <div class="stat-card"><div class="stat-card-value" style="color:#ef4444">${s.open_reports}</div><div class="stat-card-label">Open Reports</div></div>`;
   } catch (e) { showToast(e.message, 'error'); }
 }
 
@@ -139,7 +138,6 @@ async function unsuspendUser(id) {
   catch (e) { showToast(e.message, 'error'); }
 }
 
-
 async function loadAdminReports() {
   const el = document.getElementById('adminReportsTable');
   try {
@@ -158,30 +156,6 @@ async function loadAdminReports() {
 
 async function resolveReport(id) {
   try { await api.put(`/api/admin/reports/${id}/resolve`); showToast('Report resolved', 'success'); loadAdminReports(); }
-  catch (e) { showToast(e.message, 'error'); }
-}
-
-async function loadAdminPayouts() {
-  const el = document.getElementById('adminPayoutsTable');
-  try {
-    const { payouts } = await api.get('/api/admin/payouts');
-    if (!payouts.length) { el.innerHTML = '<p class="text-muted">No pending payouts.</p>'; return; }
-    el.innerHTML = `<div class="table-wrap"><table><thead><tr><th>Owner</th><th>Amount</th><th>Method</th><th>Account</th><th>Date</th><th>Actions</th></tr></thead><tbody>` +
-      payouts.map(p => `<tr>
-        <td>${p.owner_name}</td>
-        <td style="font-weight:700;color:var(--primary)">GHS ${Number(p.amount).toFixed(2)}</td>
-        <td>${p.payment_method.replace('_', ' ')}</td>
-        <td>${p.account_number}</td>
-        <td>${new Date(p.created_at).toLocaleDateString()}</td>
-        <td><button class="btn btn-secondary btn-sm" onclick="approvePayout(${p.id})"><i data-lucide="check" style="width:14px;height:14px"></i> Pay</button></td>
-      </tr>`).join('') + '</tbody></table></div>';
-    if (typeof lucide !== 'undefined') lucide.createIcons();
-  } catch (e) { el.innerHTML = `<p class="text-muted">${e.message}</p>`; }
-}
-
-async function approvePayout(id) {
-  if (!confirm('Confirm payout?')) return;
-  try { await api.put(`/api/admin/payouts/${id}/approve`); showToast('Payout approved', 'success'); loadAdminPayouts(); }
   catch (e) { showToast(e.message, 'error'); }
 }
 

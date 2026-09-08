@@ -29,19 +29,16 @@
           <li><a href="#requests" onclick="showAdminTab('requests',this)"><i data-lucide="message-circle"></i> Contact Requests</a></li>
           <li><a href="#users" onclick="showAdminTab('users',this)"><i data-lucide="users"></i> Users</a></li>
           <li><a href="#reports" onclick="showAdminTab('reports',this)"><i data-lucide="flag"></i> Reports</a></li>
-          <li><a href="#payouts" onclick="showAdminTab('payouts',this)"><i data-lucide="wallet"></i> Payouts</a></li>
           <li><a href="#logs" onclick="showAdminTab('logs',this)"><i data-lucide="clipboard-list"></i> Audit Logs</a></li>
         </ul>
       </aside>
 
       <main>
-        <!-- OVERVIEW -->
         <div id="admin-tab-overview">
           <h2 class="mb-3">Platform Overview</h2>
           <div class="stat-cards" id="adminStats"></div>
         </div>
 
-        <!-- LISTINGS QUEUE -->
         <div id="admin-tab-listings" style="display:none">
           <div class="flex-between mb-3">
             <h2>Listings Moderation</h2>
@@ -54,7 +51,6 @@
           <div id="adminListingsTable"></div>
         </div>
 
-        <!-- CONTACT REQUESTS -->
         <div id="admin-tab-requests" style="display:none">
           <div class="flex-between mb-3">
             <h2>Contact Requests</h2>
@@ -69,7 +65,6 @@
           <div id="adminRequestsTable"></div>
         </div>
 
-        <!-- USERS -->
         <div id="admin-tab-users" style="display:none">
           <div class="flex-between mb-3">
             <h2>User Management</h2>
@@ -83,19 +78,11 @@
           <div id="adminUsersTable"></div>
         </div>
 
-        <!-- REPORTS -->
         <div id="admin-tab-reports" style="display:none">
           <h2 class="mb-3">Flagged Reports</h2>
           <div id="adminReportsTable"></div>
         </div>
 
-        <!-- PAYOUTS -->
-        <div id="admin-tab-payouts" style="display:none">
-          <h2 class="mb-3">Pending Payouts</h2>
-          <div id="adminPayoutsTable"></div>
-        </div>
-
-        <!-- AUDIT LOGS -->
         <div id="admin-tab-logs" style="display:none">
           <h2 class="mb-3">Audit Logs</h2>
           <div id="adminLogsTable"></div>
@@ -104,7 +91,6 @@
     </div>
   </div>
 
-  <!-- REQUEST STATUS MODAL -->
   <div class="modal-overlay" id="requestModal">
     <div class="modal">
       <div class="modal-header">
@@ -129,7 +115,6 @@
     </div>
   </div>
 
-  <!-- REJECT LISTING MODAL -->
   <div class="modal-overlay" id="rejectModal">
     <div class="modal">
       <div class="modal-header">

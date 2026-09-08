@@ -13,7 +13,7 @@ const upload = multer({
   fileFilter: (req, file, cb) => cb(null, /image\/(jpeg|jpg|png|webp)/.test(file.mimetype))
 });
 
-const COMMISSION_RATE = 0.10;
+const COMMISSION_RATE = 0; // No transactions — price posted is price shown
 
 // GET /api/listings
 router.get('/', async (req, res) => {
@@ -130,7 +130,7 @@ router.post('/', requireAuth, requireRole('owner', 'agent', 'admin'), upload.arr
 
   try {
     const price = parseFloat(original_price);
-    const listed_price = parseFloat((price * (1 + COMMISSION_RATE)).toFixed(2));
+    const listed_price = price;
     const price_per_head = parseFloat((listed_price / parseInt(occupancy_type)).toFixed(2));
     const expires_at = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 

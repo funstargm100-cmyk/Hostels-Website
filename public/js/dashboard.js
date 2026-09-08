@@ -9,11 +9,9 @@ async function initDashboard() {
 
   if (currentUser.role === 'owner' || currentUser.role === 'agent') {
     document.getElementById('myListingsNav').style.display = '';
-    document.getElementById('earningsNav').style.display = '';
     document.getElementById('myRequestsNav').style.display = 'none';
   }
 
-  // Handle hash navigation
   const hash = location.hash.replace('#', '') || 'overview';
   const link = document.querySelector(`[href="#${hash}"]`);
   if (link) showTab(hash, link);
@@ -27,8 +25,7 @@ function showTab(tab, link) {
   if (el) el.style.display = 'block';
   if (link) link.classList.add('active');
   history.replaceState(null, '', `#${tab}`);
-
-  const loaders = { overview: loadOverview, requests: loadRequests, listings: loadOwnerListings, earnings: loadEarnings, favorites: loadFavorites, notifications: loadNotifications };
+  const loaders = { overview: loadOverview, requests: loadRequests, listings: loadOwnerListings, favorites: loadFavorites, notifications: loadNotifications };
   loaders[tab]?.();
 }
 
@@ -36,12 +33,12 @@ async function loadOverview() {
   const statsEl = document.getElementById('statCards');
   try {
     if (currentUser.role === 'owner' || currentUser.role === 'agent') {
-      const [{ listings }, earnings] = await Promise.all([api.get('/api/user/listings'), api.get('/api/payments/summary')]);
+      const { listings } = await api.get('/api/user/listings');
       statsEl.innerHTML = `
         <div class="stat-card"><div class="stat-card-value">${listings.length}</div><div class="stat-card-label">My Listings</div></div>
-        <div class="stat-card"><div class="stat-card-value">GHS ${Number(earnings.wallet_balance).toFixed(2)}</div><div class="stat-card-label">Wallet Balance</div></div>
-        <div class="stat-card"><div class="stat-card-value">${earnings.total_bookings}</div><div class="stat-card-label">Total Bookings</div></div>
-        <div class="stat-card"><div class="stat-card-value">GHS ${Number(earnings.total_earned).toFixed(2)}</div><div class="stat-card-label">Total Earned</div></div>`;
+        <div class="stat-card"><div class="stat-card-value">${listings.filter(l => l.status === 'active').length}</div><div class="stat-card-label">Active</div></div>
+        <div class="stat-card"><div class="stat-card-value">${listings.reduce((s, l) => s + (l.views_count || 0), 0)}</div><div class="stat-card-label">Total Views</div></div>
+        <div class="stat-card"><div class="stat-card-value">${listings.reduce((s, l) => s + (l.interest_count || 0), 0)}</div><div class="stat-card-label">Total Interests</div></div>`;
     } else {
       const { requests } = await api.get('/api/requests/mine');
       statsEl.innerHTML = `
@@ -55,7 +52,7 @@ async function loadRequests() {
   const el = document.getElementById('requestsList');
   try {
     const { requests } = await api.get('/api/requests/mine');
-    if (!requests.length) { el.innerHTML = '<div class="empty-state"><div class="icon"><i data-lucide="message-circle" style="width:48px;height:48px"></i></div><p>No requests yet. <a href="/listings" style="color:var(--primary)">Browse rooms</a></p></div>'; return; }
+    if (!requests.length) { el.innerHTML = '<div class="empty-state"><div class="icon"><i data-lucide="message-circle" style="width:48px;height:48px"></i></div><p>No requests yet. <a href="/listings" style="color:var(--primary)">Browse rooms</a></p></div>'; if (typeof lucide !== 'undefined') lucide.createIcons(); return; }
     el.innerHTML = `<div class="table-wrap"><table><thead><tr><th>Listing</th><th>Status</th><th>Move-in</th><th>Date</th></tr></thead><tbody>` +
       requests.map(r => `<tr>
         <td><a href="/listing?id=${r.listing_uuid}" style="color:var(--primary)">${r.listing_title}</a><br><span class="text-muted">${r.location_area}</span></td>
@@ -70,7 +67,7 @@ async function loadOwnerListings() {
   const el = document.getElementById('ownerListings');
   try {
     const { listings } = await api.get('/api/user/listings');
-    if (!listings.length) { el.innerHTML = '<div class="empty-state"><div class="icon"><i data-lucide="building-2" style="width:48px;height:48px"></i></div><p>No listings yet. <a href="/post-ad" style="color:var(--primary)">Post your first room</a></p></div>'; return; }
+    if (!listings.length) { el.innerHTML = '<div class="empty-state"><div class="icon"><i data-lucide="building-2" style="width:48px;height:48px"></i></div><p>No listings yet. <a href="/post-ad" style="color:var(--primary)">Post your first room</a></p></div>'; if (typeof lucide !== 'undefined') lucide.createIcons(); return; }
     el.innerHTML = `<div class="table-wrap"><table><thead><tr><th>Title</th><th>Status</th><th>Price</th><th>Views</th><th>Interest</th><th>Actions</th></tr></thead><tbody>` +
       listings.map(l => `<tr>
         <td><a href="/listing?id=${l.uuid}" style="color:var(--primary)">${l.title}</a></td>
@@ -92,36 +89,11 @@ async function deactivateListing(uuid) {
   } catch (e) { showToast(e.message, 'error'); }
 }
 
-async function loadEarnings() {
-  const el = document.getElementById('earningStats');
-  try {
-    const data = await api.get('/api/payments/summary');
-    el.innerHTML = `
-      <div class="stat-card"><div class="stat-card-value">GHS ${Number(data.wallet_balance).toFixed(2)}</div><div class="stat-card-label">Available Balance</div></div>
-      <div class="stat-card"><div class="stat-card-value">GHS ${Number(data.total_earned).toFixed(2)}</div><div class="stat-card-label">Total Earned</div></div>
-      <div class="stat-card"><div class="stat-card-value">${data.total_bookings}</div><div class="stat-card-label">Bookings</div></div>`;
-  } catch (e) { el.innerHTML = `<p class="text-muted">${e.message}</p>`; }
-}
-
-async function requestPayout(e) {
-  e.preventDefault();
-  try {
-    await api.post('/api/user/payout-request', {
-      amount: document.getElementById('payoutAmount').value,
-      payment_method: document.getElementById('payoutMethod').value,
-      account_number: document.getElementById('payoutAccount').value
-    });
-    showToast('Payout request submitted', 'success');
-    e.target.reset();
-    loadEarnings();
-  } catch (ex) { showToast(ex.message, 'error'); }
-}
-
 async function loadFavorites() {
   const el = document.getElementById('favoritesList');
   try {
     const { favorites } = await api.get('/api/user/favorites');
-    if (!favorites.length) { el.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><div class="icon"><i data-lucide="heart" style="width:48px;height:48px"></i></div><p>No saved listings yet.</p></div>'; return; }
+    if (!favorites.length) { el.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><div class="icon"><i data-lucide="heart" style="width:48px;height:48px"></i></div><p>No saved listings yet.</p></div>'; if (typeof lucide !== 'undefined') lucide.createIcons(); return; }
     el.innerHTML = favorites.map(renderListingCard).join('');
     if (typeof lucide !== 'undefined') lucide.createIcons();
   } catch (e) { el.innerHTML = `<p class="text-muted">${e.message}</p>`; }
@@ -131,7 +103,7 @@ async function loadNotifications() {
   const el = document.getElementById('notificationsList');
   try {
     const { notifications } = await api.get('/api/user/notifications');
-    if (!notifications.length) { el.innerHTML = '<div class="empty-state"><div class="icon"><i data-lucide="bell" style="width:48px;height:48px"></i></div><p>No notifications.</p></div>'; return; }
+    if (!notifications.length) { el.innerHTML = '<div class="empty-state"><div class="icon"><i data-lucide="bell" style="width:48px;height:48px"></i></div><p>No notifications.</p></div>'; if (typeof lucide !== 'undefined') lucide.createIcons(); return; }
     el.innerHTML = notifications.map(n => `
       <div style="padding:1rem;border-bottom:1px solid var(--border);${!n.is_read ? 'background:var(--primary-light)' : ''}">
         <div style="font-weight:600;font-size:0.875rem">${n.title}</div>
@@ -140,6 +112,5 @@ async function loadNotifications() {
       </div>`).join('');
   } catch (e) { el.innerHTML = `<p class="text-muted">${e.message}</p>`; }
 }
-
 
 initDashboard();

@@ -18,7 +18,6 @@ CREATE TABLE IF NOT EXISTS users (
   otp_expires_at TIMESTAMPTZ,
   reset_token VARCHAR(100),
   reset_expires_at TIMESTAMPTZ,
-  wallet_balance NUMERIC(10,2) DEFAULT 0.00,
   is_suspended BOOLEAN DEFAULT FALSE,
   violation_count INT DEFAULT 0,
   avatar VARCHAR(255),
@@ -91,32 +90,6 @@ CREATE TABLE IF NOT EXISTS contact_requests (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE TABLE IF NOT EXISTS transactions (
-  id SERIAL PRIMARY KEY,
-  uuid UUID DEFAULT uuid_generate_v4() UNIQUE NOT NULL,
-  contact_request_id INT NOT NULL REFERENCES contact_requests(id),
-  listing_id INT NOT NULL REFERENCES listings(id),
-  owner_id INT NOT NULL REFERENCES users(id),
-  total_amount NUMERIC(10,2) NOT NULL,
-  platform_fee NUMERIC(10,2) NOT NULL,
-  owner_commission NUMERIC(10,2) NOT NULL,
-  payment_method VARCHAR(30) NOT NULL,
-  payment_ref VARCHAR(100),
-  status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending','completed','failed','refunded')),
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE TABLE IF NOT EXISTS payout_requests (
-  id SERIAL PRIMARY KEY,
-  owner_id INT NOT NULL REFERENCES users(id),
-  amount NUMERIC(10,2) NOT NULL,
-  payment_method VARCHAR(30) NOT NULL,
-  account_number VARCHAR(50) NOT NULL,
-  status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending','approved','paid','rejected')),
-  admin_note TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
 CREATE TABLE IF NOT EXISTS reviews (
   id SERIAL PRIMARY KEY,
   listing_id INT NOT NULL REFERENCES listings(id) ON DELETE CASCADE,
@@ -151,7 +124,7 @@ CREATE TABLE IF NOT EXISTS admin_logs (
   id SERIAL PRIMARY KEY,
   admin_id INT NOT NULL REFERENCES users(id),
   action VARCHAR(100) NOT NULL,
-  target_type VARCHAR(20) NOT NULL CHECK (target_type IN ('user','listing','request','transaction','payout')),
+  target_type VARCHAR(20) NOT NULL CHECK (target_type IN ('user','listing','request')),
   target_id INT NOT NULL,
   details TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
