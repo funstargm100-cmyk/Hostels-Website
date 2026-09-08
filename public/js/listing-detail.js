@@ -37,7 +37,7 @@ async function loadListing() {
   try {
     const { listing, images, amenities, reviews } = await api.get(`/api/listings/${listingUUID}`);
     currentListing = listing;
-    document.title = `${listing.title} — HostelHub`;
+    document.title = `${listing.title} — Roomy`;
     document.getElementById('detailSkeleton').style.display = 'none';
     document.getElementById('detailContent').style.display = 'block';
 
