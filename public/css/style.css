@@ -258,13 +258,12 @@ textarea{ resize:vertical; min-height:110px; }
 }
 @media (max-width:760px){ .search-card{ grid-template-columns:1fr; } .hero{ min-height:auto; padding-top:2rem;} .hero-inner{ padding-top:7rem; }}
 .stats-strip{
-  display:grid; grid-template-columns:repeat(4,1fr); gap:1rem; padding:1.6rem 1.5rem; max-width:1180px; margin:0 auto;
+  display:grid; grid-template-columns:repeat(4,1fr); gap:.8rem; padding:1.2rem 1rem; max-width:1180px; margin:0 auto;
 }
-.stat-block{ text-align:center; padding:1.1rem .8rem; border:1px solid var(--border); border-radius:var(--radius); background:var(--card-bg); }
-@media (max-width:900px){ .stats-strip{ grid-template-columns:repeat(2,1fr); } }
-@media (max-width:520px){ .stats-strip{ grid-template-columns:repeat(2,1fr); padding:1.2rem 1rem; gap:.7rem; } .stat-block{ padding:.9rem .5rem; } }
-.stat-block .num{ font-family:var(--font-display); font-size:1.9rem; font-weight:600; color:var(--primary); }
-.stat-block .lbl{ font-size:.82rem; color:var(--text-muted); }
+.stat-block{ text-align:center; padding:.7rem .4rem; border:1px solid var(--border); border-radius:var(--radius); background:var(--card-bg); min-width:0; }
+.stat-block .num{ font-family:var(--font-display); font-size:1.25rem; font-weight:600; color:var(--primary); white-space:nowrap; }
+.stat-block .lbl{ font-size:.72rem; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+@media (max-width:520px){ .stats-strip{ gap:.5rem; padding:1rem .7rem; } .stat-block .num{ font-size:1.05rem; } .stat-block .lbl{ font-size:.62rem; } }
 
 .section{ padding:2.4rem 0; }
 .section-head{ display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:1.4rem; gap:1rem; flex-wrap:wrap; }
@@ -279,6 +278,18 @@ textarea{ resize:vertical; min-height:110px; }
 .grid-3 .card{ width:100%; }
 @media (max-width:900px){ .grid-3{ grid-template-columns:repeat(2,1fr); } }
 @media (max-width:600px){ .grid-3{ grid-template-columns:1fr; } }
+
+/* ── featured rooms: small cards, horizontal scroll ─────────────── */
+.hscroll{ display:flex; gap:1rem; overflow-x:auto; scroll-snap-type:x mandatory; padding:.2rem .2rem 1rem; scrollbar-width:thin; }
+.hscroll::-webkit-scrollbar{ height:6px; }
+.hscroll::-webkit-scrollbar-thumb{ background:var(--border); border-radius:999px; }
+.hscroll::-webkit-scrollbar-thumb:hover{ background:var(--text-muted); }
+.hscroll .card{ flex:0 0 240px; width:240px; scroll-snap-align:start; }
+.hscroll .card .card-img{ height:140px; object-fit:cover; width:100%; }
+.hscroll .card .card-body{ padding:.8rem; }
+.hscroll .card h3{ font-size:.95rem; }
+.hscroll .card p{ font-size:.82rem; }
+@media (max-width:600px){ .hscroll .card{ flex-basis:200px; width:200px; } .hscroll .card .card-img{ height:120px; } }
 
 .area-chips{ display:flex; flex-wrap:wrap; gap:.7rem; }
 .area-chip{ display:inline-flex; align-items:center; gap:.4rem; padding:.55rem 1.1rem; border:1px solid var(--border); border-radius:999px; background:var(--card-bg); color:var(--text); text-decoration:none; font-weight:600; font-size:.9rem; transition:border-color .15s ease, color .15s ease, transform .15s ease; }
