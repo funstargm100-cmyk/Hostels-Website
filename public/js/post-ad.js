@@ -88,7 +88,7 @@ function calcPrice() {
   document.getElementById('prevOriginal').textContent = `GHS ${price.toLocaleString()}`;
   document.getElementById('prevFee').textContent = `GHS ${fee.toFixed(2)}`;
   document.getElementById('prevListed').textContent = `GHS ${listed.toFixed(2)}`;
-  document.getElementById('prevPerHead').textContent = occ > 1 ? `Per person: GHS ${perHead.toFixed(2)}` : '';
+  document.getElementById('prevPerHead').textContent = `Per person: GHS ${perHead.toFixed(2)}`;
   preview.style.display = 'block';
 }
 
@@ -209,14 +209,15 @@ function buildReviewSummary() {
   const data = new FormData(form);
   const price = parseFloat(data.get('original_price') || 0);
   const occ = parseInt(data.get('occupancy_type') || 1);
-  const listed = (price * 1.10).toFixed(2);
+  const listed = price * 1.10;
+  const perPerson = (listed / occ).toFixed(2);
   const area = data.get('location_area') || '—';
   const address = data.get('full_address') || '';
   document.getElementById('reviewSummary').innerHTML = `
     <div style="display:grid;gap:0.75rem;font-size:0.875rem">
       <div style="display:flex;justify-content:space-between;padding:0.5rem 0;border-bottom:1px solid var(--border)"><span class="text-muted">Title</span><span style="font-weight:600;max-width:60%;text-align:right">${data.get('title') || '—'}</span></div>
       <div style="display:flex;justify-content:space-between;padding:0.5rem 0;border-bottom:1px solid var(--border)"><span class="text-muted">Occupancy</span><span>${occ}-in-1</span></div>
-      <div style="display:flex;justify-content:space-between;padding:0.5rem 0;border-bottom:1px solid var(--border)"><span class="text-muted">Listed Price</span><span style="color:var(--primary);font-weight:700">GHS ${listed}</span></div>
+      <div style="display:flex;justify-content:space-between;padding:0.5rem 0;border-bottom:1px solid var(--border)"><span class="text-muted">Price per person</span><span style="color:var(--primary);font-weight:700">GHS ${perPerson}</span></div>
       <div style="display:flex;justify-content:space-between;padding:0.5rem 0;border-bottom:1px solid var(--border)"><span class="text-muted">Area</span><span>${area}</span></div>
       ${address ? `<div style="padding:0.5rem 0;border-bottom:1px solid var(--border)"><span class="text-muted">Address</span><br><span style="font-size:0.8rem">${address}</span></div>` : ''}
       <div style="display:flex;justify-content:space-between;padding:0.5rem 0"><span class="text-muted">Photos</span><span>${selectedFiles.length} uploaded</span></div>

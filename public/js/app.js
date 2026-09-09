@@ -119,14 +119,17 @@ function renderListingCard(l) {
   const img = l.primary_image ? l.primary_image : '/images/placeholder.jpg';
   const verified = l.owner_verified ? '<span class="badge badge-verified"><i data-lucide="badge-check" style="width:11px;height:11px"></i> Verified</span>' : '';
   const featured = l.is_featured ? '<span class="badge badge-featured"><i data-lucide="star" style="width:11px;height:11px"></i> Featured</span>' : '';
-  const stars = l.avg_rating ? `<span class="stars">${'★'.repeat(Math.round(l.avg_rating))}${'☆'.repeat(5 - Math.round(l.avg_rating))}</span> ${l.avg_rating} (${l.review_count})` : 'No reviews';
-  const perHead = l.occupancy_type > 1 ? `<div class="card-price-sub">GHS ${Number(l.price_per_head).toLocaleString()} / person</div>` : '';
+  const perHead = `<div class="card-price-sub">per&nbsp;person</div>`;
   const amenityIcons = [
     l.wifi ? '<i data-lucide="wifi"></i> Wi-Fi' : '',
     l.water === 'constant' ? '<i data-lucide="droplets"></i> Water' : '',
     l.parking ? '<i data-lucide="car"></i> Parking' : '',
     l.furnishing === 'furnished' ? '<i data-lucide="armchair"></i> Furnished' : ''
   ].filter(Boolean).slice(0, 3);
+
+  // Short location, e.g. "New Town, Sunyani Mun..." — first two comma parts
+  const locParts = String(l.location_area || '').split(',').map(s => s.trim()).filter(Boolean);
+  const locText = locParts.slice(0, 2).join(', ');
 
   return `
     <div class="card" onclick="location.href='/listing?id=${l.uuid}'" style="cursor:pointer">
@@ -138,13 +141,12 @@ function renderListingCard(l) {
       </div>
       <div class="card-body">
         <div class="card-title">${l.title}</div>
-        <div class="card-location"><i data-lucide="map-pin"></i> ${l.location_area}${l.nearest_landmark ? ' · ' + l.nearest_landmark : ''}</div>
-        <div class="star-rating">${stars}</div>
+        <div class="card-location"><i data-lucide="map-pin"></i> <span>${locText}</span></div>
         <div class="amenity-icons">${amenityIcons.map(a => `<span class="amenity-icon">${a}</span>`).join('')}</div>
       </div>
       <div class="card-footer">
         <div>
-          <div class="card-price">GHS ${Number(l.listed_price).toLocaleString()}</div>
+          <div class="card-price">GHS ${Number(l.price_per_head).toLocaleString()}</div>
           ${perHead}
         </div>
         <span class="tag">${l.occupancy_type}-in-1</span>

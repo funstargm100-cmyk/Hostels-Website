@@ -170,11 +170,9 @@ function renderAmenities(a) {
 
 function renderPriceBox(l) {
   document.getElementById('occupancyTag').textContent = `${l.occupancy_type}-in-1 Room`;
-  document.getElementById('priceMain').textContent = `GHS ${Number(l.listed_price).toLocaleString()}`;
-  document.getElementById('pricePerHead').textContent = l.occupancy_type > 1 ? `GHS ${Number(l.price_per_head).toLocaleString()} per person` : 'Self-contained';
-  document.getElementById('priceBreakdown').textContent = l.occupancy_type > 1
-    ? `GHS ${Number(l.listed_price).toLocaleString()} total · ${l.occupancy_type} sharing`
-    : `GHS ${Number(l.listed_price).toLocaleString()} · whole room`;
+  document.getElementById('priceMain').textContent = `GHS ${Number(l.price_per_head).toLocaleString()}`;
+  document.getElementById('pricePerHead').textContent = 'per person';
+  document.getElementById('priceBreakdown').textContent = `${l.occupancy_type}-in-1 room`;
   document.getElementById('ownerName').textContent = l.owner_name || 'Verified Owner';
   document.getElementById('viewCount').textContent = l.views_count || 0;
   document.getElementById('interestCount').textContent = l.interest_count || 0;

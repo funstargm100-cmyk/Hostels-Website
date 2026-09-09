@@ -14,7 +14,7 @@ router.get('/profile', requireAuth, async (req, res) => {
 router.get('/listings', requireAuth, async (req, res) => {
   try {
     const [listings] = await db.query2(`
-      SELECT l.uuid, l.title, l.status, l.listed_price, l.views_count, l.interest_count, l.created_at, l.expires_at, l.location_area,
+      SELECT l.uuid, l.title, l.status, l.price_per_head, l.views_count, l.interest_count, l.created_at, l.expires_at, l.location_area,
              img.image_path as primary_image
       FROM listings l
       LEFT JOIN listing_images img ON img.listing_id = l.id AND img.is_primary = TRUE
