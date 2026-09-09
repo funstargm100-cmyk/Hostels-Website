@@ -341,6 +341,15 @@ textarea{ resize:vertical; min-height:110px; }
 
 /* ── filters / listings page ─────────────────────────────────────────── */
 .listings-layout{ display:grid; grid-template-columns:270px 1fr; gap:2rem; align-items:start; }
+/* keep browse cards side-by-side on mobile (overrides global .grid-2 single-column rule) */
+@media (max-width:640px){
+  #listingsGrid.grid-2{ grid-template-columns:repeat(2,1fr); gap:.7rem; }
+  #listingsGrid.grid-2 .card-title{ font-size:.9rem; }
+  #listingsGrid.grid-2 .card-body{ padding:.6rem .7rem .2rem; }
+  #listingsGrid.grid-2 .amenity-icons{ display:none; }
+  #listingsGrid.grid-2 .card-footer{ padding:.5rem .7rem .7rem; }
+  #listingsGrid.grid-2 .card-price{ font-size:.95rem; }
+}
 .filters-panel{ background:var(--card-bg); border:1px solid var(--border); border-radius:var(--radius); padding:1.4rem; position:sticky; top:90px; }
 .filters-panel h4{ font-family:var(--font-body); font-size:.8rem; font-weight:800; margin:1rem 0 .5rem; color:var(--text-muted); }
 .filters-panel h4:first-child{ margin-top:0; }
