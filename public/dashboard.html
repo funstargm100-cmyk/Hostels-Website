@@ -30,58 +30,76 @@
     </div>
   </nav>
 
-  <div class="container">
-    <div class="dashboard-layout">
+  <div class="container page-in">
+    <div class="dashboard-layout" id="dashLayout">
       <aside class="sidebar">
         <div style="text-align:center;padding:1rem 0;border-bottom:1px solid var(--border);margin-bottom:1rem">
           <div style="width:60px;height:60px;border-radius:50%;background:var(--primary-light);display:flex;align-items:center;justify-content:center;margin:0 auto 0.5rem"><i data-lucide="user" style="width:28px;height:28px;color:var(--primary)"></i></div>
           <div style="font-weight:600" id="sidebarName">Loading...</div>
           <div class="text-muted" style="font-size:0.78rem" id="sidebarRole"></div>
         </div>
-        <ul class="sidebar-nav">
-          <li><a href="#overview" class="active" onclick="showTab('overview',this)"><i data-lucide="layout-dashboard"></i> Overview</a></li>
-          <li id="myRequestsNav"><a href="#requests" onclick="showTab('requests',this)"><i data-lucide="message-circle"></i> My Requests</a></li>
-          <li id="myListingsNav" style="display:none"><a href="#listings" onclick="showTab('listings',this)"><i data-lucide="building-2"></i> My Listings</a></li>
-          <li><a href="#favorites" onclick="showTab('favorites',this)"><i data-lucide="heart"></i> Favorites</a></li>
-          <li><a href="#notifications" onclick="showTab('notifications',this)"><i data-lucide="bell"></i> Notifications</a></li>
-        </ul>
+        <ul class="sidebar-nav" id="sidebarNav"></ul>
       </aside>
 
       <main>
-        <div id="tab-overview">
-          <h2 class="mb-3">Overview</h2>
-          <div class="stat-cards reveal-stagger" id="statCards"></div>
+        <div class="dashboard-topbar" style="display:none">
+          <div>
+            <div style="font-weight:600" id="mobileName"></div>
+            <div class="text-muted" style="font-size:0.78rem" id="mobileRole"></div>
+          </div>
+        </div>
+
+        <div id="ownerBanner" class="owner-banner" style="display:none">
+          <div>
+            <h2 style="font-size:1.3rem">Welcome back, <span id="ownerGreeting">Owner</span> 👋</h2>
+            <p>Manage your rooms, track views and connect with seekers.</p>
+          </div>
+          <a href="/post-ad" class="btn btn-white"><i data-lucide="plus"></i> Post New Room</a>
+        </div>
+
+        <div id="seekerActions" class="seeker-actions" style="display:none">
+          <a href="/listings" class="seeker-action"><i data-lucide="search"></i> Browse Rooms</a>
+          <a href="/listings?sort=newest" class="seeker-action"><i data-lucide="sparkles"></i> New Listings</a>
+          <button class="seeker-action" onclick="dashboardShowTab('favorites')"><i data-lucide="heart"></i> Saved Rooms</button>
+          <button class="seeker-action" onclick="dashboardShowTab('requests')"><i data-lucide="message-circle"></i> My Requests</button>
+        </div>
+
+        <div id="tab-overview" class="tab-panel">
+          <h2 class="mb-3" id="overviewTitle">Overview</h2>
+          <div class="stat-cards stagger" id="statCards"></div>
           <div class="card" style="padding:1.25rem">
             <h3 class="mb-2">Recent Activity</h3>
             <div id="recentActivity"><p class="text-muted" style="font-size:0.875rem">No recent activity.</p></div>
           </div>
         </div>
 
-        <div id="tab-requests" style="display:none">
+        <div id="tab-requests" class="tab-panel" style="display:none">
           <h2 class="mb-3">My Contact Requests</h2>
           <div id="requestsList"></div>
         </div>
 
-        <div id="tab-listings" style="display:none">
-          <div class="flex-between mb-3">
+        <div id="tab-listings" class="tab-panel" style="display:none">
+          <div class="flex-between mb-3" style="gap:0.5rem;flex-wrap:wrap">
             <h2>My Listings</h2>
-            <a href="/post-ad" class="btn btn-primary">+ Post New Room</a>
+            <a href="/post-ad" class="btn btn-primary"><i data-lucide="plus"></i> Post New Room</a>
           </div>
-          <div id="ownerListings"></div>
+          <div id="ownerListings" class="stagger"></div>
         </div>
 
-        <div id="tab-favorites" style="display:none">
+        <div id="tab-favorites" class="tab-panel" style="display:none">
           <h2 class="mb-3">Saved Listings</h2>
-          <div class="grid-2" id="favoritesList"></div>
+          <div class="grid-2 stagger" id="favoritesList"></div>
         </div>
 
-        <div id="tab-notifications" style="display:none">
+        <div id="tab-notifications" class="tab-panel" style="display:none">
           <h2 class="mb-3">Notifications</h2>
           <div id="notificationsList"></div>
         </div>
       </main>
     </div>
   </div>
+
+  <nav class="mobile-tabs" id="mobileTabs"></nav>
 
   <div class="toast-container" id="toastContainer"></div>
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>

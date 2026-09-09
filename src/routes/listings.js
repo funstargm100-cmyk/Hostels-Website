@@ -173,7 +173,8 @@ router.put('/:uuid', requireAuth, async (req, res) => {
     const listing = result.rows[0];
     if (!listing && req.session.user.role !== 'admin') return res.status(404).json({ error: 'Listing not found' });
 
-    const { title, description, original_price, occupancy_type } = req.body;
+    const { title, description, original_price, occupancy_type, location_area, full_address, nearest_landmark, gender_preference, move_in_date,
+            water, electricity, security, furnishing, bathroom, kitchen_access, wifi, parking, pet_friendly } = req.body;
     if (title || description) {
       const check = validateAdContent(title || listing.title, description || listing.description);
       if (!check.isClean) return res.status(400).json({ error: 'Contains contact info', violations: check.violations });
@@ -181,17 +182,40 @@ router.put('/:uuid', requireAuth, async (req, res) => {
 
     const fields = []; const vals = []; let p = 1;
     if (title) { fields.push(`title=$${p++}`); vals.push(title); }
-    if (description) { fields.push(`description=$${p++}`); vals.push(description); }
+    if (description !== undefined) { fields.push(`description=$${p++}`); vals.push(description); }
+    if (location_area) { fields.push(`location_area=$${p++}`); vals.push(location_area); }
+    if (full_address !== undefined) { fields.push(`full_address=$${p++}`); vals.push(full_address); }
+    if (nearest_landmark !== undefined) { fields.push(`nearest_landmark=$${p++}`); vals.push(nearest_landmark); }
+    if (gender_preference) { fields.push(`gender_preference=$${p++}`); vals.push(gender_preference); }
+    if (move_in_date) { fields.push(`move_in_date=$${p++}`); vals.push(move_in_date); }
     if (original_price) {
       const op = parseFloat(original_price);
-      const lp = parseFloat((op * 1.10).toFixed(2));
-      const pph = parseFloat((lp / (occupancy_type || listing.occupancy_type)).toFixed(2));
+      const occ = parseInt(occupancy_type || listing.occupancy_type);
+      const lp = op; // price posted is price shown (no platform fee)
+      const pph = parseFloat((lp / occ).toFixed(2));
       fields.push(`original_price=$${p++}`, `listed_price=$${p++}`, `price_per_head=$${p++}`);
       vals.push(op, lp, pph);
     }
+    if (occupancy_type && original_price) { fields.push(`occupancy_type=$${p++}`); vals.push(parseInt(occupancy_type)); }
     fields.push(`status='pending'`);
     vals.push(req.params.uuid);
     await db.query(`UPDATE listings SET ${fields.join(', ')} WHERE uuid=$${p}`, vals);
+
+    // Update amenities if any provided
+    if (water || electricity || security || furnishing || bathroom !== undefined || kitchen_access !== undefined || wifi !== undefined || parking !== undefined || pet_friendly !== undefined) {
+      const aFields = []; const aVals = []; let ap = 1;
+      if (water) { aFields.push(`water=$${ap++}`); aVals.push(water); }
+      if (electricity) { aFields.push(`electricity=$${ap++}`); aVals.push(electricity); }
+      if (security) { aFields.push(`security=$${ap++}`); aVals.push(security); }
+      if (furnishing) { aFields.push(`furnishing=$${ap++}`); aVals.push(furnishing); }
+      if (bathroom) { aFields.push(`bathroom=$${ap++}`); aVals.push(bathroom); }
+      if (kitchen_access !== undefined) { aFields.push(`kitchen_access=$${ap++}`); aVals.push(!!kitchen_access); }
+      if (wifi !== undefined) { aFields.push(`wifi=$${ap++}`); aVals.push(!!wifi); }
+      if (parking !== undefined) { aFields.push(`parking=$${ap++}`); aVals.push(!!parking); }
+      if (pet_friendly !== undefined) { aFields.push(`pet_friendly=$${ap++}`); aVals.push(!!pet_friendly); }
+      aVals.push(listing.id);
+      await db.query(`UPDATE amenities SET ${aFields.join(', ')} WHERE listing_id=$${ap}`, aVals);
+    }
     res.json({ message: 'Listing updated and resubmitted for review' });
   } catch (err) {
     res.status(500).json({ error: 'Server error' });
@@ -206,6 +230,37 @@ router.delete('/:uuid', requireAuth, async (req, res) => {
     await db.query("UPDATE listings SET status='deactivated' WHERE uuid=$1", [req.params.uuid]);
     res.json({ message: 'Listing deactivated' });
   } catch (err) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// PUT /api/listings/:uuid/availability  — owner marks listing available / unavailable
+router.put('/:uuid/availability', requireAuth, async (req, res) => {
+  try {
+    const { available } = req.body;
+    const status = available ? 'active' : 'unavailable';
+    const owner = await db.query('SELECT id FROM listings WHERE uuid=$1 AND owner_id=$2', [req.params.uuid, req.session.user.id]);
+    if (!owner.rows.length && req.session.user.role !== 'admin') return res.status(404).json({ error: 'Not found' });
+    await db.query('UPDATE listings SET status=$1 WHERE uuid=$2', [status, req.params.uuid]);
+    res.json({ message: available ? 'Listing marked as available' : 'Listing marked as unavailable', status });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// GET /api/listings/:uuid/edit-data — owner fetches full listing + amenities for the edit form
+router.get('/:uuid/edit-data', requireAuth, async (req, res) => {
+  try {
+    const lr = await db.query('SELECT * FROM listings WHERE uuid=$1 AND owner_id=$2', [req.params.uuid, req.session.user.id]);
+    if (!lr.rows.length && req.session.user.role !== 'admin') return res.status(404).json({ error: 'Listing not found' });
+    const listing = lr.rows[0];
+    const amenities = (await db.query('SELECT * FROM amenities WHERE listing_id=$1', [listing.id])).rows[0] || {};
+    const images = (await db.query('SELECT id, image_path, is_primary FROM listing_images WHERE listing_id=$1 ORDER BY sort_order', [listing.id])).rows;
+    delete listing.location_lat; delete listing.location_lng;
+    res.json({ listing, amenities, images });
+  } catch (err) {
+    console.error(err);
     res.status(500).json({ error: 'Server error' });
   }
 });
