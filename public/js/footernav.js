@@ -50,8 +50,8 @@
   function render() {
     const el = document.getElementById('footerNav');
     if (!el) return;
-    const mode = el.dataset.mode || 'visitor';
-    const items = NAVS[mode] || NAVS.visitor;
+    // Same nav on every page — no per-page modes
+    const items = NAVS.visitor;
     el.innerHTML = items.map(it => `
       <a href="${it.href}" class="footer-nav-item ${isActive(it) ? 'active' : ''}">
         <i data-lucide="${it.icon}"></i><span>${it.label}</span>
