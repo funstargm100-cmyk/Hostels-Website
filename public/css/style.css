@@ -265,7 +265,7 @@ textarea{ resize:vertical; min-height:110px; }
 .stat-block .lbl{ font-size:.72rem; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 @media (max-width:520px){ .stats-strip{ gap:.5rem; padding:1rem .7rem; } .stat-block .num{ font-size:1.05rem; } .stat-block .lbl{ font-size:.62rem; } }
 
-.section{ padding:1.6rem 0; }
+.section{ padding-block:1.6rem; }
 .section-head{ display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:1rem; gap:1rem; flex-wrap:wrap; }
 .how-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:1.2rem; }
 .how-step{ padding:1.4rem; border:1px solid var(--border); border-radius:var(--radius); background:var(--card-bg); }
