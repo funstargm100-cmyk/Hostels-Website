@@ -15,11 +15,14 @@ const signToken = (user) => jwt.sign(
 
 // POST /api/auth/signup
 router.post('/signup', async (req, res) => {
-  const { name, email, phone, password, role } = req.body;
+  const { name, email, phone, password, role, base_location, base_lat, base_lng } = req.body;
   if (!name || !password || (!email && !phone))
     return res.status(400).json({ error: 'Name, password, and email or phone required' });
   if (!['seeker', 'owner'].includes(role))
     return res.status(400).json({ error: 'Invalid role' });
+  // Seekers should provide their workplace/school base (lat/lng or at least a text)
+  if (role === 'seeker' && !base_location)
+    return res.status(400).json({ error: 'Please pin your workplace or school location' });
 
   try {
     const existing = await db.query('SELECT id FROM users WHERE email=$1 OR phone=$2', [email || null, phone || null]);
@@ -30,9 +33,16 @@ router.post('/signup', async (req, res) => {
     const otp = generateOTP();
     const otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
 
+    const lat = base_lat !== undefined && base_lat !== null && base_lat !== '' ? parseFloat(base_lat) : null;
+    const lng = base_lng !== undefined && base_lng !== null && base_lng !== '' ? parseFloat(base_lng) : null;
+
     const result = await db.query(
-      'INSERT INTO users (name, email, phone, password_hash, role, otp_code, otp_expires_at) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING uuid',
-      [name, email || null, phone || null, hash, role, otp, otpExpiry]
+      `INSERT INTO users (name, email, phone, password_hash, role, otp_code, otp_expires_at, base_location, base_lat, base_lng)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING uuid`,
+      [name, email || null, phone || null, hash, role, otp, otpExpiry,
+       role === 'seeker' ? base_location : null,
+       role === 'seeker' && Number.isFinite(lat) ? lat : null,
+       role === 'seeker' && Number.isFinite(lng) ? lng : null]
     );
     const uuid = result.rows[0].uuid;
 

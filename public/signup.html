@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Create account — Roomy</title>
 <link rel="stylesheet" href="/css/style.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
 <body>
 
@@ -28,16 +29,70 @@
   <div class="auth-card">
     <button class="back-btn" onclick="goBack('/')"><i data-lucide="arrow-left"></i> Back</button>
     <div class="logo mb-1">roomy<span class="dot">.</span></div>
-    <h2 style="font-size:1.4rem">Create your account</h2>
-    <p class="text-muted mb-3" style="margin-top:-.4rem">Find a room, or list one — takes under a minute.</p>
+    <h2 style="font-size:1.4rem" id="suStepTitle">Create your account</h2>
+    <p class="text-muted mb-3" style="margin-top:-.4rem" id="suStepSub">First — what brings you to Roomy?</p>
 
     <div class="alert alert-danger" id="signupError" style="display:none"></div>
 
-    <form id="signupForm">
-      <div class="role-toggle">
-        <label><input type="radio" name="role" value="seeker" checked /><span>I'm looking for a room</span></label>
-        <label><input type="radio" name="role" value="owner" /><span>I'm listing a room</span></label>
+    <!-- STEP 1: choose role -->
+    <div class="su-step active" id="suStep1">
+      <div class="su-role-cards">
+        <button type="button" class="su-role-card" data-role="seeker">
+          <i data-lucide="search" class="su-role-icon"></i>
+          <span class="su-role-name">I'm looking for a room</span>
+          <span class="su-role-desc">Find hostels &amp; rooms near your school or workplace.</span>
+        </button>
+        <button type="button" class="su-role-card" data-role="owner">
+          <i data-lucide="home" class="su-role-icon"></i>
+          <span class="su-role-name">I'm listing a room</span>
+          <span class="su-role-desc">Post your hostel or room and reach serious seekers.</span>
+        </button>
       </div>
+    </div>
+
+    <!-- SEEKER PATH: step 2 = base location map -->
+    <div class="su-step" id="suSeekerMap" style="display:none">
+      <p style="font-size:.92rem;margin-top:-.6rem">Where do you spend most of your day — school or work? We'll use this to find rooms nearby.</p>
+      <button type="button" class="btn btn-outline btn-sm mb-2" onclick="suGetMyLocation()"><i data-lucide="locate-fixed"></i> Use my current location</button>
+      <div id="suMap"></div>
+      <p class="text-muted" style="font-size:.8rem" id="suPinStatus">No pin set yet — tap the map to drop a pin.</p>
+      <input type="hidden" id="suBaseLat" />
+      <input type="hidden" id="suBaseLng" />
+      <input type="hidden" id="suBaseLocation" />
+      <div style="display:flex;gap:.7rem;margin-top:1rem">
+        <button type="button" class="btn btn-outline" onclick="suPrev()"><i data-lucide="arrow-left"></i> Back</button>
+        <button type="button" class="btn btn-primary btn-lg" style="flex:1" id="suMapNextBtn">Continue</button>
+      </div>
+    </div>
+
+    <!-- SEEKER PATH: step 3 = account details -->
+    <form id="seekerDetailsForm" class="su-step" style="display:none">
+      <div class="form-group">
+        <label>Full name</label>
+        <input type="text" id="suSeekerName" required />
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" id="suSeekerEmail" />
+        </div>
+        <div class="form-group">
+          <label>Phone</label>
+          <input type="tel" id="suSeekerPhone" placeholder="0XX XXX XXXX" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="suSeekerPassword" required minlength="6" autocomplete="new-password" />
+      </div>
+      <div style="display:flex;gap:.7rem">
+        <button type="button" class="btn btn-outline" onclick="suPrev()"><i data-lucide="arrow-left"></i> Back</button>
+        <button type="submit" class="btn btn-primary btn-lg" style="flex:1" id="seekerSubmitBtn">Create account</button>
+      </div>
+    </form>
+
+    <!-- OWNER PATH: step 2 = account details -->
+    <form id="signupForm" class="su-step" style="display:none">
       <div class="form-group">
         <label>Full name</label>
         <input type="text" id="suName" required />
@@ -56,7 +111,10 @@
         <label>Password</label>
         <input type="password" id="suPassword" required minlength="6" autocomplete="new-password" />
       </div>
-      <button type="submit" class="btn btn-primary btn-lg" style="width:100%" id="signupSubmitBtn">Create account</button>
+      <div style="display:flex;gap:.7rem">
+        <button type="button" class="btn btn-outline" onclick="suPrev()"><i data-lucide="arrow-left"></i> Back</button>
+        <button type="submit" class="btn btn-primary btn-lg" style="flex:1" id="signupSubmitBtn">Create account</button>
+      </div>
     </form>
 
     <p class="text-muted mt-3" style="text-align:center;font-size:.88rem">Already have an account? <a href="/login" style="color:var(--primary);font-weight:700">Log in</a></p>
@@ -73,37 +131,11 @@
 <nav class="footer-nav" id="footerNav"></nav>
 
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js" defer></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
 <script src="/js/app.js" defer></script>
 <script src="/js/footernav.js" defer></script>
 <script src="/js/animations.js" defer></script>
 <script src="/js/scrolltop.js" defer></script>
-<script defer>
-document.getElementById('signupForm').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const btn = document.getElementById('signupSubmitBtn');
-  const errEl = document.getElementById('signupError');
-  errEl.style.display = 'none';
-  const email = document.getElementById('suEmail').value.trim();
-  const phone = document.getElementById('suPhone').value.trim();
-  if (!email && !phone) { errEl.textContent = 'Provide an email or phone number.'; errEl.style.display = 'block'; return; }
-  btn.disabled = true; btn.classList.add('btn-loading');
-  try {
-    const { token, user } = await api.post('/api/auth/signup', {
-      name: document.getElementById('suName').value.trim(),
-      email: email || undefined,
-      phone: phone || undefined,
-      password: document.getElementById('suPassword').value,
-      role: document.querySelector('input[name="role"]:checked').value
-    });
-    localStorage.setItem('token', token);
-    localStorage.setItem('user', JSON.stringify(user));
-    location.href = window.goHomeForRole ? goHomeForRole(user.role) : '/dashboard';
-  } catch (ex) {
-    errEl.textContent = ex.message;
-    errEl.style.display = 'block';
-    btn.disabled = false; btn.classList.remove('btn-loading');
-  }
-});
-</script>
+<script src="/js/signup.js" defer></script>
 </body>
 </html>

@@ -524,6 +524,27 @@ td{ padding:.8rem 1rem; border-top:1px solid var(--border); vertical-align:top; 
 .role-toggle input:checked + span{ color:var(--primary); }
 .role-toggle label:has(input:checked){ border-color:var(--primary); background:var(--primary-light); }
 
+/* ── signup wizard ─────────────────────────────────────────────────── */
+.su-step{ animation:suFadeIn .25s ease; }
+@keyframes suFadeIn{ from{ opacity:0; transform:translateY(6px);} to{ opacity:1; transform:none;} }
+.su-role-cards{ display:grid; grid-template-columns:1fr 1fr; gap:.8rem; margin:.4rem 0 1.2rem; }
+.su-role-card{
+  display:flex; flex-direction:column; align-items:flex-start; gap:.45rem;
+  border:1.5px solid var(--border); border-radius:var(--radius-sm); background:var(--card-bg);
+  padding:1.1rem 1rem; cursor:pointer; text-align:left; font-family:inherit;
+  transition:border-color .15s ease, background .15s ease, transform .15s ease;
+}
+.su-role-card:hover{ border-color:var(--primary); transform:translateY(-2px); }
+.su-role-card:focus-visible{ outline:2px solid var(--primary); outline-offset:2px; }
+.su-role-icon{ width:26px; height:26px; color:var(--primary); }
+.su-role-name{ font-weight:700; font-size:.95rem; color:var(--text); }
+.su-role-desc{ font-size:.78rem; color:var(--text-muted); line-height:1.4; }
+@media (max-width:480px){ .su-role-cards{ grid-template-columns:1fr; } }
+#suMap{ height:300px; border-radius:var(--radius-sm); margin:.8rem 0; z-index:0; }
+#suMap .leaflet-pane{ z-index:10 !important; }
+#suMap .leaflet-top, #suMap .leaflet-bottom{ z-index:20 !important; }
+#suMap .leaflet-popup-pane{ z-index:30 !important; }
+
 /* about page */
 .value-grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:1.4rem; }
 @media (max-width:700px){ .value-grid{ grid-template-columns:1fr; } }

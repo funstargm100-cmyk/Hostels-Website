@@ -54,6 +54,7 @@
   function itemsFor() {
     const user = cachedUser();
     const role = user?.role;
+    const role = user?.role;
     const home = role === 'owner' || role === 'agent' ? '/home-agent' : role === 'seeker' ? '/home-seeker' : '/';
     const base = [
       { href: home, icon: 'home', label: 'Home' },

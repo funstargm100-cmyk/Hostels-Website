@@ -158,3 +158,8 @@ ON CONFLICT (email) DO NOTHING;
 
 -- Migration: add full_address column if upgrading existing DB
 ALTER TABLE listings ADD COLUMN IF NOT EXISTS full_address TEXT;
+
+-- Migration: seeker workplace/school location (used to find rooms nearby)
+ALTER TABLE users ADD COLUMN IF NOT EXISTS base_location TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS base_lat DOUBLE PRECISION;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS base_lng DOUBLE PRECISION;
