@@ -131,7 +131,7 @@ function renderListingCard(l) {
   return `
     <div class="card" onclick="location.href='/listing?id=${l.uuid}'" style="cursor:pointer">
       <div style="position:relative">
-        <img class="card-img" src="${img}" alt="${l.title}" loading="lazy" onerror="this.src='/images/placeholder.jpg'" />
+        <img class="card-img" src="${img}" alt="${l.title}" loading="lazy" onerror="this.onerror=null;this.src='/images/placeholder.jpg'" />
         <div style="position:absolute;top:0.6rem;left:0.6rem;display:flex;gap:0.3rem;flex-wrap:wrap">${verified}${featured}</div>
         <button class="fav-btn" style="position:absolute;top:0.5rem;right:0.5rem;background:rgba(255,255,255,0.9);border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center"
           onclick="event.stopPropagation();toggleFav('${l.uuid}',this)"><i data-lucide="heart"></i></button>
