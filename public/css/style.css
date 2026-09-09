@@ -363,7 +363,7 @@ textarea{ resize:vertical; min-height:110px; }
   #listingsGrid.grid-2 .amenity-icons{ display:none; }
   #listingsGrid.grid-2 .card-footer{ padding:.4rem .7rem .6rem; }
   #listingsGrid.grid-2 .card-price{ font-size:.95rem; white-space:nowrap; }
-  #listingsGrid.grid-2 .card-footer .tag{ margin-left:auto; align-self:center; }
+  #listingsGrid.grid-2 .card-footer .tag{ margin-left:auto; align-self:flex-end; }
   #listingsGrid.grid-2 .tag{ font-size:.6rem; padding:.2rem .45rem; }
 }
 .filters-panel{ background:var(--card-bg); border:1px solid var(--border); border-radius:var(--radius); padding:1.4rem; position:sticky; top:90px; }
