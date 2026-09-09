@@ -19,15 +19,3 @@ async function loadStats() {
 
 loadFeatured();
 loadStats();
-
-// Make transparent navbar solid on scroll
-const nav = document.getElementById('mainNav');
-if (nav && nav.classList.contains('navbar-transparent')) {
-  window.addEventListener('scroll', () => {
-    if (window.scrollY > 60) {
-      nav.classList.remove('navbar-transparent');
-    } else {
-      nav.classList.add('navbar-transparent');
-    }
-  }, { passive: true });
-}
