@@ -114,10 +114,42 @@ function handleLogout() {
 document.getElementById('logoutBtn')?.addEventListener('click', handleLogout);
 document.getElementById('logoutBtnMobile')?.addEventListener('click', handleLogout);
 
-// ─── HAMBURGER ────────────────────────────────────────────────────────────────
-document.getElementById('hamburger')?.addEventListener('click', () => {
-  document.getElementById('navMenu')?.classList.toggle('open');
-});
+// ─── HAMBURGER / MOBILE MENU ──────────────────────────────────────────────────
+(function () {
+  const hamburger = document.getElementById('hamburger');
+  const menu = document.getElementById('navMenu');
+  if (!hamburger || !menu) return;
+
+  // Shared dimmed overlay behind the slide-out menu (one per page)
+  let overlay = document.querySelector('.nav-overlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.className = 'nav-overlay';
+    document.body.appendChild(overlay);
+  }
+
+  function setMenu(open) {
+    menu.classList.toggle('open', open);
+    overlay.classList.toggle('open', open);
+    document.body.classList.toggle('menu-open', open);
+    hamburger.setAttribute('aria-expanded', String(open));
+    hamburger.classList.toggle('open', open);
+    // Swap the lucide icon only when the hamburger uses one (some pages use CSS span bars)
+    if (hamburger.querySelector('i,svg') || hamburger.innerHTML.trim() === '') {
+      hamburger.innerHTML = `<i data-lucide="${open ? 'x' : 'menu'}"></i>`;
+      if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [hamburger] });
+    }
+  }
+
+  hamburger.addEventListener('click', e => {
+    e.stopPropagation();
+    setMenu(!menu.classList.contains('open'));
+  });
+  overlay.addEventListener('click', () => setMenu(false));
+  menu.addEventListener('click', e => { if (e.target.closest('a,button')) setMenu(false); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') setMenu(false); });
+  window.addEventListener('resize', () => { if (window.innerWidth > 860) setMenu(false); });
+})();
 
 // ─── LISTING CARD RENDERER ────────────────────────────────────────────────────
 function renderListingCard(l) {

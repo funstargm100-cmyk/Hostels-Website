@@ -56,14 +56,90 @@ async function loadListing() {
   }
 }
 
+let galleryImages = [];
+let galleryIndex = 0;
+
 function renderGallery(images) {
   const gallery = document.getElementById('gallery');
-  if (!images.length) { gallery.innerHTML = `<img src="/images/placeholder.jpg" alt="No image" style="width:100%;height:420px;object-fit:cover;border-radius:var(--radius)" />`; return; }
-  const primary = images.find(i => i.is_primary) || images[0];
-  const thumbs = images.filter(i => !i.is_primary).slice(0, 2);
+  if (!images.length) {
+    gallery.innerHTML = `<div class="gallery-main"><img src="/images/placeholder.jpg" alt="No image" /></div>`;
+    return;
+  }
+  // Sort primary first, keep a stable gallery model
+  galleryImages = [...images].sort((a, b) => (b.is_primary ? 1 : 0) - (a.is_primary ? 1 : 0));
+  galleryIndex = 0;
+  const many = galleryImages.length > 1;
   gallery.innerHTML = `
-    <div class="gallery-main"><img src="${primary.image_path}" alt="Main photo" id="mainPhoto" /></div>
-    ${thumbs.length ? `<div class="gallery-thumbs">${thumbs.map((t, i) => `<img src="${t.image_path}" alt="Photo ${i+2}" onclick="document.getElementById('mainPhoto').src='${t.image_path}'" />`).join('')}</div>` : ''}`;
+    <div class="gallery-main" id="galleryMain">
+      <img src="${galleryImages[0].image_path}" alt="Photo 1" id="mainPhoto" />
+      ${many ? `
+        <button class="gallery-nav prev" id="galPrev" aria-label="Previous photo">&#8249;</button>
+        <button class="gallery-nav next" id="galNext" aria-label="Next photo">&#8250;</button>
+        <span class="gallery-counter" id="galCounter">1 / ${galleryImages.length}</span>` : ''}
+    </div>
+    ${many ? `<div class="gallery-thumbs" id="galleryThumbs">${galleryImages.map((t, i) =>
+      `<img src="${t.image_path}" alt="Photo ${i + 1}" data-index="${i}" class="${i === 0 ? 'active' : ''}" />`).join('')}</div>` : ''}
+    <div class="lightbox" id="galleryLightbox">
+      <button class="lightbox-close" id="lbClose" aria-label="Close">&#10005;</button>
+      ${many ? `<button class="lightbox-nav prev" id="lbPrev" aria-label="Previous">&#8249;</button>
+      <button class="lightbox-nav next" id="lbNext" aria-label="Next">&#8250;</button>` : ''}
+      <img src="${galleryImages[0].image_path}" alt="Photo fullscreen" id="lbImg" />
+      ${many ? `<span class="lightbox-count" id="lbCount">1 / ${galleryImages.length}</span>` : ''}
+    </div>`;
+
+  if (!many) {
+    document.getElementById('galleryMain').addEventListener('click', () => openLightbox());
+    return;
+  }
+
+  const show = (i) => {
+    galleryIndex = (i + galleryImages.length) % galleryImages.length;
+    const src = galleryImages[galleryIndex].image_path;
+    document.getElementById('mainPhoto').src = src;
+    document.getElementById('galCounter').textContent = `${galleryIndex + 1} / ${galleryImages.length}`;
+    document.querySelectorAll('#galleryThumbs img').forEach(t => t.classList.toggle('active', +t.dataset.index === galleryIndex));
+    const activeThumb = document.querySelector('#galleryThumbs img.active');
+    activeThumb?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+  };
+
+  document.getElementById('galPrev').addEventListener('click', () => show(galleryIndex - 1));
+  document.getElementById('galNext').addEventListener('click', () => show(galleryIndex + 1));
+  document.getElementById('galleryThumbs').addEventListener('click', e => {
+    const t = e.target.closest('img[data-index]');
+    if (t) show(+t.dataset.index);
+  });
+  document.getElementById('mainPhoto').addEventListener('click', () => openLightbox());
+
+  // Touch swipe
+  let startX = null;
+  const main = document.getElementById('galleryMain');
+  main.addEventListener('touchstart', e => { startX = e.touches[0].clientX; }, { passive: true });
+  main.addEventListener('touchend', e => {
+    if (startX === null) return;
+    const dx = e.changedTouches[0].clientX - startX;
+    if (Math.abs(dx) > 40) show(galleryIndex + (dx < 0 ? 1 : -1));
+    startX = null;
+  }, { passive: true });
+
+  // Lightbox
+  const lb = document.getElementById('galleryLightbox');
+  const openLightboxAt = (i) => {
+    show(i);
+    document.getElementById('lbImg').src = galleryImages[galleryIndex].image_path;
+    document.getElementById('lbCount').textContent = `${galleryIndex + 1} / ${galleryImages.length}`;
+    lb.classList.add('open');
+  };
+  window.openLightbox = () => openLightboxAt(galleryIndex);
+  document.getElementById('lbClose').addEventListener('click', () => lb.classList.remove('open'));
+  document.getElementById('lbPrev').addEventListener('click', () => openLightboxAt(galleryIndex - 1));
+  document.getElementById('lbNext').addEventListener('click', () => openLightboxAt(galleryIndex + 1));
+  lb.addEventListener('click', e => { if (e.target === lb) lb.classList.remove('open'); });
+  document.addEventListener('keydown', e => {
+    if (!lb.classList.contains('open')) return;
+    if (e.key === 'Escape') lb.classList.remove('open');
+    if (e.key === 'ArrowLeft') openLightboxAt(galleryIndex - 1);
+    if (e.key === 'ArrowRight') openLightboxAt(galleryIndex + 1);
+  });
 }
 
 function renderBadges(listing) {
@@ -96,7 +172,9 @@ function renderPriceBox(l) {
   document.getElementById('occupancyTag').textContent = `${l.occupancy_type}-in-1 Room`;
   document.getElementById('priceMain').textContent = `GHS ${Number(l.listed_price).toLocaleString()}`;
   document.getElementById('pricePerHead').textContent = l.occupancy_type > 1 ? `GHS ${Number(l.price_per_head).toLocaleString()} per person` : 'Self-contained';
-  document.getElementById('priceBreakdown').textContent = `GHS ${Number(l.listed_price).toLocaleString()}`;
+  document.getElementById('priceBreakdown').textContent = l.occupancy_type > 1
+    ? `GHS ${Number(l.listed_price).toLocaleString()} total · ${l.occupancy_type} sharing`
+    : `GHS ${Number(l.listed_price).toLocaleString()} · whole room`;
   document.getElementById('ownerName').textContent = l.owner_name || 'Verified Owner';
   document.getElementById('viewCount').textContent = l.views_count || 0;
   document.getElementById('interestCount').textContent = l.interest_count || 0;
