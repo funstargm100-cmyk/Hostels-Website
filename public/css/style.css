@@ -139,20 +139,20 @@ textarea{ resize:vertical; min-height:110px; }
 .card-title{ font-family:var(--font-display); font-weight:600; font-size:1.08rem; margin-bottom:.25rem; }
 .card-location{ display:flex; align-items:center; gap:.3rem; font-size:.8rem; color:var(--text-muted); margin-bottom:.4rem; }
 .card-location span{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; }
-.card-location svg,.card-location i{ width:12px; height:12px; }
+.card-location svg,.card-location i{ width:12px; height:12px; flex-shrink:0; }
 .star-rating{ font-size:.8rem; color:var(--text-muted); margin-bottom:.5rem; }
 .stars{ color:var(--gold-deep); letter-spacing:1px; }
 .amenity-icons{ display:flex; gap:.6rem; flex-wrap:wrap; margin-bottom:.6rem; }
 .amenity-icon{ display:flex; align-items:center; gap:.25rem; font-size:.72rem; color:var(--teal); background:#EAF2EF; padding:.2rem .5rem; border-radius:999px; }
 [data-theme="dark"] .amenity-icon{ background:#1B3230; }
 .amenity-icon i,.amenity-icon svg{ width:11px; height:11px; }
-.card-footer{ display:flex; align-items:flex-start; justify-content:space-between; gap:.6rem; padding:.7rem 1.1rem 1.1rem; border-top:1px dashed var(--border); margin-top:.4rem; min-width:0; }
+.card-footer{ display:flex; align-items:center; justify-content:space-between; gap:.6rem; padding:.5rem 1.1rem .9rem; margin-top:0; min-width:0; }
 .card-footer > div{ min-width:0; }
 .card-price{ font-family:var(--font-display); font-weight:600; font-size:1.15rem; color:var(--primary); white-space:nowrap; }
 .card-price-sub{ font-size:.75rem; color:var(--text-muted); white-space:nowrap; }
 .tag{ background:var(--primary-light); color:var(--primary-deep); font-size:.72rem; font-weight:700; padding:.28rem .6rem; border-radius:999px; white-space:nowrap; flex-shrink:0; }
 @media (max-width:640px){
-  .card-footer{ padding:.6rem .8rem .9rem; }
+  .card-footer{ padding:.55rem .8rem .85rem; }
   .card-price{ font-size:1rem; }
   .card-price-sub{ font-size:.7rem; }
   .tag{ font-size:.65rem; padding:.22rem .5rem; }
@@ -361,10 +361,9 @@ textarea{ resize:vertical; min-height:110px; }
   #listingsGrid.grid-2 .card-title{ font-size:.9rem; }
   #listingsGrid.grid-2 .card-body{ padding:.6rem .7rem .2rem; }
   #listingsGrid.grid-2 .amenity-icons{ display:none; }
-  #listingsGrid.grid-2 .card-footer{ padding:.5rem .7rem .7rem; }
+  #listingsGrid.grid-2 .card-footer{ padding:.4rem .7rem .6rem; }
   #listingsGrid.grid-2 .card-price{ font-size:.95rem; white-space:nowrap; }
-  #listingsGrid.grid-2 .card-footer{ flex-wrap:wrap; }
-  #listingsGrid.grid-2 .card-footer .tag{ margin-left:auto; }
+  #listingsGrid.grid-2 .card-footer .tag{ margin-left:auto; align-self:center; }
   #listingsGrid.grid-2 .tag{ font-size:.6rem; padding:.2rem .45rem; }
 }
 .filters-panel{ background:var(--card-bg); border:1px solid var(--border); border-radius:var(--radius); padding:1.4rem; position:sticky; top:90px; }
