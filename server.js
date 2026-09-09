@@ -45,6 +45,11 @@ pages.forEach(page => {
   app.get(route, (req, res) => res.sendFile(path.join(__dirname, 'public', file)));
 });
 
+// Role-tailored home pages (served as real files — no JS view switching)
+app.get('/home-visitor', (req, res) => res.sendFile(path.join(__dirname, 'public', 'home-visitor.html')));
+app.get('/home-seeker', (req, res) => res.sendFile(path.join(__dirname, 'public', 'home-seeker.html')));
+app.get('/home-agent', (req, res) => res.sendFile(path.join(__dirname, 'public', 'home-agent.html')));
+
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 
 app.use((err, req, res, next) => {

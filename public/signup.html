@@ -97,7 +97,7 @@ document.getElementById('signupForm').addEventListener('submit', async (e) => {
     });
     localStorage.setItem('token', token);
     localStorage.setItem('user', JSON.stringify(user));
-    location.href = '/dashboard';
+    location.href = window.goHomeForRole ? goHomeForRole(user.role) : '/dashboard';
   } catch (ex) {
     errEl.textContent = ex.message;
     errEl.style.display = 'block';

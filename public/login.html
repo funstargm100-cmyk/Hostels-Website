@@ -78,7 +78,7 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
     localStorage.setItem('token', token);
     localStorage.setItem('user', JSON.stringify(user));
     const params = new URLSearchParams(location.search);
-    location.href = params.get('redirect') || '/dashboard';
+    location.href = params.get('redirect') || (window.goHomeForRole ? goHomeForRole(user.role) : '/dashboard');
   } catch (ex) {
     errEl.textContent = ex.message;
     errEl.style.display = 'block';

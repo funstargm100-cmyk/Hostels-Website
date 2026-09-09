@@ -120,6 +120,14 @@ function handleLogout() {
   localStorage.removeItem('user');
   location.href = '/';
 }
+
+// Send each role to its own dedicated home page
+function goHomeForRole(role) {
+  if (role === 'owner' || role === 'agent') return '/home-agent';
+  if (role === 'seeker') return '/home-seeker';
+  return '/';
+}
+window.goHomeForRole = goHomeForRole;
 document.getElementById('logoutBtn')?.addEventListener('click', handleLogout);
 document.getElementById('logoutBtnMobile')?.addEventListener('click', handleLogout);
 

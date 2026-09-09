@@ -38,7 +38,7 @@
   function isActive(item) {
     const path = currentPath();
     const search = new URLSearchParams(location.search);
-    if (item.href === '/' ? path === '/' : path === item.href.replace(/\/+$/, '')) {
+    if (item.href === '/' || path === item.href.replace(/\/+$/, '')) {
       // Also match hash / query specifics like /dashboard + favorites tab
       if (item.match && item.match.some(m => location.search.includes(m) || location.hash.includes(m))) return true;
       if (item.href === '/dashboard' && (location.search.includes('tab=') || location.hash)) return true;
@@ -54,8 +54,9 @@
   function itemsFor() {
     const user = cachedUser();
     const role = user?.role;
+    const home = role === 'owner' || role === 'agent' ? '/home-agent' : role === 'seeker' ? '/home-seeker' : '/';
     const base = [
-      { href: '/', icon: 'home', label: 'Home' },
+      { href: home, icon: 'home', label: 'Home' },
       { href: '/listings', icon: 'search', label: 'Browse' },
       { href: '/post-ad', icon: 'plus-circle', label: 'Post Room' },
       { href: '/about', icon: 'info', label: 'About' }
