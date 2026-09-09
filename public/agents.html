@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>For Agents & Owners — Roomy</title>
+  <meta name="description" content="List your hostels and rooms free on Roomy. Get a KYC-verified badge and let verified seekers come straight to you." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/style.css" />
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#FF6B6B" />
+</head>
+<body>
+
+  <nav class="navbar navbar-transparent" id="mainNav">
+    <div class="container">
+      <a href="/" class="navbar-brand"><i data-lucide="home"></i> <span class="brand-roomy">Roomy</span></a>
+      <ul class="navbar-nav" id="navMenu">
+        <li><a href="/">Home</a></li>
+        <li><a href="/listings">Browse Rooms</a></li>
+        <li><a href="/seekers">For Seekers</a></li>
+        <li><a href="/about" class="active">About</a></li>
+        <li class="nav-auth-mobile">
+          <a href="/login" class="btn btn-ghost" id="loginBtnMobile">Login</a>
+          <a href="/signup" class="btn btn-primary" id="signupBtnMobile">Sign Up Free</a>
+          <a href="/dashboard" class="btn btn-outline" id="dashboardBtnMobile" style="display:none">Dashboard</a>
+          <button class="btn btn-ghost" id="logoutBtnMobile" style="display:none">Logout</button>
+        </li>
+      </ul>
+      <div class="navbar-actions">
+        <button class="theme-toggle" id="themeToggle"><i data-lucide="moon"></i></button>
+        <a href="/login" class="btn btn-ghost btn-sm" id="loginBtn">Login</a>
+        <a href="/signup" class="btn btn-primary btn-sm" id="signupBtn">Sign Up Free</a>
+        <a href="/dashboard" class="btn btn-outline btn-sm" id="dashboardBtn" style="display:none">Dashboard</a>
+        <button class="btn btn-ghost btn-sm" id="logoutBtn" style="display:none">Logout</button>
+        <button class="hamburger" id="hamburger"><span></span><span></span><span></span></button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- AGENT HERO -->
+  <section class="aud-hero">
+    <div class="aud-hero-bg agent">
+      <img src="/images/herobg.jpg" alt="Hostel building" />
+    </div>
+    <div class="container">
+      <div class="aud-hero-content">
+        <span class="aud-eyebrow"><i data-lucide="badge-check" style="width:14px;height:14px"></i> For Agents & Room Owners</span>
+        <h1>Fill Your Rooms <em>Faster.</em></h1>
+        <p>Stop chasing tenants. Post your rooms free, earn your KYC-verified badge, and let serious seekers come to you — every enquiry routed straight to you.</p>
+        <div class="aud-hero-actions">
+          <a href="/post-ad" class="btn btn-white btn-lg"><i data-lucide="plus-circle"></i> Post a Room Free</a>
+          <a href="/signup" class="btn btn-primary btn-lg"><i data-lucide="user-plus"></i> Become a Verified Agent</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- AGENT QUICK CARDS -->
+  <section class="section" style="padding-top:0">
+    <div class="container">
+      <div class="aud-cards reveal-stagger">
+        <div class="aud-card">
+          <div class="aud-card-icon"><i data-lucide="megaphone"></i></div>
+          <h3>Free Unlimited Listings</h3>
+          <p>Post as many rooms as you manage. Photos, maps, amenities and pricing — all at no cost.</p>
+          <a href="/post-ad" class="aud-card-link">Post your first room <i data-lucide="arrow-right" style="width:14px;height:14px"></i></a>
+        </div>
+        <div class="aud-card">
+          <div class="aud-card-icon"><i data-lucide="shield-check"></i></div>
+          <h3>KYC-Verified Badge</h3>
+          <p>Complete a one-time verification and stand out with a trust badge that triples enquiries.</p>
+          <a href="/dashboard" class="aud-card-link">Get verified <i data-lucide="arrow-right" style="width:14px;height:14px"></i></a>
+        </div>
+        <div class="aud-card">
+          <div class="aud-card-icon"><i data-lucide="bar-chart-3"></i></div>
+          <h3>Track Performance</h3>
+          <p>See views, enquiries and request status for every listing from one clean dashboard.</p>
+          <a href="/dashboard" class="aud-card-link">Open dashboard <i data-lucide="arrow-right" style="width:14px;height:14px"></i></a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS FOR AGENTS -->
+  <section class="section how-it-works">
+    <div class="container">
+      <div class="text-center section-title reveal">
+        <h2>From Listing to Move-In</h2>
+        <p class="text-muted" style="max-width:480px;margin:0.5rem auto 0">We handle the marketing, you handle the keys</p>
+      </div>
+      <div class="aud-steps reveal-stagger">
+        <div class="aud-step">
+          <div class="aud-step-num">01</div>
+          <div class="aud-step-icon"><i data-lucide="camera"></i></div>
+          <h3>List Your Room</h3>
+          <p>Upload photos, set your price and mark amenities. Live in under five minutes.</p>
+        </div>
+        <div class="aud-step">
+          <div class="aud-step-num">02</div>
+          <div class="aud-step-icon"><i data-lucide="inbox"></i></div>
+          <h3>Receive Requests</h3>
+          <p>Interested seekers send requests straight to your dashboard — no time-wasters, no spam.</p>
+        </div>
+        <div class="aud-step">
+          <div class="aud-step-num">03</div>
+          <div class="aud-step-icon"><i data-lucide="key-round"></i></div>
+          <h3>Connect & Close</h3>
+          <p>Chat, arrange a viewing and hand over the keys. We're with you at every step.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- WHY AGENTS CHOOSE ROOMY -->
+  <section class="section">
+    <div class="container">
+      <div class="aud-split">
+        <div class="aud-split-img reveal reveal-scale">
+          <img src="/images/herobg.jpg" alt="Agent showing hostel room" />
+        </div>
+        <div class="reveal">
+          <h2>More Views.<br>More Moves.</h2>
+          <ul class="aud-feature-list">
+            <li><i data-lucide="check-circle"></i> <span><b>Qualified leads</b> — every enquiry comes from a real, registered seeker.</span></li>
+            <li><i data-lucide="trending-up"></i> <span><b>Featured placement</b> — quality listings get boosted across the platform.</span></li>
+            <li><i data-lucide="clock"></i> <span><b>Always-on marketing</b> — your rooms work while you sleep, 24/7.</span></li>
+            <li><i data-lucide="users"></i> <span><b>Grow your business</b> — manage multiple hostels from a single dashboard.</span></li>
+          </ul>
+          <div class="mt-3">
+            <a href="/post-ad" class="btn btn-primary btn-lg">List a Room Now <i data-lucide="arrow-right" style="width:16px;height:16px"></i></a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- AGENT CTA -->
+  <section class="section" style="padding-top:0">
+    <div class="container">
+      <div class="aud-cta reveal reveal-scale">
+        <h2>Your Rooms Deserve Better Tenants.</h2>
+        <p>Join verified agents across Ghana filling rooms faster with Roomy — free to start, always.</p>
+        <div class="aud-cta-actions">
+          <a href="/signup" class="btn btn-white btn-lg">Create Free Account</a>
+          <a href="/post-ad" class="btn btn-outline btn-lg" style="border-color:#fff;color:#fff">Post a Room</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <div class="navbar-brand" style="font-size:1.2rem"><i data-lucide="home"></i> <span class="brand-roomy">Roomy</span></div>
+          <p>Find and post hostels — get paid. Ghana's trusted room rental marketplace.</p>
+        </div>
+        <div class="footer-links">
+          <h4>Agents</h4>
+          <ul>
+            <li><a href="/post-ad">Post a Room</a></li>
+            <li><a href="/dashboard">My Listings</a></li>
+            <li><a href="/dashboard">Requests</a></li>
+          </ul>
+        </div>
+        <div class="footer-links">
+          <h4>Company</h4>
+          <ul>
+            <li><a href="/about">About Us</a></li>
+            <li><a href="/about#safety">Safety Tips</a></li>
+            <li><a href="/about#terms">Terms</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>© 2025 Roomy. All rights reserved.</span>
+        <span style="display:flex;align-items:center;gap:0.3rem">Made with <i data-lucide="heart" style="width:14px;height:14px;color:var(--primary);fill:var(--primary)"></i> in Ghana</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- MOBILE FOOTER NAV -->
+  <nav class="footer-nav" id="footerNav" data-mode="agent"></nav>
+
+  <div class="toast-container" id="toastContainer"></div>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="/js/app.js"></script>
+  <script src="/js/footernav.js"></script>
+  <script>lucide.createIcons();</script>
+  <script src="/js/animations.js"></script>
+</body>
+</html>

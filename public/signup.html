@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en" data-theme="light">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Sign Up — Roomy</title>
+  <title>Sign Up â€” Roomy</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/css/style.css" />
@@ -92,9 +92,11 @@
       </div>
     </div>
   </div>
+  <nav class="footer-nav" id="footerNav" data-mode="visitor"></nav>
 
   <div class="toast-container" id="toastContainer"></div>
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="/js/footernav.js" defer></script>
   <script src="/js/app.js"></script>
   <script>
     let pendingUUID = null;
@@ -149,10 +151,11 @@
     }
 
     async function resendOTP() {
-      showToast('Resend not yet implemented — check your email/phone', 'info');
+      showToast('Resend not yet implemented â€” check your email/phone', 'info');
     }
   </script>
   <script>lucide.createIcons();</script>
   <script src="/js/animations.js"></script>
 </body>
 </html>
+

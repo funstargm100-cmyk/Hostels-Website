@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en" data-theme="light">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Post a Room — Roomy</title>
+  <title>Post a Room â€” Roomy</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/css/style.css" />
@@ -69,7 +69,7 @@
           <div id="photoDropzone" style="border:2px dashed var(--border);border-radius:var(--radius);padding:2.5rem;text-align:center;cursor:pointer;transition:border-color var(--transition)" onclick="document.getElementById('photoInput').click()" ondragover="event.preventDefault()" ondrop="handleDrop(event)">
             <div style="display:flex;justify-content:center;margin-bottom:0.5rem"><i data-lucide="camera" style="width:40px;height:40px;color:var(--text-muted)"></i></div>
             <p style="font-weight:600">Click or drag photos here</p>
-            <p class="text-muted" style="font-size:0.82rem">JPG, PNG, WebP — up to 10 images</p>
+            <p class="text-muted" style="font-size:0.82rem">JPG, PNG, WebP â€” up to 10 images</p>
           </div>
           <input type="file" id="photoInput" name="images" multiple accept="image/*" style="display:none" onchange="handlePhotoSelect(this.files)" />
           <div id="photoPreview" class="mt-2" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:0.5rem"></div>
@@ -121,7 +121,7 @@
           <div class="form-group">
             <label class="form-label">Your Room Price (GHS) *</label>
             <div class="input-group">
-              <span class="input-icon">₵</span>
+              <span class="input-icon">â‚µ</span>
               <input type="number" class="form-control" id="adOriginalPrice" name="original_price" placeholder="e.g. 800" min="1" required oninput="calcPrice()" />
             </div>
             <div class="form-hint">Enter your desired price. Platform adds 10% commission automatically.</div>
@@ -199,10 +199,10 @@
         <div class="wizard-panel card" style="padding:1.5rem" id="step5">
           <h3 class="mb-2">Pin Your Location</h3>
           <p class="text-muted mb-2" style="font-size:0.875rem">Click on the map to drop a pin on the hostel's exact location. The address will be filled in automatically.</p>
-          <div class="alert alert-info mb-2" style="font-size:0.82rem"><i data-lucide="lock" style="width:14px;height:14px"></i> Seekers will only see an approximate area — your exact pin is kept private.</div>
+          <div class="alert alert-info mb-2" style="font-size:0.82rem"><i data-lucide="lock" style="width:14px;height:14px"></i> Seekers will only see an approximate area â€” your exact pin is kept private.</div>
           <button type="button" class="btn btn-outline btn-sm mb-2" onclick="getMyLocation()"><i data-lucide="navigation"></i> Use My Current Location</button>
           <div id="postMap" style="height:320px;border-radius:var(--radius);border:1px solid var(--border);z-index:0"></div>
-          <div id="pinStatus" class="text-muted mt-1" style="font-size:0.82rem">No pin dropped yet — click the map above.</div>
+          <div id="pinStatus" class="text-muted mt-1" style="font-size:0.82rem">No pin dropped yet â€” click the map above.</div>
           <div class="form-group mt-2">
             <label class="form-label">Area / Neighborhood *</label>
             <input type="text" class="form-control" id="adLocationArea" name="location_area" placeholder="Auto-filled when you pin, or type manually" required />
@@ -235,13 +235,16 @@
       </form>
     </div>
   </div>
+  <nav class="footer-nav" id="footerNav" data-mode="visitor"></nav>
 
   <div class="toast-container" id="toastContainer"></div>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="/js/footernav.js" defer></script>
   <script src="/js/app.js"></script>
   <script src="/js/post-ad.js"></script>
   <script>lucide.createIcons();</script>
   <script src="/js/animations.js"></script>
 </body>
 </html>
+

@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>For Seekers — Roomy</title>
+  <meta name="description" content="Find verified hostels and rooms near your university or workplace. Search, save favourites and connect safely with Roomy." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/style.css" />
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#FF6B6B" />
+</head>
+<body>
+
+  <nav class="navbar navbar-transparent" id="mainNav">
+    <div class="container">
+      <a href="/" class="navbar-brand"><i data-lucide="home"></i> <span class="brand-roomy">Roomy</span></a>
+      <ul class="navbar-nav" id="navMenu">
+        <li><a href="/">Home</a></li>
+        <li><a href="/listings" class="active">Browse Rooms</a></li>
+        <li><a href="/agents">For Agents</a></li>
+        <li><a href="/about">About</a></li>
+        <li class="nav-auth-mobile">
+          <a href="/login" class="btn btn-ghost" id="loginBtnMobile">Login</a>
+          <a href="/signup" class="btn btn-primary" id="signupBtnMobile">Sign Up Free</a>
+          <a href="/dashboard" class="btn btn-outline" id="dashboardBtnMobile" style="display:none">Dashboard</a>
+          <button class="btn btn-ghost" id="logoutBtnMobile" style="display:none">Logout</button>
+        </li>
+      </ul>
+      <div class="navbar-actions">
+        <button class="theme-toggle" id="themeToggle"><i data-lucide="moon"></i></button>
+        <a href="/login" class="btn btn-ghost btn-sm" id="loginBtn">Login</a>
+        <a href="/signup" class="btn btn-primary btn-sm" id="signupBtn">Sign Up Free</a>
+        <a href="/dashboard" class="btn btn-outline btn-sm" id="dashboardBtn" style="display:none">Dashboard</a>
+        <button class="btn btn-ghost btn-sm" id="logoutBtn" style="display:none">Logout</button>
+        <button class="hamburger" id="hamburger"><span></span><span></span><span></span></button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- SEEKER HERO -->
+  <section class="aud-hero">
+    <div class="aud-hero-bg seeker">
+      <img src="/images/herobg.jpg" alt="Hostel room" />
+    </div>
+    <div class="container">
+      <div class="aud-hero-content">
+        <span class="aud-eyebrow"><i data-lucide="search" style="width:14px;height:14px"></i> For Room Seekers</span>
+        <h1>Your Next Room Is <em>Already Listed.</em></h1>
+        <p>Skip the agents-on-the-street hustle. Search verified hostels near your campus or workplace, save your favourites and connect with owners safely — all free.</p>
+        <div class="aud-hero-actions">
+          <a href="/listings" class="btn btn-white btn-lg"><i data-lucide="search"></i> Browse Rooms Now</a>
+          <a href="/signup" class="btn btn-primary btn-lg"><i data-lucide="user-plus"></i> Create Free Account</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SEEKER QUICK CARDS -->
+  <section class="section" style="padding-top:0">
+    <div class="container">
+      <div class="aud-cards reveal-stagger">
+        <div class="aud-card">
+          <div class="aud-card-icon"><i data-lucide="map-pin"></i></div>
+          <h3>Search by Location</h3>
+          <p>Filter by area, nearest landmark and price to find rooms exactly where you want to live.</p>
+          <a href="/listings" class="aud-card-link">Explore locations <i data-lucide="arrow-right" style="width:14px;height:14px"></i></a>
+        </div>
+        <div class="aud-card">
+          <div class="aud-card-icon"><i data-lucide="heart"></i></div>
+          <h3>Save & Compare</h3>
+          <p>Tap the heart on any room to save it, then compare your shortlist side by side from your dashboard.</p>
+          <a href="/dashboard" class="aud-card-link">Go to saved rooms <i data-lucide="arrow-right" style="width:14px;height:14px"></i></a>
+        </div>
+        <div class="aud-card">
+          <div class="aud-card-icon"><i data-lucide="shield-check"></i></div>
+          <h3>Connect Safely</h3>
+          <p>Your contact details stay hidden. Request contact and we connect you directly with the verified owner.</p>
+          <a href="/about#safety" class="aud-card-link">Safety tips <i data-lucide="arrow-right" style="width:14px;height:14px"></i></a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS FOR SEEKERS -->
+  <section class="section how-it-works">
+    <div class="container">
+      <div class="text-center section-title reveal">
+        <h2>Three Steps to Your New Room</h2>
+        <p class="text-muted" style="max-width:480px;margin:0.5rem auto 0">From search to move-in, it's that simple</p>
+      </div>
+      <div class="aud-steps reveal-stagger">
+        <div class="aud-step">
+          <div class="aud-step-num">01</div>
+          <div class="aud-step-icon"><i data-lucide="search"></i></div>
+          <h3>Search & Filter</h3>
+          <p>Set your budget, location and amenities. See only rooms that actually fit your life.</p>
+        </div>
+        <div class="aud-step">
+          <div class="aud-step-num">02</div>
+          <div class="aud-step-icon"><i data-lucide="message-circle"></i></div>
+          <h3>Request Contact</h3>
+          <p>Found the one? Tap "I'm Interested" — we notify the owner without exposing your number.</p>
+        </div>
+        <div class="aud-step">
+          <div class="aud-step-num">03</div>
+          <div class="aud-step-icon"><i data-lucide="door-open"></i></div>
+          <h3>Move In</h3>
+          <p>Connect with the verified owner, view the room and settle in. No middlemen fees, ever.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- WHY SEEKERS LOVE ROOMY -->
+  <section class="section">
+    <div class="container">
+      <div class="aud-split">
+        <div class="reveal">
+          <h2>Built for Students,<br>Trusted by Everyone</h2>
+          <ul class="aud-feature-list">
+            <li><i data-lucide="check-circle"></i> <span><b>Verified owners only</b> — every listing owner passes KYC checks before going live.</span></li>
+            <li><i data-lucide="eye-off"></i> <span><b>Privacy first</b> — owners never see your phone number until you say so.</span></li>
+            <li><i data-lucide="wallet"></i> <span><b>Zero fees</b> — searching, saving and connecting is completely free.</span></li>
+            <li><i data-lucide="map"></i> <span><b>Campus coverage</b> — listings across 10+ cities near major universities and workplaces.</span></li>
+          </ul>
+          <div class="mt-3">
+            <a href="/listings" class="btn btn-primary btn-lg">Find My Room <i data-lucide="arrow-right" style="width:16px;height:16px"></i></a>
+          </div>
+        </div>
+        <div class="aud-split-img reveal reveal-scale">
+          <img src="/images/herobg.jpg" alt="Student hostel room" />
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SEEKER CTA -->
+  <section class="section" style="padding-top:0">
+    <div class="container">
+      <div class="aud-cta reveal reveal-scale">
+        <h2>Stop Searching. Start Living.</h2>
+        <p>Create your free account to save rooms, track requests and get notified when new listings drop near you.</p>
+        <div class="aud-cta-actions">
+          <a href="/signup" class="btn btn-white btn-lg">Sign Up Free</a>
+          <a href="/listings" class="btn btn-outline btn-lg" style="border-color:#fff;color:#fff">Just Browsing</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <div class="navbar-brand" style="font-size:1.2rem"><i data-lucide="home"></i> <span class="brand-roomy">Roomy</span></div>
+          <p>Find and post hostels — get paid. Ghana's trusted room rental marketplace.</p>
+        </div>
+        <div class="footer-links">
+          <h4>Seekers</h4>
+          <ul>
+            <li><a href="/listings">Browse Rooms</a></li>
+            <li><a href="/listings?sort=newest">New Listings</a></li>
+            <li><a href="/dashboard">My Requests</a></li>
+          </ul>
+        </div>
+        <div class="footer-links">
+          <h4>Company</h4>
+          <ul>
+            <li><a href="/about">About Us</a></li>
+            <li><a href="/about#safety">Safety Tips</a></li>
+            <li><a href="/about#terms">Terms</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>© 2025 Roomy. All rights reserved.</span>
+        <span style="display:flex;align-items:center;gap:0.3rem">Made with <i data-lucide="heart" style="width:14px;height:14px;color:var(--primary);fill:var(--primary)"></i> in Ghana</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- MOBILE FOOTER NAV -->
+  <nav class="footer-nav" id="footerNav" data-mode="seeker"></nav>
+
+  <div class="toast-container" id="toastContainer"></div>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="/js/app.js"></script>
+  <script src="/js/footernav.js"></script>
+  <script>lucide.createIcons();</script>
+  <script src="/js/animations.js"></script>
+</body>
+</html>

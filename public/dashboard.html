@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en" data-theme="light">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Dashboard — Roomy</title>
+  <title>Dashboard â€” Roomy</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/css/style.css" />
@@ -51,7 +51,7 @@
 
         <div id="ownerBanner" class="owner-banner" style="display:none">
           <div>
-            <h2 style="font-size:1.3rem">Welcome back, <span id="ownerGreeting">Owner</span> 👋</h2>
+            <h2 style="font-size:1.3rem">Welcome back, <span id="ownerGreeting">Owner</span> ðŸ‘‹</h2>
             <p>Manage your rooms, track views and connect with seekers.</p>
           </div>
           <a href="/post-ad" class="btn btn-white"><i data-lucide="plus"></i> Post New Room</a>
@@ -100,12 +100,15 @@
   </div>
 
   <nav class="mobile-tabs" id="mobileTabs"></nav>
+  <nav class="footer-nav" id="footerNav" data-mode="visitor"></nav>
 
   <div class="toast-container" id="toastContainer"></div>
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="/js/footernav.js" defer></script>
   <script src="/js/app.js"></script>
   <script src="/js/dashboard.js"></script>
   <script>lucide.createIcons();</script>
   <script src="/js/animations.js"></script>
 </body>
 </html>
+

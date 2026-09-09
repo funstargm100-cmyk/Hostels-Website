@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en" data-theme="light">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Room Details — Roomy</title>
+  <title>Room Details â€” Roomy</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/css/style.css" />
@@ -99,7 +99,7 @@
           </div>
         </div>
 
-        <!-- RIGHT COLUMN — PRICE BOX -->
+        <!-- RIGHT COLUMN â€” PRICE BOX -->
         <div>
           <div class="price-box">
             <div class="occupancy-tag" id="occupancyTag"></div>
@@ -131,7 +131,7 @@
     <div class="modal">
       <div class="modal-header">
         <h3>Express Interest</h3>
-        <button class="modal-close" onclick="closeModal('interestModal')">✕</button>
+        <button class="modal-close" onclick="closeModal('interestModal')">âœ•</button>
       </div>
       <div class="alert alert-info mb-2">We'll contact you and arrange the connection. Your privacy is protected.</div>
       <form id="interestForm" onsubmit="submitInterest(event)">
@@ -165,7 +165,7 @@
     <div class="modal">
       <div class="modal-header">
         <h3>Report Listing</h3>
-        <button class="modal-close" onclick="closeModal('reportModal')">✕</button>
+        <button class="modal-close" onclick="closeModal('reportModal')">âœ•</button>
       </div>
       <form onsubmit="submitReport(event)">
         <div class="form-group">
@@ -187,13 +187,16 @@
       </form>
     </div>
   </div>
+  <nav class="footer-nav" id="footerNav" data-mode="visitor"></nav>
 
   <div class="toast-container" id="toastContainer"></div>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="/js/footernav.js" defer></script>
   <script src="/js/app.js"></script>
   <script src="/js/listing-detail.js"></script>
   <script>lucide.createIcons();</script>
   <script src="/js/animations.js"></script>
 </body>
 </html>
+

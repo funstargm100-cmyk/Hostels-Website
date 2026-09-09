@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en" data-theme="light">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Login — Roomy</title>
+  <title>Login â€” Roomy</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/css/style.css" />
@@ -47,8 +47,11 @@
       <p style="text-align:center;font-size:0.875rem">Don't have an account? <a href="/signup" style="color:var(--primary);font-weight:600">Sign up free</a></p>
     </div>
   </div>
+  <nav class="footer-nav" id="footerNav" data-mode="visitor"></nav>
+
   <div class="toast-container" id="toastContainer"></div>
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="/js/footernav.js" defer></script>
   <script src="/js/app.js"></script>
   <script>
     async function handleLogin(e) {
@@ -77,3 +80,4 @@
   <script src="/js/animations.js"></script>
 </body>
 </html>
+

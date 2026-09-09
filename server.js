@@ -38,7 +38,7 @@ app.use('/api/user', require('./src/routes/user'));
 app.use('/api/payments', require('./src/routes/payments'));
 
 // Serve frontend pages
-const pages = ['', 'listings', 'listing', 'post-ad', 'edit-listing', 'login', 'signup', 'dashboard', 'admin', 'about', 'contact'];
+const pages = ['', 'listings', 'listing', 'post-ad', 'edit-listing', 'login', 'signup', 'dashboard', 'admin', 'about', 'contact', 'seekers', 'agents'];
 pages.forEach(page => {
   const route = page ? `/${page}` : '/';
   const file = page ? `${page}.html` : 'index.html';
