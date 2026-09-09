@@ -315,12 +315,12 @@ textarea{ resize:vertical; min-height:110px; }
 
 /* reveal animation helper */
 .reveal{ opacity:0; transform:translateY(18px); transition:opacity .6s ease, transform .6s ease; }
-.reveal.revealed{ opacity:1; transform:none; }
-.reveal-stagger.revealed > *{ animation:fadeUp .55s ease both; }
-.reveal-stagger.revealed > *:nth-child(1){ animation-delay:.02s; }
-.reveal-stagger.revealed > *:nth-child(2){ animation-delay:.09s; }
-.reveal-stagger.revealed > *:nth-child(3){ animation-delay:.16s; }
-.reveal-stagger.revealed > *:nth-child(4){ animation-delay:.23s; }
+.reveal.in-view{ opacity:1; transform:none; }
+.reveal-stagger.in-view > *{ animation:fadeUp .55s ease both; }
+.reveal-stagger.in-view > *:nth-child(1){ animation-delay:.02s; }
+.reveal-stagger.in-view > *:nth-child(2){ animation-delay:.09s; }
+.reveal-stagger.in-view > *:nth-child(3){ animation-delay:.16s; }
+.reveal-stagger.in-view > *:nth-child(4){ animation-delay:.23s; }
 @keyframes fadeUp{ from{ opacity:0; transform:translateY(14px);} to{ opacity:1; transform:none;} }
 
 /* ── toast ───────────────────────────────────────────────────────────── */
