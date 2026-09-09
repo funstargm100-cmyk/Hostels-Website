@@ -201,7 +201,14 @@ function initMap(lat, lng, area) {
     mapEl.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-muted)">${area}</div>`;
     return;
   }
-  const map = L.map(mapEl).setView([lat, lng], 15);
+  const map = L.map(mapEl, {
+    scrollWheelZoom: false,
+    tap: true,
+    zoomSnap: 0.5,
+    inertia: false // reduce jank on low-end mobile devices
+  }).setView([lat, lng], 15);
+  // fix: invalidateSize after render so the map doesn't overflow its container on mobile
+  setTimeout(() => map.invalidateSize(), 200);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
     maxZoom: 19

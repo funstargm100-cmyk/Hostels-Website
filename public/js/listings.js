@@ -68,7 +68,7 @@ function renderPagination(current, total) {
 }
 
 function goPage(p) { currentPage = p; loadListings(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
-function applyFilters() { currentPage = 1; loadListings(); }
+function applyFilters() { currentPage = 1; loadListings(); closeFilters(); }
 function clearFilters() {
   document.getElementById('searchLocation').value = '';
   const toolbarInput = document.getElementById('toolbarSearch');
@@ -112,6 +112,7 @@ function filterNearMe() {
   });
 }
 function toggleFilters() { document.getElementById('filtersPanel').classList.toggle('open'); }
+function closeFilters() { document.getElementById('filtersPanel').classList.remove('open'); }
 function setView(v) { currentView = v; loadListings(); }
 
 // Pre-fill from URL params
