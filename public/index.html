@@ -34,8 +34,8 @@
 <header class="hero">
   <div class="hero-inner reveal">
     <div class="hero-eyebrow"><i data-lucide="map-pin"></i> Accra · Kumasi · Takoradi · Tamale</div>
-    <h1>A room that actually <em>fits your life.</em></h1>
-    <p>Verified hostels, self-contained rooms and shared houses across Ghana — browse real photos, message owners safely, and move in without the runaround.</p>
+    <h1 id="heroTitle">A room that actually <em>fits your life.</em></h1>
+    <p id="heroSub">Verified hostels, self-contained rooms and shared houses across Ghana — browse real photos, message owners safely, and move in without the runaround.</p>
 
     <form class="search-card" onsubmit="event.preventDefault(); location.href='/listings?location='+encodeURIComponent(this.q.value)+'&max_price='+this.budget.value">
       <div class="form-group" style="margin-bottom:0">
@@ -57,6 +57,9 @@
   <div class="stat-block"><div class="num">10%</div><div class="lbl">All-in service fee</div></div>
   <div class="stat-block"><div class="num">0</div><div class="lbl">Direct-contact scams</div></div>
 </section>
+
+<!-- ══ VISITOR HOME ══════════════════════════════════════════════════════ -->
+<div id="homeVisitor">
 
 <section class="container reveal" style="padding-top:.4rem">
   <div class="section-head">
@@ -137,6 +140,133 @@
     <a href="/post-ad" class="btn btn-secondary btn-lg">Post your room</a>
   </div>
 </section>
+</div><!-- /homeVisitor -->
+
+<!-- ══ SEEKER HOME ═══════════════════════════════════════════════════════ -->
+<div id="homeSeeker" style="display:none">
+  <section class="section container" style="padding-top:1.6rem">
+    <div class="section-head">
+      <div>
+        <h2 id="seekerGreeting">Welcome back</h2>
+        <p class="text-muted" style="margin:0">Find a hostel with ease — no roaming around town. Search, shortlist and connect, all in one place.</p>
+      </div>
+      <a href="/dashboard" class="btn btn-outline btn-sm"><i data-lucide="heart"></i> Saved rooms</a>
+    </div>
+    <div class="aud-cards reveal-stagger">
+      <div class="aud-card">
+        <div class="aud-card-icon"><i data-lucide="map-pin"></i></div>
+        <h3>Search near you</h3>
+        <p>Filter by area, budget and amenities — see only rooms that actually fit your life.</p>
+        <a href="/listings" class="aud-card-link">Start searching <i data-lucide="arrow-right" style="width:14px;height:14px"></i></a>
+      </div>
+      <div class="aud-card">
+        <div class="aud-card-icon"><i data-lucide="heart"></i></div>
+        <h3>Your shortlist</h3>
+        <p>Rooms you've saved, ready to compare side by side before you commit.</p>
+        <a href="/dashboard" class="aud-card-link">View saved rooms <i data-lucide="arrow-right" style="width:14px;height:14px"></i></a>
+      </div>
+      <div class="aud-card">
+        <div class="aud-card-icon"><i data-lucide="message-circle"></i></div>
+        <h3>Your requests</h3>
+        <p>Track every enquiry in one place — know the moment an owner responds.</p>
+        <a href="/dashboard" class="aud-card-link">Track requests <i data-lucide="arrow-right" style="width:14px;height:14px"></i></a>
+      </div>
+    </div>
+  </section>
+
+  <section class="section container">
+    <div class="section-head">
+      <div>
+        <h2>Pick up where you left off</h2>
+        <p class="text-muted" style="margin:0">Fresh rooms near the areas you're searching.</p>
+      </div>
+      <a href="/listings" class="btn btn-outline">See all rooms</a>
+    </div>
+    <div class="hscroll" id="featuredListingsSeeker"></div>
+  </section>
+
+  <section class="section container">
+    <div class="section-head">
+      <div>
+        <h2>Popular near campus</h2>
+        <p class="text-muted" style="margin:0">Where students and young workers are looking right now.</p>
+      </div>
+    </div>
+    <div class="area-chips">
+      <a class="area-chip" href="/listings?location=Legon"><i data-lucide="graduation-cap"></i> Legon</a>
+      <a class="area-chip" href="/listings?location=KNUST%2F%20Ayeduase"><i data-lucide="graduation-cap"></i> KNUST / Ayeduase</a>
+      <a class="area-chip" href="/listings?location=East%20Legon"><i data-lucide="map-pin"></i> East Legon</a>
+      <a class="area-chip" href="/listings?location=Adenta"><i data-lucide="map-pin"></i> Adenta</a>
+      <a class="area-chip" href="/listings?location=Madina"><i data-lucide="map-pin"></i> Madina</a>
+      <a class="area-chip" href="/listings?location=Takoradi"><i data-lucide="map-pin"></i> Takoradi</a>
+      <a class="area-chip" href="/listings"><i data-lucide="compass"></i> See all areas</a>
+    </div>
+  </section>
+
+  <section class="section container reveal">
+    <div class="section-head"><h2>Why seekers trust Roomy</h2></div>
+    <div class="why-grid">
+      <div class="why-card"><i data-lucide="badge-check"></i><h3>Verified rooms only</h3><p class="text-muted">Every listing passes human review before it goes live.</p></div>
+      <div class="why-card"><i data-lucide="droplets"></i><h3>The real picture</h3><p class="text-muted">Water flow, power, bathroom type — known before you visit.</p></div>
+      <div class="why-card"><i data-lucide="shield"></i><h3>Your number stays yours</h3><p class="text-muted">Contacts are only shared after both sides confirm interest.</p></div>
+      <div class="why-card"><i data-lucide="wallet"></i><h3>No hidden charges</h3><p class="text-muted">Browsing and requests are free. One flat 10% fee at the end.</p></div>
+    </div>
+  </section>
+</div><!-- /homeSeeker -->
+
+<!-- ══ AGENT HOME ════════════════════════════════════════════════════════ -->
+<div id="homeAgent" style="display:none">
+  <section class="section container" style="padding-top:1.6rem">
+    <div class="section-head">
+      <div>
+        <h2 id="agentGreeting">Welcome back</h2>
+        <p class="text-muted" style="margin:0">Find hostels, post rooms and get paid — your whole rental business in one place.</p>
+      </div>
+      <a href="/post-ad" class="btn btn-primary btn-sm"><i data-lucide="plus-circle"></i> Post a room</a>
+    </div>
+    <div class="aud-cards reveal-stagger">
+      <div class="aud-card">
+        <div class="aud-card-icon"><i data-lucide="plus-circle"></i></div>
+        <h3>Post a hostel</h3>
+        <p>List a room in under five minutes — photos, map, amenities and pricing, free.</p>
+        <a href="/post-ad" class="aud-card-link">Post your room <i data-lucide="arrow-right" style="width:14px;height:14px"></i></a>
+      </div>
+      <div class="aud-card">
+        <div class="aud-card-icon"><i data-lucide="layout-dashboard"></i></div>
+        <h3>Manage listings</h3>
+        <p>See views, enquiries and status for every room you manage, all in one dashboard.</p>
+        <a href="/dashboard" class="aud-card-link">Open dashboard <i data-lucide="arrow-right" style="width:14px;height:14px"></i></a>
+      </div>
+      <div class="aud-card">
+        <div class="aud-card-icon"><i data-lucide="wallet"></i></div>
+        <h3>Get paid</h3>
+        <p>Track your confirmed connections and earnings — payments land in your wallet.</p>
+        <a href="/dashboard" class="aud-card-link">View earnings <i data-lucide="arrow-right" style="width:14px;height:14px"></i></a>
+      </div>
+    </div>
+  </section>
+
+  <section class="section container">
+    <div class="section-head">
+      <div>
+        <h2>Your rooms, live right now</h2>
+        <p class="text-muted" style="margin:0">Recent activity on the listings you manage.</p>
+      </div>
+      <a href="/dashboard" class="btn btn-outline">Manage all</a>
+    </div>
+    <div class="hscroll" id="agentListings"></div>
+  </section>
+
+  <section class="container" style="padding-bottom:3.2rem">
+    <div class="trust-band reveal">
+      <div>
+        <h3 style="color:#fff;margin-bottom:.4rem">Fill every empty room</h3>
+        <p style="margin:0;color:#DCEAE7;max-width:42ch">Verified rooms get up to 3× more enquiries. Keep your photos fresh and your status active.</p>
+      </div>
+      <a href="/post-ad" class="btn btn-secondary btn-lg">Post another room</a>
+    </div>
+  </section>
+</div><!-- /homeAgent -->
 
 <footer class="site-footer">
   <div class="container">

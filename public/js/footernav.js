@@ -47,11 +47,33 @@
     return false;
   }
 
+  function cachedUser() {
+    try { return JSON.parse(localStorage.getItem('user') || 'null'); } catch { return null; }
+  }
+
+  function itemsFor() {
+    const user = cachedUser();
+    const role = user?.role;
+    const base = [
+      { href: '/', icon: 'home', label: 'Home' },
+      { href: '/listings', icon: 'search', label: 'Browse' },
+      { href: '/post-ad', icon: 'plus-circle', label: 'Post Room' },
+      { href: '/about', icon: 'info', label: 'About' }
+    ];
+    if (role === 'owner' || role === 'agent') {
+      base.push({ href: '/dashboard', icon: 'layout-dashboard', label: 'Dashboard' });
+    } else if (role === 'seeker') {
+      base.push({ href: '/dashboard', icon: 'user', label: 'Profile' });
+    } else {
+      base.push({ href: '/signup', icon: 'user-plus', label: 'Join' });
+    }
+    return base;
+  }
+
   function render() {
     const el = document.getElementById('footerNav');
     if (!el) return;
-    // Same nav on every page — no per-page modes
-    const items = NAVS.visitor;
+    const items = itemsFor();
     el.innerHTML = items.map(it => `
       <a href="${it.href}" class="footer-nav-item ${isActive(it) ? 'active' : ''}">
         <i data-lucide="${it.icon}"></i><span>${it.label}</span>
@@ -60,5 +82,6 @@
   }
 
   window.initFooterNav = render;
+  window.renderFooterNav = render; // called by home.js after auth state resolves
   document.addEventListener('DOMContentLoaded', render);
 })();
