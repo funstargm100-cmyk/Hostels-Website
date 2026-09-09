@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Admin Panel — Roomy</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/css/style.css" />
 </head>
 <body>
@@ -35,17 +35,16 @@
 
       <main>
         <div id="admin-tab-overview">
-          <h2 class="mb-3">Platform Overview</h2>
+          <h2 class="mb-3">Platform overview</h2>
           <div class="stat-cards" id="adminStats"></div>
         </div>
 
         <div id="admin-tab-listings" style="display:none">
           <div class="flex-between mb-3">
-            <h2>Listings Moderation</h2>
+            <h2>Listings moderation</h2>
             <select class="form-control" id="listingStatusFilter" style="width:auto" onchange="loadAdminListings()">
               <option value="pending">Pending Review</option>
               <option value="active">Active</option>
-              <option value="deactivated">Deactivated</option>
               <option value="rejected">Rejected</option>
             </select>
           </div>
@@ -54,7 +53,7 @@
 
         <div id="admin-tab-requests" style="display:none">
           <div class="flex-between mb-3">
-            <h2>Contact Requests</h2>
+            <h2>Contact requests</h2>
             <select class="form-control" id="requestStatusFilter" style="width:auto" onchange="loadAdminRequests()">
               <option value="received">New</option>
               <option value="in_progress">In Progress</option>
@@ -68,7 +67,7 @@
 
         <div id="admin-tab-users" style="display:none">
           <div class="flex-between mb-3">
-            <h2>User Management</h2>
+            <h2>User management</h2>
             <select class="form-control" id="userRoleFilter" style="width:auto" onchange="loadAdminUsers()">
               <option value="">All Users</option>
               <option value="seeker">Seekers</option>
@@ -80,12 +79,12 @@
         </div>
 
         <div id="admin-tab-reports" style="display:none">
-          <h2 class="mb-3">Flagged Reports</h2>
+          <h2 class="mb-3">Flagged reports</h2>
           <div id="adminReportsTable"></div>
         </div>
 
         <div id="admin-tab-logs" style="display:none">
-          <h2 class="mb-3">Audit Logs</h2>
+          <h2 class="mb-3">Audit logs</h2>
           <div id="adminLogsTable"></div>
         </div>
       </main>
@@ -127,20 +126,6 @@
         <textarea class="form-control" id="rejectReason" rows="3" placeholder="Explain why this listing is being rejected..." required></textarea>
       </div>
       <button class="btn btn-primary btn-block" onclick="confirmReject()">Confirm Rejection</button>
-    </div>
-  </div>
-
-  <div class="modal-overlay" id="deleteModal">
-    <div class="modal">
-      <div class="modal-header">
-        <h3>Delete Listing</h3>
-        <button class="modal-close" onclick="closeModal('deleteModal')">✕</button>
-      </div>
-      <div class="mb-3" style="font-size:0.875rem;color:var(--text-muted)">Permanently remove this listing? This cannot be undone.</div>
-      <div class="flex-between">
-        <button class="btn btn-ghost btn-sm" onclick="closeModal('deleteModal')">Cancel</button>
-        <button class="btn btn-sm" style="background:#fee2e2;color:#991b1b" onclick="confirmDelete()">Delete Permanently</button>
-      </div>
     </div>
   </div>
 

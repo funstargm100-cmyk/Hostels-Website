@@ -1,11 +1,11 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en" data-theme="light">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Browse Rooms â€” Roomy</title>
+  <title>Browse Rooms — Roomy</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/css/style.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
@@ -21,7 +21,7 @@
         <li class="nav-auth-mobile">
           <a href="/login" class="btn btn-ghost" id="loginBtnMobile">Login</a>
           <a href="/signup" class="btn btn-primary" id="signupBtnMobile">Sign Up Free</a>
-          <a href="/dashboard" class="btn btn-outline" id="dashboardBtnMobile" style="display:none">Dashboard</a>
+          <a href="/dashboard" class="btn btn-outline nav-profile-link" id="dashboardBtnMobile" style="display:none"><i data-lucide="user-circle"></i> Profile</a>
           <button class="btn btn-ghost" id="logoutBtnMobile" style="display:none">Logout</button>
         </li>
       </ul>
@@ -29,7 +29,7 @@
         <button class="theme-toggle" id="themeToggle"><i data-lucide="moon"></i></button>
         <a href="/login" class="btn btn-ghost btn-sm" id="loginBtn">Login</a>
         <a href="/signup" class="btn btn-primary btn-sm" id="signupBtn">Sign Up Free</a>
-        <a href="/dashboard" class="btn btn-outline btn-sm" id="dashboardBtn" style="display:none">Dashboard</a>
+        <a href="/dashboard" class="btn btn-outline btn-sm nav-profile-link" id="dashboardBtn" style="display:none"><i data-lucide="user-circle"></i> Profile</a>
         <button class="btn btn-ghost btn-sm" id="logoutBtn" style="display:none">Logout</button>
         <button class="hamburger" id="hamburger"><span></span><span></span><span></span></button>
       </div>
@@ -38,25 +38,25 @@
 
   <div class="search-sticky">
     <div class="container">
-      <div class="search-bar-row" style="display:flex;gap:0.75rem;flex-wrap:wrap;align-items:center">
-        <div class="search-main" style="display:flex;gap:0.4rem;align-items:center;flex:1 1 auto;min-width:0">
+      <div class="search-bar-row">
+        <div class="search-main">
           <div class="input-group" style="flex:1;min-width:180px">
             <span class="input-icon"><i data-lucide="map-pin"></i></span>
             <input type="text" class="form-control" id="searchLocation" placeholder="Location or university..." />
           </div>
           <button class="btn btn-primary" onclick="applyFilters()"><i data-lucide="search"></i> Search</button>
         </div>
-        <div class="search-secondary" style="display:flex;gap:0.4rem;flex-wrap:wrap;align-items:center">
+        <div class="search-secondary">
           <button class="btn btn-ghost" onclick="toggleFilters()"><i data-lucide="sliders-horizontal"></i> Filters</button>
           <button class="btn btn-ghost" id="nearMeBtn" onclick="filterNearMe()" title="Show rooms near me"><i data-lucide="navigation"></i> Near Me</button>
-          <div class="view-sort-row" style="display:flex;gap:0.4rem;align-items:center">
-            <button class="btn btn-ghost btn-sm" onclick="setView('grid')" title="Grid"><i data-lucide="layout-grid"></i></button>
-            <button class="btn btn-ghost btn-sm" onclick="setView('list')" title="List"><i data-lucide="list"></i></button>
+          <div class="view-sort-row">
+            <button class="btn btn-ghost btn-sm btn-icon" onclick="setView('grid')" title="Grid"><i data-lucide="layout-grid"></i></button>
+            <button class="btn btn-ghost btn-sm btn-icon" onclick="setView('list')" title="List"><i data-lucide="list"></i></button>
             <select class="form-control" id="sortSelect" style="width:auto" onchange="applyFilters()">
               <option value="">Sort: Featured</option>
               <option value="newest">Newest</option>
-              <option value="price_asc">Price: Low â†’ High</option>
-              <option value="price_desc">Price: High â†’ Low</option>
+              <option value="price_asc">Price: Low → High</option>
+              <option value="price_desc">Price: High → Low</option>
               <option value="rating">Top Rated</option>
             </select>
           </div>
@@ -65,7 +65,7 @@
     </div>
   </div>
 
-  <div class="container" style="padding-top:1.5rem;padding-bottom:2rem">
+  <div class="container" style="padding-top:1.75rem;padding-bottom:2rem">
     <div class="listings-layout">
       <aside class="filters-panel" id="filtersPanel">
         <div class="flex-between mb-2">
@@ -73,15 +73,15 @@
           <button class="btn btn-ghost btn-sm" onclick="clearFilters()">Clear all</button>
         </div>
         <div class="filter-section">
-          <div class="filter-title">Price Range (GHS)</div>
+          <div class="filter-title">Price range (GHS)</div>
           <div class="price-range">
             <input type="number" class="form-control" id="minPrice" placeholder="Min" style="width:80px" />
-            <span style="color:var(--text-muted)">â€”</span>
+            <span style="color:var(--text-muted)">—</span>
             <input type="number" class="form-control" id="maxPrice" placeholder="Max" style="width:80px" />
           </div>
         </div>
         <div class="filter-section">
-          <div class="filter-title">Occupancy Type</div>
+          <div class="filter-title">Occupancy type</div>
           <div class="checkbox-group" style="flex-direction:column">
             <label class="checkbox-item"><input type="radio" name="occupancy" value="" checked onchange="applyFilters()"> Any</label>
             <label class="checkbox-item"><input type="radio" name="occupancy" value="1" onchange="applyFilters()"> 1 in 1</label>
@@ -91,7 +91,7 @@
           </div>
         </div>
         <div class="filter-section">
-          <div class="filter-title">Gender Preference</div>
+          <div class="filter-title">Gender preference</div>
           <select class="form-control" id="genderFilter" onchange="applyFilters()">
             <option value="">Any</option>
             <option value="male">Male Only</option>
@@ -107,7 +107,7 @@
           </div>
         </div>
         <div class="filter-section">
-          <div class="filter-title">Water Supply</div>
+          <div class="filter-title">Water supply</div>
           <select class="form-control" id="waterFilter" onchange="applyFilters()">
             <option value="">Any</option>
             <option value="constant">Constant</option>
@@ -141,7 +141,7 @@
             <option value="shared">Shared</option>
           </select>
         </div>
-        <button class="btn btn-primary btn-block mt-2" onclick="applyFilters()">Apply Filters</button>
+        <button class="btn btn-primary btn-block mt-2" onclick="applyFilters()">Apply filters</button>
       </aside>
 
       <div>
@@ -151,16 +151,13 @@
       </div>
     </div>
   </div>
-  <nav class="footer-nav" id="footerNav" data-mode="visitor"></nav>
 
   <div class="toast-container" id="toastContainer"></div>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-  <script src="/js/footernav.js" defer></script>
   <script src="/js/app.js"></script>
   <script src="/js/listings.js"></script>
   <script>lucide.createIcons();</script>
   <script src="/js/animations.js"></script>
 </body>
 </html>
-

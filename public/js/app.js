@@ -11,16 +11,7 @@ const api = {
     if (body) opts.body = JSON.stringify(body);
     const res = await fetch(url, opts);
     const data = await res.json();
-    if (!res.ok) {
-      // Suspended accounts: force logout so the block takes effect immediately
-      if (res.status === 403 && /suspended/i.test(data.error || '')) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        alert(data.error);
-        location.href = '/login';
-      }
-      throw new Error(data.error || 'Request failed');
-    }
+    if (!res.ok) throw new Error(data.error || 'Request failed');
     return data;
   },
   get: (url) => api.request('GET', url),
@@ -35,16 +26,8 @@ const api = {
       body: formData,
       headers: token ? { Authorization: `Bearer ${token}` } : {}
     });
-    // Server may return HTML/plain text on errors (e.g. 413 body too large)
-    const contentType = res.headers.get('content-type') || '';
-    const data = contentType.includes('application/json') ? await res.json() : { error: await res.text() };
-    if (!res.ok) {
-      const msg = (data.error || '').replace(/<[^>]*>/g, '').trim();
-      throw new Error(res.status === 413
-        ? 'Upload too large. Try fewer or smaller photos.'
-        : (msg || 'Upload failed'));
-    }
-    return data;
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Upload failed');
     return data;
   }
 };

@@ -1,6 +1,5 @@
 let pendingRejectId = null;
 let pendingRequestId = null;
-let pendingDeleteId = null;
 
 async function initAdmin() {
   const user = await initNavAuth();
@@ -42,11 +41,10 @@ async function loadAdminListings() {
         <td>${l.owner_name}<br><span class="text-muted" style="font-size:0.75rem">${l.owner_email}</span></td>
         <td>GHS ${Number(l.listed_price).toLocaleString()}</td>
         <td>${new Date(l.created_at).toLocaleDateString()}</td>
-         <td style="display:flex;gap:0.4rem;flex-wrap:wrap">
-           ${status === 'pending' ? `<button class="btn btn-secondary btn-sm" onclick="approveListing(${l.id})"><i data-lucide="check" style="width:14px;height:14px"></i> Approve</button><button class="btn btn-sm" style="background:#fee2e2;color:#991b1b" onclick="openRejectModal(${l.id})"><i data-lucide="x" style="width:14px;height:14px"></i> Reject</button>` : ''}
-           ${status === 'active' ? `<button class="btn btn-ghost btn-sm" onclick="markUnavailable(${l.id})">Mark Unavailable</button><button class="btn btn-sm" style="background:#fee2e2;color:#991b1b" onclick="openDeleteModal(${l.id})"><i data-lucide="trash-2" style="width:14px;height:14px"></i> Delete</button>` : ''}
-           ${status === 'deactivated' ? `<button class="btn btn-secondary btn-sm" onclick="reactivateListing(${l.id})"><i data-lucide="refresh-cw" style="width:14px;height:14px"></i> Reactivate</button><button class="btn btn-sm" style="background:#fee2e2;color:#991b1b" onclick="openDeleteModal(${l.id})"><i data-lucide="trash-2" style="width:14px;height:14px"></i> Delete</button>` : ''}
-         </td>
+        <td style="display:flex;gap:0.4rem;flex-wrap:wrap">
+          ${status === 'pending' ? `<button class="btn btn-secondary btn-sm" onclick="approveListing(${l.id})"><i data-lucide="check" style="width:14px;height:14px"></i> Approve</button><button class="btn btn-sm" style="background:#fee2e2;color:#991b1b" onclick="openRejectModal(${l.id})"><i data-lucide="x" style="width:14px;height:14px"></i> Reject</button>` : ''}
+          ${status === 'active' ? `<button class="btn btn-ghost btn-sm" onclick="rejectListing(${l.id},'Removed by admin')">Remove</button>` : ''}
+        </td>
       </tr>`).join('') + '</tbody></table></div>';
     if (typeof lucide !== 'undefined') lucide.createIcons();
   } catch (e) { el.innerHTML = `<p class="text-muted">${e.message}</p>`; }
@@ -69,34 +67,6 @@ async function confirmReject() {
     await api.put(`/api/admin/listings/${pendingRejectId}/reject`, { reason });
     closeModal('rejectModal');
     showToast('Listing rejected', 'success');
-    loadAdminListings();
-  } catch (e) { showToast(e.message, 'error'); }
-}
-
-async function markUnavailable(id) {
-  if (!confirm('Mark this listing as unavailable?')) return;
-  try {
-    await api.put(`/api/admin/listings/${id}/deactivate`);
-    showToast('Listing marked as unavailable', 'success');
-    loadAdminListings();
-  } catch (e) { showToast(e.message, 'error'); }
-}
-
-async function reactivateListing(id) {
-  try {
-    await api.put(`/api/admin/listings/${id}/reactivate`);
-    showToast('Listing reactivated', 'success');
-    loadAdminListings();
-  } catch (e) { showToast(e.message, 'error'); }
-}
-
-function openDeleteModal(id) { pendingDeleteId = id; openModal('deleteModal'); }
-
-async function confirmDelete() {
-  try {
-    await api.delete(`/api/admin/listings/${pendingDeleteId}`);
-    closeModal('deleteModal');
-    showToast('Listing deleted', 'success');
     loadAdminListings();
   } catch (e) { showToast(e.message, 'error'); }
 }

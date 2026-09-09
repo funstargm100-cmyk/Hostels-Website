@@ -1,18 +1,18 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en" data-theme="light">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Login â€” Roomy</title>
+  <title>Login — Roomy</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/css/style.css" />
   <style>
-    .auth-page { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #fff0f0 0%, #f0fffe 100%); padding: 2rem 1rem; }
-    [data-theme="dark"] .auth-page { background: linear-gradient(135deg, #1e0a0a 0%, #0a1e1d 100%); }
-    .auth-card { background: var(--bg); border-radius: var(--radius); box-shadow: var(--shadow-lg); padding: 2.5rem; width: 100%; max-width: 420px; }
+    .auth-page { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(160deg, var(--marigold-light) 0%, var(--cream) 60%); padding: 2rem 1rem; }
+    [data-theme="dark"] .auth-page { background: linear-gradient(160deg, #2E2415 0%, var(--bg) 60%); }
+    .auth-card { background: var(--paper); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); padding: 2.75rem; width: 100%; max-width: 420px; border: 1px solid var(--border); }
     .auth-logo { text-align: center; margin-bottom: 1.5rem; }
-    .auth-logo a { font-family: var(--font-head); font-size: 1.6rem; font-weight: 700; color: var(--primary); }
+    .auth-logo a { font-family: var(--font-head); font-size: 1.6rem; font-weight: 700; color: var(--clay); }
     .auth-logo a span { color: var(--text); }
     .auth-divider { display: flex; align-items: center; gap: 0.75rem; margin: 1.25rem 0; color: var(--text-muted); font-size: 0.82rem; }
     .auth-divider::before, .auth-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
@@ -38,20 +38,17 @@
           <input type="password" class="form-control" id="loginPassword" required autocomplete="current-password" />
         </div>
         <div style="text-align:right;margin-bottom:1rem">
-          <a href="/forgot-password" style="font-size:0.82rem;color:var(--primary)">Forgot password?</a>
+          <a href="/forgot-password" style="font-size:0.82rem;color:var(--clay)">Forgot password?</a>
         </div>
         <button type="submit" class="btn btn-primary btn-block btn-lg" id="loginBtn">Sign In</button>
       </form>
 
       <div class="auth-divider">or</div>
-      <p style="text-align:center;font-size:0.875rem">Don't have an account? <a href="/signup" style="color:var(--primary);font-weight:600">Sign up free</a></p>
+      <p style="text-align:center;font-size:0.875rem">Don't have an account? <a href="/signup" style="color:var(--clay);font-weight:600">Sign up free</a></p>
     </div>
   </div>
-  <nav class="footer-nav" id="footerNav" data-mode="visitor"></nav>
-
   <div class="toast-container" id="toastContainer"></div>
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-  <script src="/js/footernav.js" defer></script>
   <script src="/js/app.js"></script>
   <script>
     async function handleLogin(e) {
@@ -80,4 +77,3 @@
   <script src="/js/animations.js"></script>
 </body>
 </html>
-
