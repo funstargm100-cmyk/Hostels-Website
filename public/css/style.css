@@ -270,7 +270,11 @@ textarea{ resize:vertical; min-height:110px; }
   background:var(--surface); border-radius:var(--radius); box-shadow:var(--shadow-lg); padding:1.2rem;
   margin-top:1.8rem; display:grid; grid-template-columns:1.4fr 1fr auto; gap:1rem; align-items:end;
 }
-@media (max-width:760px){ .search-card{ grid-template-columns:1fr; } .hero{ min-height:auto; padding-top:2rem;} .hero-inner{ padding-top:7rem; }}
+.search-card.justify-center{ grid-template-columns:1fr; justify-items:center; text-align:center; max-width:520px; }
+.search-card-title{ display:flex; align-items:center; gap:.5rem; font-weight:600; font-size:1.05rem; margin:0; }
+.search-card.justify-center .search-card-title{ justify-content:center; }
+.search-card-actions{ display:flex; gap:.75rem; align-items:center; }
+@media (max-width:760px){ .search-card{ grid-template-columns:1fr; } .search-card-actions{ flex-direction:column; width:100%; } .search-card-actions .btn{ width:100%; } .hero{ min-height:auto; padding-top:2rem;} .hero-inner{ padding-top:7rem; }}
 .stats-strip{
   display:grid; grid-template-columns:repeat(4,1fr); gap:.8rem; padding:1.2rem 1rem; max-width:1180px; margin:0 auto;
 }
