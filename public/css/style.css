@@ -506,3 +506,32 @@ td{ padding:.8rem 1rem; border-top:1px solid var(--border); vertical-align:top; 
 
 /* dark-mode icon swap safety */
 [data-theme="dark"] img.card-img{ filter:brightness(.94); }
+
+/* ---------- Scroll to top button ---------- */
+#scrollTopBtn{
+  position: fixed;
+  right: 1.2rem;
+  bottom: calc(1.2rem + env(safe-area-inset-bottom, 0px));
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  border: none;
+  background: var(--primary, #111);
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 14px rgba(0,0,0,.25);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(12px);
+  transition: opacity .25s ease, transform .25s ease, visibility .25s;
+  z-index: 999;
+}
+#scrollTopBtn.show{ opacity: 1; visibility: visible; transform: translateY(0); }
+#scrollTopBtn:hover{ filter: brightness(1.15); }
+#scrollTopBtn:active{ transform: scale(.92); }
+@media (max-width:640px){
+  #scrollTopBtn{ right: .9rem; bottom: calc(4.6rem + env(safe-area-inset-bottom, 0px)); width: 42px; height: 42px; }
+}
