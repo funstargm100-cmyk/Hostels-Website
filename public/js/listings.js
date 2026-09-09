@@ -71,6 +71,8 @@ function goPage(p) { currentPage = p; loadListings(); window.scrollTo({ top: 0, 
 function applyFilters() { currentPage = 1; loadListings(); }
 function clearFilters() {
   document.getElementById('searchLocation').value = '';
+  const toolbarInput = document.getElementById('toolbarSearch');
+  if (toolbarInput) toolbarInput.value = '';
   document.getElementById('minPrice').value = '';
   document.getElementById('maxPrice').value = '';
   document.querySelector('input[name="occupancy"][value=""]').checked = true;
@@ -116,6 +118,24 @@ function setView(v) { currentView = v; loadListings(); }
 const urlParams = new URLSearchParams(location.search);
 if (urlParams.get('location')) document.getElementById('searchLocation').value = urlParams.get('location');
 if (urlParams.get('max_price')) document.getElementById('maxPrice').value = urlParams.get('max_price');
+
+// Toolbar search box — syncs with the sidebar location filter
+(function initToolbarSearch() {
+  const toolbarInput = document.getElementById('toolbarSearch');
+  const sidebarInput = document.getElementById('searchLocation');
+  if (!toolbarInput || !sidebarInput) return;
+  toolbarInput.value = sidebarInput.value;
+  let debounce;
+  toolbarInput.addEventListener('input', () => {
+    clearTimeout(debounce);
+    debounce = setTimeout(() => {
+      sidebarInput.value = toolbarInput.value;
+      applyFilters();
+    }, 400);
+  });
+  // keep toolbar in sync when user edits the sidebar field
+  sidebarInput.addEventListener('input', () => { toolbarInput.value = sidebarInput.value; });
+})();
 if (urlParams.get('occupancy')) {
   const radio = document.querySelector(`input[name="occupancy"][value="${urlParams.get('occupancy')}"]`);
   if (radio) radio.checked = true;

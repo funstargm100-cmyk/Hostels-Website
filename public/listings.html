@@ -35,7 +35,10 @@
       <span class="text-muted" id="resultsCount">Loading…</span>
     </div>
     <div style="display:flex;gap:.6rem;align-items:center;flex-wrap:wrap">
-      <button class="btn btn-outline btn-sm" id="nearMeBtn" onclick="filterNearMe()"><i data-lucide="navigation"></i> Near Me</button>
+      <div class="toolbar-search">
+        <i data-lucide="search"></i>
+        <input type="text" id="toolbarSearch" placeholder="Search area or landmark..." />
+      </div>
       <select id="sortSelect" onchange="applyFilters()" style="width:auto">
         <option value="">Sort: Newest</option>
         <option value="price_asc">Price: Low to High</option>
@@ -47,6 +50,7 @@
         <button class="active" id="gridViewBtn" onclick="setView('grid');document.getElementById('gridViewBtn').classList.add('active');document.getElementById('listViewBtn').classList.remove('active')"><i data-lucide="grid-2x2"></i></button>
         <button id="listViewBtn" onclick="setView('list');document.getElementById('listViewBtn').classList.add('active');document.getElementById('gridViewBtn').classList.remove('active')"><i data-lucide="list"></i></button>
       </div>
+      <button class="btn btn-outline btn-sm" id="nearMeBtn" onclick="filterNearMe()"><i data-lucide="navigation"></i> Near Me</button>
       <button class="btn btn-outline btn-sm" onclick="toggleFilters()" id="mobileFilterBtn"><i data-lucide="sliders-horizontal"></i> Filters</button>
     </div>
   </div>

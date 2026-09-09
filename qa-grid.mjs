@@ -1,20 +1,26 @@
 export default async function run(page, ui) {
-  await page.setViewportSize({ width: 390, height: 844 });
+  // Desktop check: toolbar layout
+  await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto('http://localhost:3000/listings.html', { waitUntil: 'load' });
   await page.waitForSelector('#listingsGrid .card', { timeout: 20000 });
-  await page.waitForFunction(() => {
-    const imgs = [...document.querySelectorAll('#listingsGrid .card img')];
-    return imgs.length && imgs.every(i => i.complete);
-  }, { timeout: 30000 }).catch(() => 'timeout');
-  const grid = await page.evaluate(() => {
-    const g = document.getElementById('listingsGrid');
-    const card = g.querySelector('.card');
-    return {
-      cols: getComputedStyle(g).gridTemplateColumns.split(' ').length,
-      cardWidth: Math.round(card.getBoundingClientRect().width),
-      vw: document.documentElement.clientWidth
-    };
+  await page.screenshot({ path: 'toolbar-desktop.png' });
+  const desktop = await page.evaluate(() => {
+    const btns = [...document.querySelectorAll('.results-toolbar .btn, .view-toggle, #sortSelect')];
+    return btns.map(b => b.id || b.className.split(' ')[0]);
   });
-  await page.screenshot({ path: 'listings-mobile.png' });
-  return grid;
+
+  // Type into toolbar search and see results filter
+  await page.fill('#toolbarSearch', 'Legon');
+  await page.waitForTimeout(900); // debounce + fetch
+  const searchResult = await page.evaluate(() => ({
+    count: document.getElementById('resultsCount').textContent,
+    sidebarValue: document.getElementById('searchLocation').value
+  }));
+
+  // Mobile check
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.waitForTimeout(400);
+  await page.screenshot({ path: 'toolbar-mobile.png' });
+
+  return { desktop, searchResult };
 }

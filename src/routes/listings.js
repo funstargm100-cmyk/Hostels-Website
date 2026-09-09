@@ -25,9 +25,19 @@ router.get('/', async (req, res) => {
     const params = [];
     let p = 1;
 
-    if (location) { where.push(`(l.location_area ILIKE $${p} OR l.nearest_landmark ILIKE $${p+1} OR l.full_address ILIKE $${p+2})`); params.push(`%${location}%`, `%${location}%`, `%${location}%`); p += 3; }
-    if (min_price) { where.push(`l.listed_price >= $${p++}`); params.push(min_price); }
-    if (max_price) { where.push(`l.listed_price <= $${p++}`); params.push(max_price); }
+    // Advanced search: every word must match somewhere (title, description,
+    // area, landmark, or address). Multi-word phrases in quotes are kept whole.
+    if (location) {
+      const tokens = location.match(/"[^"]+"|\S+/g)?.map(t => t.replace(/"/g, '').trim()).filter(Boolean) || [];
+      for (const tok of tokens) {
+        const like = `%${tok}%`;
+        where.push(`(l.location_area ILIKE $${p} OR l.nearest_landmark ILIKE $${p+1} OR l.full_address ILIKE $${p+2} OR l.title ILIKE $${p+3} OR l.description ILIKE $${p+4})`);
+        params.push(like, like, like, like, like);
+        p += 5;
+      }
+    }
+    if (min_price) { where.push(`l.price_per_head >= $${p++}`); params.push(min_price); }
+    if (max_price) { where.push(`l.price_per_head <= $${p++}`); params.push(max_price); }
     if (occupancy) { where.push(`l.occupancy_type = $${p++}`); params.push(occupancy); }
     if (gender) { where.push(`l.gender_preference = $${p++}`); params.push(gender); }
     if (wifi === '1') { where.push('a.wifi = TRUE'); }
@@ -49,8 +59,27 @@ router.get('/', async (req, res) => {
       p += 3;
     }
 
-    const orderMap = { price_asc: 'l.listed_price ASC', price_desc: 'l.listed_price DESC', newest: 'l.created_at DESC', rating: 'avg_rating DESC NULLS LAST' };
-    const orderBy = orderMap[sort] || 'l.is_featured DESC, l.created_at DESC';
+    const orderMap = { price_asc: 'l.price_per_head ASC', price_desc: 'l.price_per_head DESC', newest: 'l.created_at DESC', rating: 'avg_rating DESC NULLS LAST' };
+    let orderBy = orderMap[sort] || '';
+    const whereParamCount = p - 1; // WHERE clauses use params[0..p-2] exclusively
+
+    // Relevance ranking when searching without an explicit sort:
+    // title matches > area/landmark/address matches > description matches,
+    // then featured, then newest. Same $n placeholder is safely reused.
+    if (location && !sort) {
+      const tokens = location.match(/"[^"]+"|\S+/g)?.map(t => t.replace(/"/g, '').trim()).filter(Boolean) || [];
+      const scoreParts = tokens.map(tok => {
+        const n = p++;
+        params.push(`%${tok}%`);
+        return `(CASE
+          WHEN l.title ILIKE $${n} THEN 3
+          WHEN l.location_area ILIKE $${n} OR l.nearest_landmark ILIKE $${n} OR l.full_address ILIKE $${n} THEN 2
+          WHEN l.description ILIKE $${n} THEN 1
+          ELSE 0 END)`;
+      });
+      if (scoreParts.length) orderBy = `(${scoreParts.join(' + ')}) DESC, l.is_featured DESC, l.created_at DESC`;
+    }
+    if (!orderBy) orderBy = 'l.is_featured DESC, l.created_at DESC';
     const whereStr = `WHERE ${where.join(' AND ')}`;
 
     const sql = `
@@ -71,8 +100,10 @@ router.get('/', async (req, res) => {
       ORDER BY ${orderBy}
       LIMIT $${p} OFFSET $${p+1}`;
 
+    // WHERE-only params for the count query (scoring params are ORDER BY-only)
+    const whereParams = params.slice(0, whereParamCount);
     const [listings] = await db.query2(sql, [...params, parseInt(limit), parseInt(offset)]);
-    const countRes = await db.query(`SELECT COUNT(DISTINCT l.id) as total FROM listings l LEFT JOIN amenities a ON a.listing_id = l.id ${whereStr}`, params);
+    const countRes = await db.query(`SELECT COUNT(DISTINCT l.id) as total FROM listings l LEFT JOIN amenities a ON a.listing_id = l.id ${whereStr}`, whereParams);
     const total = parseInt(countRes.rows[0].total);
 
     res.json({ listings, total, page: parseInt(page), pages: Math.ceil(total / limit) });
