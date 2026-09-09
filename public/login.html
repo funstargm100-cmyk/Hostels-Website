@@ -68,7 +68,7 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
   try {
     const identifier = document.getElementById('loginIdentifier').value.trim();
     const password = document.getElementById('loginPassword').value;
-    const body = identifier.includes('@') ? { email: identifier, password } : { phone: identifier, password };
+    const body = { identifier, password };
     const { token, user } = await api.post('/api/auth/login', body);
     localStorage.setItem('token', token);
     localStorage.setItem('user', JSON.stringify(user));

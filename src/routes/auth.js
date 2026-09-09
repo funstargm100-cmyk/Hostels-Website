@@ -64,9 +64,11 @@ router.post('/verify-otp', async (req, res) => {
 
 // POST /api/auth/login
 router.post('/login', async (req, res) => {
-  const { identifier, password } = req.body;
+  const { identifier, email, phone, password } = req.body;
+  const id = identifier || email || phone;
+  if (!id || !password) return res.status(400).json({ error: 'Email/phone and password required' });
   try {
-    const result = await db.query('SELECT * FROM users WHERE email=$1 OR phone=$1', [identifier]);
+    const result = await db.query('SELECT * FROM users WHERE email=$1 OR phone=$1', [id]);
     const user = result.rows[0];
     if (!user) return res.status(401).json({ error: 'Invalid credentials' });
     if (user.is_suspended) return res.status(403).json({ error: 'Account suspended. Contact support.' });
