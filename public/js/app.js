@@ -1,3 +1,12 @@
+// ─── BACK NAVIGATION ─────────────────────────────────────────────────────────
+function goBack(fallback = '/') {
+  if (history.length > 1 && document.referrer && document.referrer !== location.href) {
+    history.back();
+  } else {
+    location.href = fallback;
+  }
+}
+
 // ─── API HELPER ───────────────────────────────────────────────────────────────
 const api = {
   getToken: () => localStorage.getItem('token'),

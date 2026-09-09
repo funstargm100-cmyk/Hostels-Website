@@ -1,3 +1,4 @@
+// Scroll-to-top button — included on every page.
 (function () {
   const btn = document.createElement('button');
   btn.id = 'scrollTopBtn';
