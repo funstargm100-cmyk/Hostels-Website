@@ -187,16 +187,14 @@ textarea{ resize:vertical; min-height:110px; }
 }
 .navbar-transparent{ position:fixed; top:0; left:0; right:0; background:transparent; border-color:transparent; }
 .navbar-transparent .nav-inner a,.navbar-transparent .logo{ color:#fff; }
-.navbar-transparent #themeToggle,.navbar-transparent #hamburger{ color:#fff; }
+.navbar-transparent #themeToggle{ color:#fff; }
 .nav-inner{ display:flex; align-items:center; justify-content:space-between; padding:1.1rem 1.5rem; max-width:1180px; margin:0 auto; }
 .logo{ font-family:var(--font-display); font-weight:600; font-style:italic; font-size:1.5rem; display:flex; align-items:center; gap:.4rem; }
 .logo .dot{ color:var(--primary); }
 .nav-links{ display:flex; align-items:center; gap:1.7rem; font-weight:600; font-size:.92rem; }
 .nav-links a:hover{ color:var(--primary); }
 .nav-actions{ display:flex; align-items:center; gap:.7rem; }
-#themeToggle,#hamburger{ background:none; border:none; cursor:pointer; color:var(--text); padding:.4rem; display:flex; }
-#hamburger{ display:none; }
-.mobile-menu{ display:none; }
+#themeToggle{ background:none; border:none; cursor:pointer; color:var(--text); padding:.4rem; display:flex; }
 
 /* ── alt navbar variant (agents / seekers pages) ───────────────────── */
 .navbar .container{ display:flex; align-items:center; justify-content:space-between; gap:1rem; width:100%; }
@@ -206,42 +204,17 @@ textarea{ resize:vertical; min-height:110px; }
 .navbar-nav{ display:flex; align-items:center; gap:1.5rem; list-style:none; margin:0; padding:0; font-weight:600; font-size:.92rem; }
 .navbar-nav a{ color:var(--text); text-decoration:none; }
 .navbar-nav a:hover,.navbar-nav a.active{ color:var(--primary); }
-.nav-auth-mobile{ display:none; }
 .navbar-actions{ display:flex; align-items:center; gap:.7rem; }
 .theme-toggle{ background:none; border:none; cursor:pointer; color:var(--text); padding:.4rem; display:flex; }
-.hamburger{ display:none; flex-direction:column; justify-content:center; gap:4px; background:none; border:none; cursor:pointer; padding:.5rem .4rem; color:var(--text); }
-.hamburger span{ display:block; width:20px; height:2px; background:currentColor; border-radius:2px; transition:transform .2s ease, opacity .2s ease; }
-.hamburger.open span:nth-child(1){ transform:translateY(6px) rotate(45deg); }
-.hamburger.open span:nth-child(2){ opacity:0; }
-.hamburger.open span:nth-child(3){ transform:translateY(-6px) rotate(-45deg); }
 
 @media (max-width:860px){
-  .navbar-nav{
-    display:none; position:absolute; top:100%; left:0; right:0; flex-direction:column; align-items:stretch; gap:0;
-    background:var(--surface); border-bottom:1px solid var(--border); box-shadow:var(--shadow-lg); padding:.6rem 1.5rem 1rem; z-index:60;
-  }
-  .navbar-nav.open{ display:flex; }
-  .navbar-nav li{ padding:.7rem 0; border-bottom:1px solid var(--border); }
-  .navbar-nav li:last-child{ border-bottom:none; }
-  .nav-auth-mobile{ display:flex; gap:.6rem; flex-wrap:wrap; padding-top:.7rem; }
+  .navbar-nav{ display:none; }
   .navbar-actions .btn{ display:none; }
-  .hamburger{ display:flex; }
 }
 
 @media (max-width:860px){
   .nav-links{ display:none; }
   .nav-actions .btn{ display:none; }
-  #hamburger{ display:flex; }
-  .mobile-menu{
-    display:block; position:fixed; inset:0 0 0 auto; width:78%; max-width:320px; background:var(--surface);
-    box-shadow:var(--shadow-lg); transform:translateX(100%); transition:transform .3s ease; z-index:60; padding:1.5rem;
-    visibility:hidden; overflow-y:auto;
-  }
-  .mobile-menu.open{ transform:translateX(0); visibility:visible; }
-  .mobile-menu a,.mobile-menu button{ display:block; width:100%; text-align:left; padding:.85rem 0; border-bottom:1px solid var(--border); font-weight:600; background:none; border-left:none; border-right:none; border-top:none; color:var(--text); font-size:.95rem; cursor:pointer; }
-  .nav-overlay{ display:none; position:fixed; inset:0; background:rgba(10,8,16,.5); z-index:55; }
-  .nav-overlay.open{ display:block; }
-  body.menu-open{ overflow:hidden; }
 }
 
 /* ── footer nav (mobile bottom bar) ─────────────────────────────────── */
