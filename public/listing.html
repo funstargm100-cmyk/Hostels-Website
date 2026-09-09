@@ -1,192 +1,171 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Room Details — Roomy</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/css/style.css" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Room details — Roomy</title>
+<link rel="stylesheet" href="/css/style.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
 <body>
-  <nav class="navbar">
-    <div class="container">
-      <a href="/" class="navbar-brand"><i data-lucide="home"></i> <span class="brand-roomy">Roomy</span></a>
-      <ul class="navbar-nav" id="navMenu">
-        <li><a href="/">Home</a></li>
-        <li><a href="/listings">Browse Rooms</a></li>
-        <li><a href="/post-ad">Post a Room</a></li>
-        <li class="nav-auth-mobile">
-          <a href="/login" class="btn btn-ghost" id="loginBtnMobile">Login</a>
-          <a href="/signup" class="btn btn-primary" id="signupBtnMobile">Sign Up Free</a>
-          <a href="/dashboard" class="btn btn-outline nav-profile-link" id="dashboardBtnMobile" style="display:none"><i data-lucide="user-circle"></i> Profile</a>
-          <button class="btn btn-ghost" id="logoutBtnMobile" style="display:none">Logout</button>
-        </li>
-      </ul>
-      <div class="navbar-actions">
-        <button class="theme-toggle" id="themeToggle"><i data-lucide="moon"></i></button>
-        <a href="/login" class="btn btn-ghost btn-sm" id="loginBtn">Login</a>
-        <a href="/signup" class="btn btn-primary btn-sm" id="signupBtn">Sign Up Free</a>
-        <a href="/dashboard" class="btn btn-outline btn-sm nav-profile-link" id="dashboardBtn" style="display:none"><i data-lucide="user-circle"></i> Profile</a>
-        <button class="btn btn-ghost btn-sm" id="logoutBtn" style="display:none">Logout</button>
-        <button class="hamburger" id="hamburger"><span></span><span></span><span></span></button>
-      </div>
+
+<div id="toastContainer"></div>
+
+<nav class="navbar" id="mainNav">
+  <div class="nav-inner">
+    <a href="/" class="logo">roomy<span class="dot">.</span></a>
+    <div class="nav-links">
+      <a href="/listings">Browse rooms</a>
+      <a href="/post-ad">Post a room</a>
+      <a href="/about">About</a>
     </div>
-  </nav>
-
-  <div class="container" style="padding-top:1.5rem;padding-bottom:3rem">
-    <a href="/listings" style="color:var(--text-muted);font-size:0.875rem;display:inline-flex;align-items:center;gap:0.3rem;margin-bottom:1rem"><i data-lucide="arrow-left"></i> Back to listings</a>
-
-    <div id="detailSkeleton">
-      <div class="skeleton" style="height:420px;border-radius:var(--radius);margin-bottom:1.5rem"></div>
-      <div class="skeleton skeleton-text w-80" style="height:28px"></div>
-      <div class="skeleton skeleton-text w-60 mt-1"></div>
+    <div class="nav-actions">
+      <button id="themeToggle" aria-label="Toggle theme"></button>
+      <a href="/login" id="loginBtn" class="btn btn-ghost btn-sm">Log in</a>
+      <a href="/signup" id="signupBtn" class="btn btn-primary btn-sm">Sign up</a>
+      <a href="/dashboard" id="dashboardBtn" class="btn btn-outline btn-sm" style="display:none">Dashboard</a>
+      <button id="logoutBtn" class="btn btn-ghost btn-sm" style="display:none">Log out</button>
+      <button id="hamburger" aria-label="Menu"><i data-lucide="menu"></i></button>
     </div>
+  </div>
+  <div class="mobile-menu" id="navMenu">
+    <a href="/listings">Browse rooms</a>
+    <a href="/post-ad">Post a room</a>
+    <a href="/about">About</a>
+    <a href="/login" id="loginBtnMobile">Log in</a>
+    <a href="/signup" id="signupBtnMobile">Sign up</a>
+    <a href="/dashboard" id="dashboardBtnMobile" style="display:none">Dashboard</a>
+    <button id="logoutBtnMobile" style="display:none">Log out</button>
+  </div>
+</nav>
 
-    <div id="detailContent" style="display:none">
-      <div class="gallery" id="gallery"></div>
+<div class="container" style="padding-top:2rem">
 
-      <div class="detail-layout">
-        <div>
-          <div class="flex-between mt-3 mb-1" style="flex-wrap:wrap;gap:0.5rem">
-            <div>
-              <div id="listingBadges" style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.5rem"></div>
-              <h1 id="listingTitle" style="font-size:1.5rem"></h1>
-            </div>
-            <button class="fav-btn" id="favBtn" onclick="toggleFavorite()" title="Save to favorites"><i data-lucide="heart"></i></button>
-          </div>
+  <div id="detailSkeleton">
+    <div class="skeleton skeleton-img" style="aspect-ratio:16/9;border-radius:16px"></div>
+    <div class="skeleton skeleton-text w-60 mt-2" style="height:24px"></div>
+    <div class="skeleton skeleton-text w-40 mt-1"></div>
+  </div>
 
-          <p class="card-location" id="listingLocation"></p>
+  <div id="detailContent" style="display:none">
+    <div style="margin-bottom:1rem" id="listingBadges"></div>
+    <div class="detail-layout">
+      <div>
+        <div id="gallery"></div>
 
-          <div class="divider"></div>
+        <div class="mt-3">
+          <h1 id="listingTitle" style="font-size:1.8rem"></h1>
+          <div class="text-muted" id="listingLocation" style="margin-bottom:1rem"></div>
+          <p id="listingDescription" style="font-size:.98rem"></p>
+        </div>
 
-          <h3 class="mb-2">About this room</h3>
-          <p id="listingDescription" style="color:var(--text-muted);line-height:1.7"></p>
-
-          <div class="divider"></div>
-
-          <h3 class="mb-2">Amenities</h3>
+        <div class="mt-3">
+          <h3>Amenities</h3>
           <div class="amenities-grid" id="amenitiesGrid"></div>
+        </div>
 
-          <div class="divider"></div>
-
-          <h3 class="mb-2">Location (approximate area)</h3>
+        <div class="mt-3">
+          <h3>Location</h3>
           <div id="detail-map"></div>
-          <p class="map-privacy-note"><i data-lucide="lock" style="width:13px;height:13px"></i> Exact address is shared only after booking confirmation.</p>
-
-          <div class="card mt-3" style="padding:1.4rem">
-            <h3 class="mb-2"><i data-lucide="ruler" style="width:20px;height:20px"></i> Distance calculator</h3>
-            <p class="text-muted mb-2" style="font-size:0.875rem">Enter a reference point to estimate travel distance.</p>
-            <div style="display:flex;gap:0.75rem;flex-wrap:wrap">
-              <input type="text" class="form-control" id="fromLocation" placeholder="e.g. University of Ghana, Legon" style="flex:1" />
-              <button class="btn btn-outline" onclick="calcDistance()">Calculate</button>
+          <div class="mt-2" style="display:flex;gap:.6rem;flex-wrap:wrap;align-items:end">
+            <div class="form-group" style="margin-bottom:0;flex:1;min-width:180px">
+              <label>Check distance from</label>
+              <input type="text" id="fromLocation" placeholder='Type "my location"' />
             </div>
-            <div id="distanceResult" class="mt-2" style="display:none">
-              <div class="alert alert-info" id="distanceText"></div>
-            </div>
+            <button class="btn btn-outline" onclick="calcDistance()">Calculate</button>
           </div>
-
-          <div class="divider"></div>
-
-          <h3 class="mb-2">Reviews</h3>
-          <div id="reviewsList">
-            <p class="text-muted" style="font-size:0.875rem">No reviews yet.</p>
-          </div>
+          <div id="distanceResult" style="display:none" class="mt-2 text-muted"><span id="distanceText"></span></div>
         </div>
 
-        <div>
-          <div class="price-box">
-            <div class="occupancy-tag" id="occupancyTag"></div>
-            <div class="price-main" id="priceMain"></div>
-            <div class="price-per-head" id="pricePerHead"></div>
-            <div class="divider"></div>
-            <div style="font-size:0.82rem;color:var(--text-muted);margin-bottom:1rem">
-              <div style="display:flex;justify-content:space-between;margin-bottom:0.3rem"><span>Listed price (incl. platform fee)</span><span id="priceBreakdown"></span></div>
-            </div>
-            <div id="moveInDate" class="text-muted mb-2" style="font-size:0.82rem"></div>
-            <button class="btn btn-primary btn-block btn-lg" onclick="openInterestModal()"><i data-lucide="message-circle"></i> I'm Interested</button>
-            <p style="font-size:0.75rem;color:var(--text-muted);text-align:center;margin-top:0.75rem">Your contact details are never shared without your consent.</p>
-            <div class="divider"></div>
-            <div style="font-size:0.82rem;color:var(--text-muted)">
-              <div style="display:flex;align-items:center;gap:0.4rem;margin-bottom:0.4rem"><i data-lucide="user" style="width:14px;height:14px"></i> <span id="ownerName"></span></div>
-              <div style="display:flex;align-items:center;gap:0.4rem;margin-bottom:0.4rem"><i data-lucide="eye" style="width:14px;height:14px"></i> <span id="viewCount"></span> views</div>
-              <div style="display:flex;align-items:center;gap:0.4rem"><i data-lucide="users" style="width:14px;height:14px"></i> <span id="interestCount"></span> interested</div>
-            </div>
-            <div class="divider"></div>
-            <button class="btn btn-ghost btn-sm btn-block" onclick="openReportModal()" style="color:var(--text-muted)"><i data-lucide="flag" style="width:14px;height:14px"></i> Report this listing</button>
-          </div>
+        <div class="mt-3">
+          <h3>Reviews</h3>
+          <div id="reviewsList"></div>
         </div>
+      </div>
+
+      <div class="price-box">
+        <span class="tag" id="occupancyTag"></span>
+        <div style="font-family:var(--font-display);font-size:1.9rem;font-weight:600;color:var(--primary);margin-top:.6rem" id="priceMain"></div>
+        <div class="text-muted" id="pricePerHead" style="margin-bottom:1rem"></div>
+        <div id="priceBreakdown" class="text-muted" style="font-size:.78rem;margin-bottom:.4rem"></div>
+        <div class="text-muted" style="font-size:.85rem;margin-bottom:1rem" id="moveInDate"></div>
+        <div style="display:flex;gap:1.2rem;font-size:.82rem;color:var(--text-muted);margin-bottom:1.2rem">
+          <span><i data-lucide="eye" style="width:14px;height:14px"></i> <span id="viewCount"></span> views</span>
+          <span><i data-lucide="users" style="width:14px;height:14px"></i> <span id="interestCount"></span> interested</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:1.3rem">
+          <div class="sidebar-avatar" style="width:36px;height:36px;font-size:.85rem" id="ownerAvatar">O</div>
+          <div><div style="font-weight:700;font-size:.9rem" id="ownerName"></div><div class="text-muted" style="font-size:.75rem">Listing owner</div></div>
+        </div>
+        <div style="display:flex;gap:.6rem">
+          <button class="btn btn-primary" style="flex:1" onclick="openInterestModal()"><i data-lucide="send"></i> Send Request</button>
+          <button class="btn btn-outline" id="favBtn" onclick="toggleFavorite()"><i data-lucide="heart"></i></button>
+        </div>
+        <button class="btn btn-ghost btn-sm mt-2" style="width:100%" onclick="openReportModal()"><i data-lucide="flag"></i> Report this listing</button>
       </div>
     </div>
   </div>
+</div>
 
-  <div class="modal-overlay" id="interestModal">
-    <div class="modal">
-      <div class="modal-header">
-        <h3>Express Interest</h3>
-        <button class="modal-close" onclick="closeModal('interestModal')">✕</button>
-      </div>
-      <div class="alert alert-info mb-2">We'll contact you and arrange the connection. Your privacy is protected.</div>
-      <form id="interestForm" onsubmit="submitInterest(event)">
-        <div class="form-group">
-          <label class="form-label">Your Name *</label>
-          <input type="text" class="form-control" id="intName" required />
-        </div>
-        <div class="form-group">
-          <label class="form-label">Phone Number</label>
-          <input type="tel" class="form-control" id="intPhone" placeholder="e.g. 0244000000" />
-        </div>
-        <div class="form-group">
-          <label class="form-label">Email Address</label>
-          <input type="email" class="form-control" id="intEmail" />
-        </div>
-        <div class="form-group">
-          <label class="form-label">Preferred Move-in Date</label>
-          <input type="date" class="form-control" id="intMoveIn" />
-        </div>
-        <div class="form-group">
-          <label class="form-label">Message (optional)</label>
-          <textarea class="form-control" id="intMessage" rows="3" placeholder="Any specific questions or requirements..."></textarea>
-        </div>
-        <button type="submit" class="btn btn-primary btn-block btn-lg" id="interestSubmitBtn">Send Request</button>
-      </form>
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-bottom" style="border-top:none;padding-top:0">
+      <span>© 2026 Roomy. Built for renters and hosts across Ghana.</span>
+      <a href="/about">About &amp; safety</a>
     </div>
   </div>
+</footer>
 
-  <div class="modal-overlay" id="reportModal">
-    <div class="modal">
-      <div class="modal-header">
-        <h3>Report Listing</h3>
-        <button class="modal-close" onclick="closeModal('reportModal')">✕</button>
+<nav class="footer-nav" id="footerNav" data-mode="visitor"></nav>
+
+<!-- Interest / request modal -->
+<div class="modal-overlay" id="interestModal">
+  <div class="modal">
+    <h3>Send a request</h3>
+    <p class="text-muted" style="font-size:.85rem">We'll pass your details to the owner. No direct contact until you're both ready.</p>
+    <form id="interestForm" onsubmit="submitInterest(event)">
+      <div class="form-group"><label>Your name</label><input type="text" id="intName" required /></div>
+      <div class="form-row">
+        <div class="form-group"><label>Phone</label><input type="tel" id="intPhone" /></div>
+        <div class="form-group"><label>Email</label><input type="email" id="intEmail" /></div>
       </div>
-      <form onsubmit="submitReport(event)">
-        <div class="form-group">
-          <label class="form-label">Reason *</label>
-          <select class="form-control" id="reportReason" required>
-            <option value="">Select reason</option>
-            <option value="contact_info">Contains contact information</option>
-            <option value="scam">Suspected scam</option>
-            <option value="inappropriate">Inappropriate content</option>
-            <option value="fake">Fake listing</option>
-            <option value="other">Other</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Details</label>
-          <textarea class="form-control" id="reportDetails" rows="3"></textarea>
-        </div>
-        <button type="submit" class="btn btn-primary btn-block">Submit Report</button>
-      </form>
-    </div>
+      <div class="form-group"><label>Preferred move-in date</label><input type="date" id="intMoveIn" /></div>
+      <div class="form-group"><label>Message (optional)</label><textarea id="intMessage" placeholder="Anything the owner should know?"></textarea></div>
+      <button type="submit" class="btn btn-primary" style="width:100%" id="interestSubmitBtn">Send Request</button>
+    </form>
   </div>
+</div>
 
-  <div class="toast-container" id="toastContainer"></div>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-  <script src="/js/app.js"></script>
-  <script src="/js/listing-detail.js"></script>
-  <script>lucide.createIcons();</script>
-  <script src="/js/animations.js"></script>
+<!-- Report modal -->
+<div class="modal-overlay" id="reportModal">
+  <div class="modal">
+    <h3>Report this listing</h3>
+    <form onsubmit="submitReport(event)">
+      <div class="form-group">
+        <label>Reason</label>
+        <select id="reportReason" required>
+          <option value="">Select a reason</option>
+          <option value="fake">Fake or misleading listing</option>
+          <option value="unavailable">Room no longer available</option>
+          <option value="contact_info">Contains contact info</option>
+          <option value="scam">Suspected scam</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Details</label><textarea id="reportDetails" placeholder="Tell us more"></textarea></div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" onclick="closeModal('reportModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Submit report</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js" defer></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
+<script src="/js/app.js" defer></script>
+<script src="/js/listing-detail.js" defer></script>
+<script src="/js/footernav.js" defer></script>
+<script src="/js/animations.js" defer></script>
 </body>
 </html>

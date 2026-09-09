@@ -1,93 +1,117 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Profile — Roomy</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/css/style.css" />
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Dashboard — Roomy</title>
+<link rel="stylesheet" href="/css/style.css" />
 </head>
 <body>
-  <nav class="navbar">
-    <div class="container">
-      <a href="/" class="navbar-brand"><i data-lucide="home"></i> <span class="brand-roomy">Roomy</span></a>
-      <ul class="navbar-nav" id="navMenu">
-        <li><a href="/">Home</a></li>
-        <li><a href="/listings">Browse Rooms</a></li>
-        <li><a href="/post-ad">Post a Room</a></li>
-        <li class="nav-auth-mobile">
-          <a href="/dashboard" class="btn btn-outline nav-profile-link" id="dashboardBtnMobile"><i data-lucide="user-circle"></i> Profile</a>
-          <button class="btn btn-ghost" id="logoutBtnMobile">Logout</button>
-        </li>
-      </ul>
-      <div class="navbar-actions">
-        <button class="theme-toggle" id="themeToggle"><i data-lucide="moon"></i></button>
-        <a href="/dashboard" class="btn btn-outline btn-sm nav-profile-link" id="dashboardBtn"><i data-lucide="user-circle"></i> Profile</a>
-        <button class="btn btn-ghost btn-sm" id="logoutBtn">Logout</button>
-        <button class="hamburger" id="hamburger"><span></span><span></span><span></span></button>
-      </div>
+
+<div id="toastContainer"></div>
+
+<nav class="navbar" id="mainNav">
+  <div class="nav-inner">
+    <a href="/" class="logo">roomy<span class="dot">.</span></a>
+    <div class="nav-links">
+      <a href="/listings">Browse rooms</a>
+      <a href="/post-ad">Post a room</a>
+      <a href="/about">About</a>
     </div>
-  </nav>
-
-  <div class="container">
-    <div class="dashboard-layout">
-      <aside class="sidebar">
-        <div style="text-align:center;padding:1rem 0;border-bottom:1px solid var(--border);margin-bottom:1rem">
-          <div style="width:60px;height:60px;border-radius:50%;background:var(--primary-light);display:flex;align-items:center;justify-content:center;margin:0 auto 0.5rem"><i data-lucide="user" style="width:28px;height:28px;color:var(--clay)"></i></div>
-          <div style="font-weight:700" id="sidebarName">Loading...</div>
-          <div class="text-muted" style="font-size:0.78rem" id="sidebarRole"></div>
-        </div>
-        <ul class="sidebar-nav">
-          <li><a href="#overview" class="active" onclick="showTab('overview',this)"><i data-lucide="layout-dashboard"></i> Overview</a></li>
-          <li id="myRequestsNav"><a href="#requests" onclick="showTab('requests',this)"><i data-lucide="message-circle"></i> My Requests</a></li>
-          <li id="myListingsNav" style="display:none"><a href="#listings" onclick="showTab('listings',this)"><i data-lucide="building-2"></i> My Listings</a></li>
-          <li><a href="#favorites" onclick="showTab('favorites',this)"><i data-lucide="heart"></i> Favorites</a></li>
-          <li><a href="#notifications" onclick="showTab('notifications',this)"><i data-lucide="bell"></i> Notifications</a></li>
-        </ul>
-      </aside>
-
-      <main>
-        <div id="tab-overview">
-          <h2 class="mb-3">Overview</h2>
-          <div class="stat-cards reveal-stagger" id="statCards"></div>
-          <div class="card" style="padding:1.4rem">
-            <h3 class="mb-2">Recent activity</h3>
-            <div id="recentActivity"><p class="text-muted" style="font-size:0.875rem">No recent activity.</p></div>
-          </div>
-        </div>
-
-        <div id="tab-requests" style="display:none">
-          <h2 class="mb-3">My contact requests</h2>
-          <div id="requestsList"></div>
-        </div>
-
-        <div id="tab-listings" style="display:none">
-          <div class="flex-between mb-3">
-            <h2>My listings</h2>
-            <a href="/post-ad" class="btn btn-primary">+ Post new room</a>
-          </div>
-          <div id="ownerListings"></div>
-        </div>
-
-        <div id="tab-favorites" style="display:none">
-          <h2 class="mb-3">Saved listings</h2>
-          <div class="grid-2" id="favoritesList"></div>
-        </div>
-
-        <div id="tab-notifications" style="display:none">
-          <h2 class="mb-3">Notifications</h2>
-          <div id="notificationsList"></div>
-        </div>
-      </main>
+    <div class="nav-actions">
+      <button id="themeToggle" aria-label="Toggle theme"></button>
+      <a href="/login" id="loginBtn" class="btn btn-ghost btn-sm">Log in</a>
+      <a href="/signup" id="signupBtn" class="btn btn-primary btn-sm">Sign up</a>
+      <a href="/dashboard" id="dashboardBtn" class="btn btn-outline btn-sm" style="display:none">Dashboard</a>
+      <button id="logoutBtn" class="btn btn-ghost btn-sm" style="display:none">Log out</button>
+      <button id="hamburger" aria-label="Menu"><i data-lucide="menu"></i></button>
     </div>
   </div>
+  <div class="mobile-menu" id="navMenu">
+    <a href="/listings">Browse rooms</a>
+    <a href="/post-ad">Post a room</a>
+    <a href="/about">About</a>
+    <a href="/login" id="loginBtnMobile">Log in</a>
+    <a href="/signup" id="signupBtnMobile">Sign up</a>
+    <a href="/dashboard" id="dashboardBtnMobile" style="display:none">Dashboard</a>
+    <button id="logoutBtnMobile" style="display:none">Log out</button>
+  </div>
+</nav>
 
-  <div class="toast-container" id="toastContainer"></div>
-  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-  <script src="/js/app.js"></script>
-  <script src="/js/dashboard.js"></script>
-  <script>lucide.createIcons();</script>
-  <script src="/js/animations.js"></script>
+<div class="dashboard-topbar">
+  <div style="display:flex;align-items:center;gap:.6rem">
+    <div class="sidebar-avatar" id="mobileAvatar">R</div>
+    <div><div style="font-weight:700;font-size:.9rem" id="mobileName"></div><div class="text-muted" style="font-size:.75rem" id="mobileRole"></div></div>
+  </div>
+</div>
+<div class="mobile-tabs" id="mobileTabs"></div>
+
+<div class="dashboard-shell">
+  <aside class="sidebar">
+    <div class="sidebar-profile">
+      <div class="sidebar-avatar" id="sidebarAvatar">R</div>
+      <div><div style="font-weight:700" id="sidebarName"></div><div class="text-muted" style="font-size:.78rem" id="sidebarRole"></div></div>
+    </div>
+    <ul class="sidebar-nav" id="sidebarNav"></ul>
+  </aside>
+
+  <main class="dashboard-main">
+    <div id="ownerBanner" class="trust-band mb-3" style="display:none;padding:1.6rem">
+      <div>
+        <h3 style="color:#fff;margin-bottom:.2rem">Welcome back, <span id="ownerGreeting"></span></h3>
+        <p style="margin:0;color:#DCEAE7">Ready to list another room?</p>
+      </div>
+      <a href="/post-ad" class="btn btn-secondary">+ Post a room</a>
+    </div>
+
+    <div id="seekerActions" style="display:none" class="grid-3 mb-3">
+      <a href="/listings" class="card" style="padding:1.3rem;display:flex;align-items:center;gap:.8rem"><i data-lucide="search" style="color:var(--primary)"></i><div><strong>Browse rooms</strong><div class="text-muted" style="font-size:.78rem">Find your next place</div></div></a>
+      <a href="#favorites" class="card" style="padding:1.3rem;display:flex;align-items:center;gap:.8rem" onclick="dashboardShowTab('favorites')"><i data-lucide="heart" style="color:var(--primary)"></i><div><strong>Saved rooms</strong><div class="text-muted" style="font-size:.78rem">Your shortlist</div></div></a>
+      <a href="#requests" class="card" style="padding:1.3rem;display:flex;align-items:center;gap:.8rem" onclick="dashboardShowTab('requests')"><i data-lucide="message-circle" style="color:var(--primary)"></i><div><strong>My requests</strong><div class="text-muted" style="font-size:.78rem">Track your enquiries</div></div></a>
+    </div>
+
+    <!-- OVERVIEW -->
+    <div id="tab-overview">
+      <h2 id="overviewTitle">Overview</h2>
+      <div id="statCards"></div>
+      <div class="card" style="padding:1.3rem">
+        <h3 style="margin-bottom:.8rem">Recent activity</h3>
+        <div id="recentActivity"></div>
+      </div>
+    </div>
+
+    <!-- REQUESTS (seeker) -->
+    <div id="tab-requests" style="display:none">
+      <h2>My requests</h2>
+      <div id="requestsList"></div>
+    </div>
+
+    <!-- LISTINGS (owner) -->
+    <div id="tab-listings" style="display:none">
+      <div class="section-head"><h2 style="margin:0">My listings</h2><a href="/post-ad" class="btn btn-primary btn-sm">+ New listing</a></div>
+      <div id="ownerListings"></div>
+    </div>
+
+    <!-- FAVORITES (seeker) -->
+    <div id="tab-favorites" style="display:none">
+      <h2>Saved rooms</h2>
+      <div class="grid-3" id="favoritesList"></div>
+    </div>
+
+    <!-- NOTIFICATIONS -->
+    <div id="tab-notifications" style="display:none">
+      <h2>Notifications</h2>
+      <div class="card" id="notificationsList"></div>
+    </div>
+  </main>
+</div>
+
+<nav class="footer-nav" id="footerNav" data-mode="visitor"></nav>
+
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js" defer></script>
+<script src="/js/app.js" defer></script>
+<script src="/js/dashboard.js" defer></script>
+<script src="/js/footernav.js" defer></script>
+<script src="/js/animations.js" defer></script>
 </body>
 </html>

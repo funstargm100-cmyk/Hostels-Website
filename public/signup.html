@@ -1,155 +1,104 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Sign Up — Roomy</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/css/style.css" />
-  <style>
-    .auth-page { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(160deg, var(--marigold-light) 0%, var(--cream) 60%); padding: 2rem 1rem; }
-    [data-theme="dark"] .auth-page { background: linear-gradient(160deg, #2E2415 0%, var(--bg) 60%); }
-    .auth-card { background: var(--paper); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); padding: 2.75rem; width: 100%; max-width: 460px; border: 1px solid var(--border); }
-    .role-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 1.25rem; }
-    .role-card { border: 2px solid var(--border); border-radius: var(--radius); padding: 1rem; text-align: center; cursor: pointer; transition: all var(--transition); }
-    .role-card:hover { border-color: var(--clay); }
-    .role-card.selected { border-color: var(--clay); background: var(--primary-light); }
-    .role-card h4 { font-size: 0.9rem; margin-bottom: 0.2rem; }
-    .role-card p { font-size: 0.75rem; color: var(--text-muted); }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Create account — Roomy</title>
+<link rel="stylesheet" href="/css/style.css" />
 </head>
 <body>
-  <button class="theme-toggle" id="themeToggle" style="position:fixed;top:1rem;right:1rem;z-index:100"><i data-lucide="moon"></i></button>
-  <div class="auth-page">
-    <div class="auth-card">
-      <div style="text-align:center;margin-bottom:1.5rem">
-        <a href="/" style="font-family:var(--font-head);font-size:1.6rem;font-weight:700;color:var(--clay);display:inline-flex;align-items:center;gap:0.4rem"><i data-lucide="home" style="width:22px;height:22px"></i> Roomy</a>
-      </div>
-      <h2 style="text-align:center;margin-bottom:0.25rem">Create your account</h2>
-      <p class="text-muted text-center mb-3" style="font-size:0.875rem">Free to join. No hidden fees.</p>
 
-      <div id="otpStep" style="display:none">
-        <div class="alert alert-info mb-3">We sent a 6-digit code to your email/phone. Enter it below.</div>
-        <div class="form-group">
-          <label class="form-label">Verification Code *</label>
-          <input type="text" class="form-control" id="otpCode" placeholder="000000" maxlength="6" style="font-size:1.5rem;text-align:center;letter-spacing:0.5rem" />
-        </div>
-        <button class="btn btn-primary btn-block btn-lg" onclick="verifyOTP()">Verify Account</button>
-        <p class="text-muted text-center mt-2" style="font-size:0.82rem">Didn't receive it? <button class="btn btn-ghost btn-sm" onclick="resendOTP()">Resend</button></p>
-      </div>
+<div id="toastContainer"></div>
 
-      <div id="signupStep">
-        <div id="signupError" class="alert alert-danger" style="display:none"></div>
-
-        <p style="font-size:0.875rem;font-weight:600;margin-bottom:0.75rem">I am a:</p>
-        <div class="role-cards">
-          <div class="role-card selected" id="roleSeeker" onclick="selectRole('seeker')">
-            <div style="display:flex;justify-content:center;margin-bottom:0.4rem"><i data-lucide="search" style="width:30px;height:30px;color:var(--clay)"></i></div>
-            <h4>Room Seeker</h4>
-            <p>Looking for a hostel or room to rent</p>
-          </div>
-          <div class="role-card" id="roleOwner" onclick="selectRole('owner')">
-            <div style="display:flex;justify-content:center;margin-bottom:0.4rem"><i data-lucide="building-2" style="width:30px;height:30px;color:var(--clay)"></i></div>
-            <h4>Room Owner</h4>
-            <p>I have rooms to list and rent out</p>
-          </div>
-        </div>
-        <input type="hidden" id="selectedRole" value="seeker" />
-
-        <form id="signupForm" onsubmit="handleSignup(event)">
-          <div class="form-group">
-            <label class="form-label">Full Name *</label>
-            <input type="text" class="form-control" id="signupName" required autocomplete="name" />
-          </div>
-          <div class="form-group">
-            <label class="form-label">Email Address</label>
-            <input type="email" class="form-control" id="signupEmail" autocomplete="email" />
-          </div>
-          <div class="form-group">
-            <label class="form-label">Phone Number</label>
-            <input type="tel" class="form-control" id="signupPhone" placeholder="e.g. 0244000000" autocomplete="tel" />
-            <div class="form-hint">At least one of email or phone is required.</div>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Password *</label>
-            <input type="password" class="form-control" id="signupPassword" required minlength="8" autocomplete="new-password" />
-            <div class="form-hint">Minimum 8 characters.</div>
-          </div>
-          <div class="form-group">
-            <label class="checkbox-item" style="font-size:0.82rem">
-              <input type="checkbox" id="agreeTerms" required />
-              I agree to the <a href="/about#terms" style="color:var(--clay)">Terms of Service</a> and <a href="/about#privacy" style="color:var(--clay)">Privacy Policy</a>
-            </label>
-          </div>
-          <button type="submit" class="btn btn-primary btn-block btn-lg" id="signupSubmitBtn">Create Account</button>
-        </form>
-
-        <p style="text-align:center;font-size:0.875rem;margin-top:1.25rem">Already have an account? <a href="/login" style="color:var(--clay);font-weight:600">Sign in</a></p>
-      </div>
+<nav class="navbar" id="mainNav">
+  <div class="nav-inner">
+    <a href="/" class="logo">roomy<span class="dot">.</span></a>
+    <div class="nav-links">
+      <a href="/listings">Browse rooms</a>
+      <a href="/post-ad">Post a room</a>
+      <a href="/about">About</a>
+    </div>
+    <div class="nav-actions">
+      <button id="themeToggle" aria-label="Toggle theme"></button>
     </div>
   </div>
+</nav>
 
-  <div class="toast-container" id="toastContainer"></div>
-  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-  <script src="/js/app.js"></script>
-  <script>
-    let pendingUUID = null;
+<div class="auth-shell">
+  <div class="auth-card">
+    <div class="logo mb-1">roomy<span class="dot">.</span></div>
+    <h2 style="font-size:1.4rem">Create your account</h2>
+    <p class="text-muted mb-3" style="margin-top:-.4rem">Find a room, or list one — takes under a minute.</p>
 
-    function selectRole(role) {
-      document.getElementById('selectedRole').value = role;
-      document.getElementById('roleSeeker').classList.toggle('selected', role === 'seeker');
-      document.getElementById('roleOwner').classList.toggle('selected', role === 'owner');
-    }
+    <div class="alert alert-danger" id="signupError" style="display:none"></div>
 
-    async function handleSignup(e) {
-      e.preventDefault();
-      const btn = document.getElementById('signupSubmitBtn');
-      const err = document.getElementById('signupError');
-      const email = document.getElementById('signupEmail').value;
-      const phone = document.getElementById('signupPhone').value;
-      if (!email && !phone) { err.textContent = 'Please provide email or phone.'; err.style.display = 'flex'; return; }
-      btn.disabled = true; btn.textContent = 'Creating account...';
-      err.style.display = 'none';
-      try {
-        const res = await api.post('/api/auth/signup', {
-          name: document.getElementById('signupName').value,
-          email: email || undefined,
-          phone: phone || undefined,
-          password: document.getElementById('signupPassword').value,
-          role: document.getElementById('selectedRole').value
-        });
-        pendingUUID = res.uuid;
-        if (res.otp) {
-          document.getElementById('otpCode').value = res.otp;
-          document.querySelector('#otpStep .alert').innerHTML = `Your OTP is: <strong>${res.otp}</strong> (auto-filled). Click verify.`;
-        }
-        document.getElementById('signupStep').style.display = 'none';
-        document.getElementById('otpStep').style.display = 'block';
-      } catch (ex) {
-        err.textContent = ex.message || 'Signup failed';
-        err.style.display = 'flex';
-        btn.disabled = false; btn.textContent = 'Create Account';
-      }
-    }
+    <form id="signupForm">
+      <div class="role-toggle">
+        <label><input type="radio" name="role" value="seeker" checked /><span>I'm looking for a room</span></label>
+        <label><input type="radio" name="role" value="owner" /><span>I'm listing a room</span></label>
+      </div>
+      <div class="form-group">
+        <label>Full name</label>
+        <input type="text" id="suName" required />
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" id="suEmail" />
+        </div>
+        <div class="form-group">
+          <label>Phone</label>
+          <input type="tel" id="suPhone" placeholder="0XX XXX XXXX" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="suPassword" required minlength="6" autocomplete="new-password" />
+      </div>
+      <button type="submit" class="btn btn-primary btn-lg" style="width:100%" id="signupSubmitBtn">Create account</button>
+    </form>
 
-    async function verifyOTP() {
-      const otp = document.getElementById('otpCode').value;
-      if (otp.length !== 6) return showToast('Enter the 6-digit code', 'error');
-      try {
-        await api.post('/api/auth/verify-otp', { uuid: pendingUUID, otp });
-        showToast('Account verified! Redirecting...', 'success');
-        setTimeout(() => location.href = '/login', 1500);
-      } catch (ex) {
-        showToast(ex.message || 'Invalid code', 'error');
-      }
-    }
+    <p class="text-muted mt-3" style="text-align:center;font-size:.88rem">Already have an account? <a href="/login" style="color:var(--primary);font-weight:700">Log in</a></p>
+  </div>
+</div>
 
-    async function resendOTP() {
-      showToast('Resend not yet implemented — check your email/phone', 'info');
-    }
-  </script>
-  <script>lucide.createIcons();</script>
-  <script src="/js/animations.js"></script>
+<footer class="site-footer" style="padding:2rem 0">
+  <div class="container footer-bottom" style="border-top:none">
+    <span>© 2026 Roomy.</span>
+    <a href="/about">About &amp; safety</a>
+  </div>
+</footer>
+
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js" defer></script>
+<script src="/js/app.js" defer></script>
+<script src="/js/animations.js" defer></script>
+<script defer>
+document.getElementById('signupForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById('signupSubmitBtn');
+  const errEl = document.getElementById('signupError');
+  errEl.style.display = 'none';
+  const email = document.getElementById('suEmail').value.trim();
+  const phone = document.getElementById('suPhone').value.trim();
+  if (!email && !phone) { errEl.textContent = 'Provide an email or phone number.'; errEl.style.display = 'block'; return; }
+  btn.disabled = true; btn.classList.add('btn-loading');
+  try {
+    const { token, user } = await api.post('/api/auth/signup', {
+      name: document.getElementById('suName').value.trim(),
+      email: email || undefined,
+      phone: phone || undefined,
+      password: document.getElementById('suPassword').value,
+      role: document.querySelector('input[name="role"]:checked').value
+    });
+    localStorage.setItem('token', token);
+    localStorage.setItem('user', JSON.stringify(user));
+    location.href = '/dashboard';
+  } catch (ex) {
+    errEl.textContent = ex.message;
+    errEl.style.display = 'block';
+    btn.disabled = false; btn.classList.remove('btn-loading');
+  }
+});
+</script>
 </body>
 </html>

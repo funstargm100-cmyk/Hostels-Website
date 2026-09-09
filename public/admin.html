@@ -1,139 +1,147 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Admin Panel — Roomy</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/css/style.css" />
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Admin — Roomy</title>
+<link rel="stylesheet" href="/css/style.css" />
 </head>
 <body>
-  <nav class="navbar">
-    <div class="container">
-      <a href="/" class="navbar-brand"><i data-lucide="home"></i> <span class="brand-roomy">Roomy</span> <span class="badge badge-primary" style="font-size:0.65rem">ADMIN</span></a>
-      <div class="navbar-actions">
-        <button class="theme-toggle" id="themeToggle"><i data-lucide="moon"></i></button>
-        <a href="/" class="btn btn-ghost btn-sm">← Site</a>
-        <button class="btn btn-ghost btn-sm" id="logoutBtn">Logout</button>
-      </div>
-    </div>
-  </nav>
 
-  <div class="container">
-    <div class="dashboard-layout">
-      <aside class="sidebar">
-        <ul class="sidebar-nav">
-          <li><a href="#overview" class="active" onclick="showAdminTab('overview',this)"><i data-lucide="layout-dashboard"></i> Overview</a></li>
-          <li><a href="#listings" onclick="showAdminTab('listings',this)"><i data-lucide="building-2"></i> Listings Queue</a></li>
-          <li><a href="#requests" onclick="showAdminTab('requests',this)"><i data-lucide="message-circle"></i> Contact Requests</a></li>
-          <li><a href="#users" onclick="showAdminTab('users',this)"><i data-lucide="users"></i> Users</a></li>
-          <li><a href="#reports" onclick="showAdminTab('reports',this)"><i data-lucide="flag"></i> Reports</a></li>
-          <li><a href="#logs" onclick="showAdminTab('logs',this)"><i data-lucide="clipboard-list"></i> Audit Logs</a></li>
-        </ul>
-      </aside>
+<div id="toastContainer"></div>
 
-      <main>
-        <div id="admin-tab-overview">
-          <h2 class="mb-3">Platform overview</h2>
-          <div class="stat-cards" id="adminStats"></div>
-        </div>
-
-        <div id="admin-tab-listings" style="display:none">
-          <div class="flex-between mb-3">
-            <h2>Listings moderation</h2>
-            <select class="form-control" id="listingStatusFilter" style="width:auto" onchange="loadAdminListings()">
-              <option value="pending">Pending Review</option>
-              <option value="active">Active</option>
-              <option value="rejected">Rejected</option>
-            </select>
-          </div>
-          <div id="adminListingsTable"></div>
-        </div>
-
-        <div id="admin-tab-requests" style="display:none">
-          <div class="flex-between mb-3">
-            <h2>Contact requests</h2>
-            <select class="form-control" id="requestStatusFilter" style="width:auto" onchange="loadAdminRequests()">
-              <option value="received">New</option>
-              <option value="in_progress">In Progress</option>
-              <option value="connected">Connected</option>
-              <option value="closed">Closed</option>
-              <option value="">All</option>
-            </select>
-          </div>
-          <div id="adminRequestsTable"></div>
-        </div>
-
-        <div id="admin-tab-users" style="display:none">
-          <div class="flex-between mb-3">
-            <h2>User management</h2>
-            <select class="form-control" id="userRoleFilter" style="width:auto" onchange="loadAdminUsers()">
-              <option value="">All Users</option>
-              <option value="seeker">Seekers</option>
-              <option value="owner">Owners</option>
-              <option value="agent">Agents</option>
-            </select>
-          </div>
-          <div id="adminUsersTable"></div>
-        </div>
-
-        <div id="admin-tab-reports" style="display:none">
-          <h2 class="mb-3">Flagged reports</h2>
-          <div id="adminReportsTable"></div>
-        </div>
-
-        <div id="admin-tab-logs" style="display:none">
-          <h2 class="mb-3">Audit logs</h2>
-          <div id="adminLogsTable"></div>
-        </div>
-      </main>
+<nav class="navbar" id="mainNav">
+  <div class="nav-inner">
+    <a href="/" class="logo">roomy<span class="dot">.</span></a>
+    <div class="nav-actions">
+      <button id="themeToggle" aria-label="Toggle theme"></button>
+      <button id="logoutBtn" class="btn btn-ghost btn-sm">Log out</button>
     </div>
   </div>
+</nav>
 
-  <div class="modal-overlay" id="requestModal">
-    <div class="modal">
-      <div class="modal-header">
-        <h3>Update Request Status</h3>
-        <button class="modal-close" onclick="closeModal('requestModal')">✕</button>
+<div class="dashboard-shell">
+  <aside class="sidebar">
+    <div class="sidebar-profile">
+      <div class="sidebar-avatar" style="background:var(--teal)">A</div>
+      <div><div style="font-weight:700">Admin panel</div><div class="text-muted" style="font-size:.78rem">Moderation &amp; ops</div></div>
+    </div>
+    <ul class="sidebar-nav">
+      <li><a href="#" class="active" onclick="showAdminTab('overview',this);return false"><i data-lucide="layout-dashboard"></i> Overview</a></li>
+      <li><a href="#" onclick="showAdminTab('listings',this);return false"><i data-lucide="building-2"></i> Listings</a></li>
+      <li><a href="#" onclick="showAdminTab('requests',this);return false"><i data-lucide="message-circle"></i> Requests</a></li>
+      <li><a href="#" onclick="showAdminTab('users',this);return false"><i data-lucide="users"></i> Users</a></li>
+      <li><a href="#" onclick="showAdminTab('reports',this);return false"><i data-lucide="flag"></i> Reports</a></li>
+      <li><a href="#" onclick="showAdminTab('logs',this);return false"><i data-lucide="scroll-text"></i> Audit logs</a></li>
+    </ul>
+  </aside>
+
+  <main class="dashboard-main">
+    <div id="admin-tab-overview">
+      <h2>Overview</h2>
+      <div id="adminStats"></div>
+    </div>
+
+    <div id="admin-tab-listings" style="display:none">
+      <div class="section-head">
+        <h2 style="margin:0">Listings</h2>
+        <select id="listingStatusFilter" onchange="loadAdminListings()" style="width:auto">
+          <option value="pending">Pending review</option>
+          <option value="active">Active</option>
+          <option value="deactivated">Deactivated</option>
+        </select>
       </div>
-      <div id="requestModalDetails" class="mb-3" style="font-size:0.875rem;color:var(--text-muted)"></div>
-      <div class="form-group">
-        <label class="form-label">New Status</label>
-        <select class="form-control" id="newRequestStatus">
-          <option value="received">Received</option>
-          <option value="in_progress">In Progress</option>
+      <div id="adminListingsTable"></div>
+    </div>
+
+    <div id="admin-tab-requests" style="display:none">
+      <div class="section-head">
+        <h2 style="margin:0">Requests</h2>
+        <select id="requestStatusFilter" onchange="loadAdminRequests()" style="width:auto">
+          <option value="">All statuses</option>
+          <option value="new">New</option>
+          <option value="in_progress">In progress</option>
           <option value="connected">Connected</option>
           <option value="closed">Closed</option>
         </select>
       </div>
-      <div class="form-group">
-        <label class="form-label">Admin Notes</label>
-        <textarea class="form-control" id="adminNotes" rows="3" placeholder="Internal notes..."></textarea>
+      <div id="adminRequestsTable"></div>
+    </div>
+
+    <div id="admin-tab-users" style="display:none">
+      <div class="section-head">
+        <h2 style="margin:0">Users</h2>
+        <select id="userRoleFilter" onchange="loadAdminUsers()" style="width:auto">
+          <option value="">All roles</option>
+          <option value="seeker">Seekers</option>
+          <option value="owner">Owners</option>
+          <option value="agent">Agents</option>
+          <option value="admin">Admins</option>
+        </select>
       </div>
-      <button class="btn btn-primary btn-block" onclick="updateRequestStatus()">Update Status</button>
+      <div id="adminUsersTable"></div>
+    </div>
+
+    <div id="admin-tab-reports" style="display:none">
+      <h2>Open reports</h2>
+      <div id="adminReportsTable"></div>
+    </div>
+
+    <div id="admin-tab-logs" style="display:none">
+      <h2>Audit logs</h2>
+      <div id="adminLogsTable"></div>
+    </div>
+  </main>
+</div>
+
+<!-- Reject listing modal -->
+<div class="modal-overlay" id="rejectModal">
+  <div class="modal">
+    <h3>Reject listing</h3>
+    <div class="form-group"><label>Reason</label><textarea id="rejectReason" placeholder="Explain why this listing is being rejected"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('rejectModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="confirmReject()">Reject listing</button>
     </div>
   </div>
+</div>
 
-  <div class="modal-overlay" id="rejectModal">
-    <div class="modal">
-      <div class="modal-header">
-        <h3>Reject Listing</h3>
-        <button class="modal-close" onclick="closeModal('rejectModal')">✕</button>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Rejection Reason *</label>
-        <textarea class="form-control" id="rejectReason" rows="3" placeholder="Explain why this listing is being rejected..." required></textarea>
-      </div>
-      <button class="btn btn-primary btn-block" onclick="confirmReject()">Confirm Rejection</button>
+<!-- Delete listing modal -->
+<div class="modal-overlay" id="deleteModal">
+  <div class="modal">
+    <h3>Delete listing</h3>
+    <p class="text-muted">This permanently removes the listing. This can't be undone.</p>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('deleteModal')">Cancel</button>
+      <button class="btn btn-primary" style="background:var(--brick)" onclick="confirmDelete()">Delete permanently</button>
     </div>
   </div>
+</div>
 
-  <div class="toast-container" id="toastContainer"></div>
-  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-  <script src="/js/app.js"></script>
-  <script src="/js/admin.js"></script>
-  <script>lucide.createIcons();</script>
-  <script src="/js/animations.js"></script>
+<!-- Update request modal -->
+<div class="modal-overlay" id="requestModal">
+  <div class="modal">
+    <h3>Update request</h3>
+    <div class="form-group">
+      <label>Status</label>
+      <select id="newRequestStatus">
+        <option value="new">New</option>
+        <option value="in_progress">In progress</option>
+        <option value="connected">Connected</option>
+        <option value="closed">Closed</option>
+      </select>
+    </div>
+    <div class="form-group"><label>Admin notes</label><textarea id="adminNotes" placeholder="Internal notes (not shared with users)"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('requestModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="updateRequestStatus()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js" defer></script>
+<script src="/js/app.js" defer></script>
+<script src="/js/admin.js" defer></script>
+<script src="/js/animations.js" defer></script>
 </body>
 </html>

@@ -1,109 +1,94 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>About — Roomy</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/css/style.css" />
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>About &amp; safety — Roomy</title>
+<link rel="stylesheet" href="/css/style.css" />
 </head>
 <body>
-  <nav class="navbar">
-    <div class="container">
-      <a href="/" class="navbar-brand"><i data-lucide="home"></i> <span class="brand-roomy">Roomy</span></a>
-      <ul class="navbar-nav" id="navMenu">
-        <li><a href="/">Home</a></li>
-        <li><a href="/listings">Browse Rooms</a></li>
-        <li><a href="/post-ad">Post a Room</a></li>
-        <li><a href="/about" class="active">About</a></li>
-        <li class="nav-auth-mobile">
-          <a href="/login" class="btn btn-ghost" id="loginBtnMobile">Login</a>
-          <a href="/signup" class="btn btn-primary" id="signupBtnMobile">Sign Up Free</a>
-          <a href="/dashboard" class="btn btn-outline nav-profile-link" id="dashboardBtnMobile" style="display:none"><i data-lucide="user-circle"></i> Profile</a>
-          <button class="btn btn-ghost" id="logoutBtnMobile" style="display:none">Logout</button>
-        </li>
-      </ul>
-      <div class="navbar-actions">
-        <button class="theme-toggle" id="themeToggle"><i data-lucide="moon"></i></button>
-        <a href="/login" class="btn btn-ghost btn-sm" id="loginBtn">Login</a>
-        <a href="/signup" class="btn btn-primary btn-sm" id="signupBtn">Sign Up Free</a>
-        <a href="/dashboard" class="btn btn-outline btn-sm nav-profile-link" id="dashboardBtn" style="display:none"><i data-lucide="user-circle"></i> Profile</a>
-        <button class="btn btn-ghost btn-sm" id="logoutBtn" style="display:none">Logout</button>
-        <button class="hamburger" id="hamburger"><span></span><span></span><span></span></button>
-      </div>
+
+<div id="toastContainer"></div>
+
+<nav class="navbar" id="mainNav">
+  <div class="nav-inner">
+    <a href="/" class="logo">roomy<span class="dot">.</span></a>
+    <div class="nav-links">
+      <a href="/listings">Browse rooms</a>
+      <a href="/post-ad">Post a room</a>
+      <a href="/about">About</a>
     </div>
-  </nav>
-
-  <div class="container" style="max-width:800px;padding-top:2.5rem;padding-bottom:4rem">
-
-    <h1 class="mb-1">About Roomy</h1>
-    <p class="text-muted mb-4">Ghana's trusted hostel and room rental marketplace.</p>
-
-    <div class="card reveal" style="padding:2rem;margin-bottom:2rem">
-      <h2 class="mb-2">Our mission</h2>
-      <p style="color:var(--text-muted);line-height:1.8">Roomy connects students and young professionals with verified room owners — without the stress of walking around or falling victim to scams. We act as the trusted middleman for every connection, ensuring both seekers and owners are protected.</p>
-    </div>
-
-    <div class="card reveal" style="padding:2rem;margin-bottom:2rem" id="safety">
-      <h2 class="mb-3"><i data-lucide="shield-check" style="width:22px;height:22px;color:var(--clay)"></i> Safety tips</h2>
-      <div style="display:flex;flex-direction:column;gap:1rem">
-        <div style="display:flex;gap:0.75rem;align-items:flex-start">
-          <i data-lucide="check-circle" style="width:20px;height:20px;color:var(--forest);flex-shrink:0;margin-top:2px"></i>
-          <div><strong>Always use Roomy to connect.</strong> Never deal with a room owner directly outside the platform.</div>
-        </div>
-        <div style="display:flex;gap:0.75rem;align-items:flex-start">
-          <i data-lucide="check-circle" style="width:20px;height:20px;color:var(--forest);flex-shrink:0;margin-top:2px"></i>
-          <div><strong>Inspect before you commit.</strong> We will arrange a viewing before any agreement is made.</div>
-        </div>
-        <div style="display:flex;gap:0.75rem;align-items:flex-start">
-          <i data-lucide="check-circle" style="width:20px;height:20px;color:var(--forest);flex-shrink:0;margin-top:2px"></i>
-          <div><strong>Report suspicious listings.</strong> Use the report button on any listing that looks fake or contains contact info.</div>
-        </div>
-        <div style="display:flex;gap:0.75rem;align-items:flex-start">
-          <i data-lucide="alert-triangle" style="width:20px;height:20px;color:var(--marigold);flex-shrink:0;margin-top:2px"></i>
-          <div><strong>Verified badge matters.</strong> Look for the green "Verified" badge — it means the owner has passed our KYC check.</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="card reveal" style="padding:2rem;margin-bottom:2rem" id="terms">
-      <h2 class="mb-3"><i data-lucide="file-text" style="width:22px;height:22px;color:var(--clay)"></i> Terms of service</h2>
-      <div style="color:var(--text-muted);font-size:0.875rem;line-height:1.8">
-        <p class="mb-2"><strong>1. Contact Information Policy:</strong> Room owners must not include any phone numbers, email addresses, social media handles, or contact-soliciting phrases in their listings. Violations result in rejection, warnings, and potential account suspension.</p>
-        <p class="mb-2"><strong>2. Middleman Model:</strong> All connections between seekers and owners are facilitated exclusively by Roomy. Direct contact outside the platform voids any platform protection.</p>
-        <p class="mb-2"><strong>3. KYC Requirement:</strong> Room owners must complete identity verification before their first listing goes live.</p>
-        <p class="mb-2"><strong>4. Listing Accuracy:</strong> Owners are responsible for the accuracy of their listings. Misleading listings will be removed.</p>
-        <p class="mb-2"><strong>5. Reviews:</strong> Reviews can only be submitted after a confirmed connection to prevent fake reviews.</p>
-        <p><strong>6. Platform Rights:</strong> Roomy reserves the right to remove any listing or suspend any account that violates these terms.</p>
-      </div>
-    </div>
-
-    <div class="card reveal" style="padding:2rem" id="privacy">
-      <h2 class="mb-3"><i data-lucide="lock" style="width:22px;height:22px;color:var(--clay)"></i> Privacy policy</h2>
-      <div style="color:var(--text-muted);font-size:0.875rem;line-height:1.8">
-        <p class="mb-2"><strong>Data We Collect:</strong> Name, email, phone number, and KYC documents for account holders. Location data for listings (stored privately).</p>
-        <p class="mb-2"><strong>How We Use It:</strong> To facilitate room connections, verify identities, and send relevant notifications.</p>
-        <p class="mb-2"><strong>Location Privacy:</strong> Exact listing coordinates are never shown publicly. Seekers see only an approximate area (±150–300m offset). Exact address is shared only after a confirmed connection.</p>
-        <p class="mb-2"><strong>Contact Privacy:</strong> Owner contact details are never displayed to seekers. Seeker contact details are never displayed to owners until the platform manually connects them.</p>
-        <p><strong>Data Security:</strong> All passwords are hashed. KYC documents are stored securely and accessible only to admins.</p>
-      </div>
+    <div class="nav-actions">
+      <button id="themeToggle" aria-label="Toggle theme"></button>
+      <a href="/login" id="loginBtn" class="btn btn-ghost btn-sm">Log in</a>
+      <a href="/signup" id="signupBtn" class="btn btn-primary btn-sm">Sign up</a>
+      <a href="/dashboard" id="dashboardBtn" class="btn btn-outline btn-sm" style="display:none">Dashboard</a>
+      <button id="logoutBtn" class="btn btn-ghost btn-sm" style="display:none">Log out</button>
+      <button id="hamburger" aria-label="Menu"><i data-lucide="menu"></i></button>
     </div>
   </div>
+  <div class="mobile-menu" id="navMenu">
+    <a href="/listings">Browse rooms</a>
+    <a href="/post-ad">Post a room</a>
+    <a href="/about">About</a>
+    <a href="/login" id="loginBtnMobile">Log in</a>
+    <a href="/signup" id="signupBtnMobile">Sign up</a>
+    <a href="/dashboard" id="dashboardBtnMobile" style="display:none">Dashboard</a>
+    <button id="logoutBtnMobile" style="display:none">Log out</button>
+  </div>
+</nav>
 
-  <footer class="footer">
-    <div class="container">
-      <div class="footer-bottom">
-        <span>© 2025 Roomy. All rights reserved.</span>
-        <span style="display:flex;align-items:center;gap:0.3rem">Made with <i data-lucide="heart" style="width:14px;height:14px;color:var(--clay);fill:var(--clay)"></i> in Ghana</span>
+<section class="container reveal" style="padding-top:3.5rem;max-width:760px">
+  <h1>Built so no one gets stranded on move-in day.</h1>
+  <p class="text-muted" style="font-size:1.05rem">Roomy is a marketplace for hostels, self-contained rooms and shared houses across Ghana. We sit between seekers and owners so enquiries stay organised, contact details stay protected, and everyone knows what to expect before they commit.</p>
+</section>
+
+<section class="section container">
+  <div class="value-grid reveal-stagger">
+    <div class="value-card"><i data-lucide="shield-check"></i><h3>Verified owners</h3><p class="text-muted" style="margin:0">Every host completes a light identity check before their first listing goes live.</p></div>
+    <div class="value-card"><i data-lucide="message-circle"></i><h3>No direct contact upfront</h3><p class="text-muted" style="margin:0">We route requests through Roomy first, so numbers aren't shared until both sides are ready.</p></div>
+    <div class="value-card"><i data-lucide="map-pin"></i><h3>Privacy-jittered maps</h3><p class="text-muted" style="margin:0">Listing locations are shown approximately until you've been in touch with the owner.</p></div>
+    <div class="value-card"><i data-lucide="banknote"></i><h3>One transparent fee</h3><p class="text-muted" style="margin:0">A flat 10% service fee is split evenly between the platform and the owner — no surprise charges.</p></div>
+  </div>
+</section>
+
+<section class="section container" style="max-width:760px" id="safety">
+  <h2>Staying safe</h2>
+  <ul style="display:grid;gap:.8rem">
+    <li class="card" style="padding:1rem 1.2rem">Always view a room (in person or on a video call) before sending any money.</li>
+    <li class="card" style="padding:1rem 1.2rem">Never pay a deposit outside of arrangements confirmed with the owner directly.</li>
+    <li class="card" style="padding:1rem 1.2rem">Report a listing immediately if a photo looks reused or the price seems too good to be true.</li>
+    <li class="card" style="padding:1rem 1.2rem">Keep early conversations on Roomy so we can step in if something feels off.</li>
+  </ul>
+</section>
+
+<section class="section container" style="max-width:760px" id="terms">
+  <h2>Terms, in plain language</h2>
+  <p class="text-muted">By using Roomy, owners agree to list only rooms they're authorised to rent, and seekers agree to use listing information for genuine enquiries only. The full legal terms and privacy policy are available on request from our support team.</p>
+</section>
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div>
+        <a href="/" class="logo" style="color:#fff">roomy<span class="dot">.</span></a>
+        <p class="mt-2" style="max-width:34ch">Ghana's marketplace for hostels, self-contained rooms and shared houses.</p>
       </div>
+      <div><h4>Explore</h4><ul><li><a href="/listings">Browse rooms</a></li><li><a href="/post-ad">Post a room</a></li></ul></div>
+      <div><h4>Account</h4><ul><li><a href="/signup">Create account</a></li><li><a href="/login">Log in</a></li></ul></div>
+      <div><h4>Support</h4><ul><li><a href="mailto:hello@roomy.gh">hello@roomy.gh</a></li></ul></div>
     </div>
-  </footer>
+    <div class="footer-bottom">
+      <span>© 2026 Roomy. Built for renters and hosts across Ghana.</span>
+    </div>
+  </div>
+</footer>
 
-  <div class="toast-container" id="toastContainer"></div>
-  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-  <script src="/js/app.js"></script>
-  <script>lucide.createIcons();</script>
-  <script src="/js/animations.js"></script>
+<nav class="footer-nav" id="footerNav" data-mode="visitor"></nav>
+
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js" defer></script>
+<script src="/js/app.js" defer></script>
+<script src="/js/footernav.js" defer></script>
+<script src="/js/animations.js" defer></script>
 </body>
 </html>

@@ -1,163 +1,177 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Browse Rooms — Roomy</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/css/style.css" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Browse rooms — Roomy</title>
+<link rel="stylesheet" href="/css/style.css" />
 </head>
 <body>
-  <nav class="navbar">
-    <div class="container">
-      <a href="/" class="navbar-brand"><i data-lucide="home"></i> <span class="brand-roomy">Roomy</span></a>
-      <ul class="navbar-nav" id="navMenu">
-        <li><a href="/">Home</a></li>
-        <li><a href="/listings" class="active">Browse Rooms</a></li>
-        <li><a href="/post-ad">Post a Room</a></li>
-        <li><a href="/about">About</a></li>
-        <li class="nav-auth-mobile">
-          <a href="/login" class="btn btn-ghost" id="loginBtnMobile">Login</a>
-          <a href="/signup" class="btn btn-primary" id="signupBtnMobile">Sign Up Free</a>
-          <a href="/dashboard" class="btn btn-outline nav-profile-link" id="dashboardBtnMobile" style="display:none"><i data-lucide="user-circle"></i> Profile</a>
-          <button class="btn btn-ghost" id="logoutBtnMobile" style="display:none">Logout</button>
-        </li>
-      </ul>
-      <div class="navbar-actions">
-        <button class="theme-toggle" id="themeToggle"><i data-lucide="moon"></i></button>
-        <a href="/login" class="btn btn-ghost btn-sm" id="loginBtn">Login</a>
-        <a href="/signup" class="btn btn-primary btn-sm" id="signupBtn">Sign Up Free</a>
-        <a href="/dashboard" class="btn btn-outline btn-sm nav-profile-link" id="dashboardBtn" style="display:none"><i data-lucide="user-circle"></i> Profile</a>
-        <button class="btn btn-ghost btn-sm" id="logoutBtn" style="display:none">Logout</button>
-        <button class="hamburger" id="hamburger"><span></span><span></span><span></span></button>
-      </div>
-    </div>
-  </nav>
 
-  <div class="search-sticky">
-    <div class="container">
-      <div class="search-bar-row">
-        <div class="search-main">
-          <div class="input-group" style="flex:1;min-width:180px">
-            <span class="input-icon"><i data-lucide="map-pin"></i></span>
-            <input type="text" class="form-control" id="searchLocation" placeholder="Location or university..." />
-          </div>
-          <button class="btn btn-primary" onclick="applyFilters()"><i data-lucide="search"></i> Search</button>
-        </div>
-        <div class="search-secondary">
-          <button class="btn btn-ghost" onclick="toggleFilters()"><i data-lucide="sliders-horizontal"></i> Filters</button>
-          <button class="btn btn-ghost" id="nearMeBtn" onclick="filterNearMe()" title="Show rooms near me"><i data-lucide="navigation"></i> Near Me</button>
-          <div class="view-sort-row">
-            <button class="btn btn-ghost btn-sm btn-icon" onclick="setView('grid')" title="Grid"><i data-lucide="layout-grid"></i></button>
-            <button class="btn btn-ghost btn-sm btn-icon" onclick="setView('list')" title="List"><i data-lucide="list"></i></button>
-            <select class="form-control" id="sortSelect" style="width:auto" onchange="applyFilters()">
-              <option value="">Sort: Featured</option>
-              <option value="newest">Newest</option>
-              <option value="price_asc">Price: Low → High</option>
-              <option value="price_desc">Price: High → Low</option>
-              <option value="rating">Top Rated</option>
-            </select>
-          </div>
-        </div>
+<div id="toastContainer"></div>
+
+<nav class="navbar" id="mainNav">
+  <div class="nav-inner">
+    <a href="/" class="logo">roomy<span class="dot">.</span></a>
+    <div class="nav-links">
+      <a href="/listings">Browse rooms</a>
+      <a href="/post-ad">Post a room</a>
+      <a href="/about">About</a>
+    </div>
+    <div class="nav-actions">
+      <button id="themeToggle" aria-label="Toggle theme"></button>
+      <a href="/login" id="loginBtn" class="btn btn-ghost btn-sm">Log in</a>
+      <a href="/signup" id="signupBtn" class="btn btn-primary btn-sm">Sign up</a>
+      <a href="/dashboard" id="dashboardBtn" class="btn btn-outline btn-sm" style="display:none">Dashboard</a>
+      <button id="logoutBtn" class="btn btn-ghost btn-sm" style="display:none">Log out</button>
+      <button id="hamburger" aria-label="Menu"><i data-lucide="menu"></i></button>
+    </div>
+  </div>
+  <div class="mobile-menu" id="navMenu">
+    <a href="/listings">Browse rooms</a>
+    <a href="/post-ad">Post a room</a>
+    <a href="/about">About</a>
+    <a href="/login" id="loginBtnMobile">Log in</a>
+    <a href="/signup" id="signupBtnMobile">Sign up</a>
+    <a href="/dashboard" id="dashboardBtnMobile" style="display:none">Dashboard</a>
+    <button id="logoutBtnMobile" style="display:none">Log out</button>
+  </div>
+</nav>
+
+<div class="container" style="padding-top:2rem">
+  <div class="results-toolbar">
+    <div>
+      <h2 style="margin-bottom:.2rem">Browse rooms</h2>
+      <span class="text-muted" id="resultsCount">Loading…</span>
+    </div>
+    <div style="display:flex;gap:.6rem;align-items:center;flex-wrap:wrap">
+      <button class="btn btn-outline btn-sm" id="nearMeBtn" onclick="filterNearMe()"><i data-lucide="navigation"></i> Near Me</button>
+      <select id="sortSelect" onchange="applyFilters()" style="width:auto">
+        <option value="">Sort: Newest</option>
+        <option value="price_asc">Price: Low to High</option>
+        <option value="price_desc">Price: High to Low</option>
+        <option value="rating">Top Rated</option>
+        <option value="featured">Featured</option>
+      </select>
+      <div class="view-toggle">
+        <button class="active" id="gridViewBtn" onclick="setView('grid');document.getElementById('gridViewBtn').classList.add('active');document.getElementById('listViewBtn').classList.remove('active')"><i data-lucide="grid-2x2"></i></button>
+        <button id="listViewBtn" onclick="setView('list');document.getElementById('listViewBtn').classList.add('active');document.getElementById('gridViewBtn').classList.remove('active')"><i data-lucide="list"></i></button>
       </div>
+      <button class="btn btn-outline btn-sm" onclick="toggleFilters()" id="mobileFilterBtn"><i data-lucide="sliders-horizontal"></i> Filters</button>
     </div>
   </div>
 
-  <div class="container" style="padding-top:1.75rem;padding-bottom:2rem">
-    <div class="listings-layout">
-      <aside class="filters-panel" id="filtersPanel">
-        <div class="flex-between mb-2">
-          <h3 style="font-size:1rem">Filters</h3>
-          <button class="btn btn-ghost btn-sm" onclick="clearFilters()">Clear all</button>
-        </div>
-        <div class="filter-section">
-          <div class="filter-title">Price range (GHS)</div>
-          <div class="price-range">
-            <input type="number" class="form-control" id="minPrice" placeholder="Min" style="width:80px" />
-            <span style="color:var(--text-muted)">—</span>
-            <input type="number" class="form-control" id="maxPrice" placeholder="Max" style="width:80px" />
-          </div>
-        </div>
-        <div class="filter-section">
-          <div class="filter-title">Occupancy type</div>
-          <div class="checkbox-group" style="flex-direction:column">
-            <label class="checkbox-item"><input type="radio" name="occupancy" value="" checked onchange="applyFilters()"> Any</label>
-            <label class="checkbox-item"><input type="radio" name="occupancy" value="1" onchange="applyFilters()"> 1 in 1</label>
-            <label class="checkbox-item"><input type="radio" name="occupancy" value="2" onchange="applyFilters()"> 2 in 1</label>
-            <label class="checkbox-item"><input type="radio" name="occupancy" value="3" onchange="applyFilters()"> 3 in 1</label>
-            <label class="checkbox-item"><input type="radio" name="occupancy" value="4" onchange="applyFilters()"> 4 in 1</label>
-          </div>
-        </div>
-        <div class="filter-section">
-          <div class="filter-title">Gender preference</div>
-          <select class="form-control" id="genderFilter" onchange="applyFilters()">
-            <option value="">Any</option>
-            <option value="male">Male Only</option>
-            <option value="female">Female Only</option>
-            <option value="mixed">Mixed</option>
-          </select>
-        </div>
-        <div class="filter-section">
-          <div class="filter-title">Amenities</div>
-          <div class="checkbox-group" style="flex-direction:column">
-            <label class="checkbox-item"><input type="checkbox" id="filterWifi" onchange="applyFilters()"> <i data-lucide="wifi"></i> Wi-Fi</label>
-            <label class="checkbox-item"><input type="checkbox" id="filterParking" onchange="applyFilters()"> <i data-lucide="car"></i> Parking</label>
-          </div>
-        </div>
-        <div class="filter-section">
-          <div class="filter-title">Water supply</div>
-          <select class="form-control" id="waterFilter" onchange="applyFilters()">
-            <option value="">Any</option>
-            <option value="constant">Constant</option>
-            <option value="intermittent">Intermittent</option>
-            <option value="borehole">Borehole</option>
-          </select>
-        </div>
-        <div class="filter-section">
-          <div class="filter-title">Electricity</div>
-          <select class="form-control" id="electricityFilter" onchange="applyFilters()">
-            <option value="">Any</option>
-            <option value="prepaid">Prepaid Meter</option>
-            <option value="postpaid">Postpaid</option>
-            <option value="generator">Generator Backup</option>
-          </select>
-        </div>
-        <div class="filter-section">
-          <div class="filter-title">Furnishing</div>
-          <select class="form-control" id="furnishedFilter" onchange="applyFilters()">
-            <option value="">Any</option>
-            <option value="furnished">Furnished</option>
-            <option value="semi-furnished">Semi-Furnished</option>
-            <option value="unfurnished">Unfurnished</option>
-          </select>
-        </div>
-        <div class="filter-section">
-          <div class="filter-title">Bathroom</div>
-          <select class="form-control" id="bathroomFilter" onchange="applyFilters()">
-            <option value="">Any</option>
-            <option value="private">Private</option>
-            <option value="shared">Shared</option>
-          </select>
-        </div>
-        <button class="btn btn-primary btn-block mt-2" onclick="applyFilters()">Apply filters</button>
-      </aside>
+  <div class="listings-layout">
+    <aside class="filters-panel" id="filtersPanel">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <h3 style="margin:0">Filters</h3>
+        <button class="btn btn-ghost btn-sm" onclick="toggleFilters()" style="display:none" id="closeFiltersBtn">✕</button>
+      </div>
 
+      <h4>Location</h4>
+      <input type="text" id="searchLocation" placeholder="Area or landmark" />
+
+      <h4>Budget (GHS)</h4>
+      <div style="display:flex;gap:.5rem">
+        <input type="number" id="minPrice" placeholder="Min" />
+        <input type="number" id="maxPrice" placeholder="Max" />
+      </div>
+
+      <h4>Occupancy</h4>
+      <div class="chip-row">
+        <label class="chip-radio"><input type="radio" name="occupancy" value="" checked /><span>Any</span></label>
+        <label class="chip-radio"><input type="radio" name="occupancy" value="1" /><span>Self-contained</span></label>
+        <label class="chip-radio"><input type="radio" name="occupancy" value="2" /><span>2-in-1</span></label>
+        <label class="chip-radio"><input type="radio" name="occupancy" value="3" /><span>3-in-1</span></label>
+        <label class="chip-radio"><input type="radio" name="occupancy" value="4" /><span>4+</span></label>
+      </div>
+
+      <h4>Gender preference</h4>
+      <select id="genderFilter">
+        <option value="">Any</option>
+        <option value="male">Male only</option>
+        <option value="female">Female only</option>
+        <option value="mixed">Mixed</option>
+      </select>
+
+      <h4>Water supply</h4>
+      <select id="waterFilter">
+        <option value="">Any</option>
+        <option value="constant">Constant</option>
+        <option value="intermittent">Intermittent</option>
+        <option value="borehole">Borehole</option>
+      </select>
+
+      <h4>Electricity</h4>
+      <select id="electricityFilter">
+        <option value="">Any</option>
+        <option value="prepaid">Prepaid</option>
+        <option value="postpaid">Postpaid</option>
+        <option value="generator">Generator backup</option>
+      </select>
+
+      <h4>Furnishing</h4>
+      <select id="furnishedFilter">
+        <option value="">Any</option>
+        <option value="furnished">Furnished</option>
+        <option value="semi-furnished">Semi-furnished</option>
+        <option value="unfurnished">Unfurnished</option>
+      </select>
+
+      <h4>Bathroom</h4>
+      <select id="bathroomFilter">
+        <option value="">Any</option>
+        <option value="private">Private</option>
+        <option value="shared">Shared</option>
+      </select>
+
+      <h4>Amenities</h4>
+      <div class="checkbox-row mb-1"><input type="checkbox" id="filterWifi" /><label style="margin:0">Wi-Fi available</label></div>
+      <div class="checkbox-row"><input type="checkbox" id="filterParking" /><label style="margin:0">Parking available</label></div>
+
+      <div style="display:flex;gap:.6rem;margin-top:1.4rem">
+        <button class="btn btn-primary" style="flex:1" onclick="applyFilters()">Apply</button>
+        <button class="btn btn-outline" onclick="clearFilters()">Clear</button>
+      </div>
+    </aside>
+
+    <div>
+      <div class="grid-2" id="listingsGrid"></div>
+      <div class="pagination" id="pagination"></div>
+    </div>
+  </div>
+</div>
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-grid">
       <div>
-        <p class="text-muted mb-2" id="resultsCount">Loading...</p>
-        <div class="grid-2 reveal-stagger" id="listingsGrid"></div>
-        <div class="pagination" id="pagination"></div>
+        <a href="/" class="logo" style="color:#fff">roomy<span class="dot">.</span></a>
+        <p class="mt-2" style="max-width:34ch">Ghana's marketplace for hostels, self-contained rooms and shared houses — verified owners, no middleman drama.</p>
       </div>
+      <div><h4>Explore</h4><ul><li><a href="/listings">Browse rooms</a></li><li><a href="/post-ad">Post a room</a></li><li><a href="/about">About &amp; safety</a></li></ul></div>
+      <div><h4>Account</h4><ul><li><a href="/signup">Create account</a></li><li><a href="/login">Log in</a></li><li><a href="/dashboard">Dashboard</a></li></ul></div>
+      <div><h4>Support</h4><ul><li><a href="mailto:hello@roomy.gh">hello@roomy.gh</a></li><li><a href="/about">Safety tips</a></li><li><a href="/about">Terms</a></li></ul></div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 Roomy. Built for renters and hosts across Ghana.</span>
+      <span>Accra · Kumasi · Takoradi · Tamale</span>
     </div>
   </div>
+</footer>
 
-  <div class="toast-container" id="toastContainer"></div>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-  <script src="/js/app.js"></script>
-  <script src="/js/listings.js"></script>
-  <script>lucide.createIcons();</script>
-  <script src="/js/animations.js"></script>
+<nav class="footer-nav" id="footerNav" data-mode="visitor"></nav>
+
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js" defer></script>
+<script src="/js/app.js" defer></script>
+<script src="/js/listings.js" defer></script>
+<script src="/js/footernav.js" defer></script>
+<script src="/js/animations.js" defer></script>
+<script>
+  // mobile filter drawer close button visibility
+  window.addEventListener('load', () => {
+    if (window.innerWidth <= 900) document.getElementById('closeFiltersBtn').style.display = 'block';
+  });
+</script>
 </body>
 </html>
