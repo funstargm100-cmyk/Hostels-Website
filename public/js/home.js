@@ -12,8 +12,6 @@ async function loadFeatured() {
 
 async function loadStats() {
   try {
-    const { listings } = await api.get('/api/listings?limit=1');
-    // Just show a count from total
     const res = await api.get('/api/listings?limit=1');
     if (res.total) document.getElementById('statListings').textContent = res.total + '+';
   } catch {}
