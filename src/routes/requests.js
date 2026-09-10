@@ -2,6 +2,7 @@ const router = require('express').Router();
 const db = require('../utils/db');
 const { requireAuth } = require('../middleware/auth');
 const { sendEmail, templates } = require('../utils/mailer');
+const { notify } = require('../utils/notify');
 
 // POST /api/requests
 router.post('/', async (req, res) => {
@@ -24,7 +25,11 @@ router.post('/', async (req, res) => {
     const ownerRes = await db.query('SELECT email FROM users WHERE id=$1', [listing.owner_id]);
     const owner = ownerRes.rows[0];
     if (owner?.email) await sendEmail(owner.email, 'New Interest in Your Listing', templates.interestReceived(listing.title));
-    if (seeker_email) await sendEmail(seeker_email, 'Request Received', templates.requestUpdate('received'));
+    // In-app notification to the owner (dashboard "My listings").
+    await notify(listing.owner_id, 'interestReceived', [listing.title], { link: '/dashboard#listings' });
+    if (seeker_email) await sendEmail(seeker_email, 'Request Received', templates.requestUpdate('received', listing.title));
+    // In-app confirmation to the signed-in seeker (dashboard "My requests").
+    if (seeker_id) await notify(seeker_id, 'requestUpdate', ['received', listing.title], { link: '/dashboard#requests' });
 
     res.status(201).json({ message: 'Interest submitted. We will contact you shortly.', uuid: result.rows[0].uuid });
   } catch (err) {

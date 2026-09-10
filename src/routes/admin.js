@@ -2,6 +2,7 @@ const router = require('express').Router();
 const db = require('../utils/db');
 const { requireRole } = require('../middleware/auth');
 const { sendEmail, templates } = require('../utils/mailer');
+const { notify } = require('../utils/notify');
 
 const admin = requireRole('admin');
 
@@ -68,6 +69,7 @@ router.put('/listings/:id/approve', admin, async (req, res) => {
     if (!listing) return res.status(404).json({ error: 'Not found' });
     await db.query("UPDATE listings SET status='active' WHERE id=$1", [req.params.id]);
     if (listing.email) await sendEmail(listing.email, 'Listing Approved', templates.adApproved(listing.title));
+    await notify(listing.owner_id, 'adApproved', [listing.title], { link: '/dashboard#listings' });
     await logAction(req.session.user.id, 'approve_listing', 'listing', req.params.id);
     res.json({ message: 'Listing approved' });
   } catch (err) {
@@ -84,6 +86,7 @@ router.put('/listings/:id/reject', admin, async (req, res) => {
     if (!listing) return res.status(404).json({ error: 'Not found' });
     await db.query("UPDATE listings SET status='rejected', rejection_reason=$1 WHERE id=$2", [reason || 'Policy violation', req.params.id]);
     if (listing.email) await sendEmail(listing.email, 'Listing Rejected', templates.adRejected(listing.title, reason));
+    await notify(listing.owner_id, 'adRejected', [listing.title, reason], { link: '/dashboard#listings' });
     await logAction(req.session.user.id, 'reject_listing', 'listing', req.params.id, reason);
     res.json({ message: 'Listing rejected' });
   } catch (err) {
@@ -99,6 +102,7 @@ router.delete('/listings/:id', admin, async (req, res) => {
     const listing = existing.rows[0];
     const ownerRes = await db.query('SELECT email FROM users WHERE id=$1', [listing.owner_id]);
     if (ownerRes.rows[0]?.email) await sendEmail(ownerRes.rows[0].email, 'Listing Removed', templates.adDeleted(listing.title));
+    await notify(listing.owner_id, 'adDeleted', [listing.title], { link: '/dashboard#listings' });
     await db.query('DELETE FROM listings WHERE id=$1', [req.params.id]);
     await logAction(req.session.user.id, 'delete_listing', 'listing', req.params.id);
     res.json({ message: 'Listing deleted' });
@@ -108,10 +112,11 @@ router.delete('/listings/:id', admin, async (req, res) => {
 // PUT /api/admin/listings/:id/deactivate  (mark as unavailable)
 router.put('/listings/:id/deactivate', admin, async (req, res) => {
   try {
-    const existing = await db.query('SELECT l.id, l.title, u.email as owner_email FROM listings l JOIN users u ON l.owner_id=u.id WHERE l.id=$1', [req.params.id]);
+    const existing = await db.query('SELECT l.id, l.title, l.owner_id, u.email as owner_email FROM listings l JOIN users u ON l.owner_id=u.id WHERE l.id=$1', [req.params.id]);
     if (!existing.rows.length) return res.status(404).json({ error: 'Listing not found' });
     const listing = existing.rows[0];
     if (listing.owner_email) await sendEmail(listing.owner_email, 'Listing Marked Unavailable', templates.adUnavailable(listing.title));
+    await notify(listing.owner_id, 'adUnavailable', [listing.title], { link: '/dashboard#listings' });
     await db.query("UPDATE listings SET status='deactivated' WHERE id=$1", [req.params.id]);
     await logAction(req.session.user.id, 'deactivate_listing', 'listing', req.params.id);
     res.json({ message: 'Listing marked as unavailable' });
@@ -121,10 +126,11 @@ router.put('/listings/:id/deactivate', admin, async (req, res) => {
 // PUT /api/admin/listings/:id/reactivate  (restore availability)
 router.put('/listings/:id/reactivate', admin, async (req, res) => {
   try {
-    const existing = await db.query('SELECT l.id, l.title, u.email as owner_email FROM listings l JOIN users u ON l.owner_id=u.id WHERE l.id=$1', [req.params.id]);
+    const existing = await db.query('SELECT l.id, l.title, l.owner_id, u.email as owner_email FROM listings l JOIN users u ON l.owner_id=u.id WHERE l.id=$1', [req.params.id]);
     if (!existing.rows.length) return res.status(404).json({ error: 'Listing not found' });
     const listing = existing.rows[0];
     if (listing.owner_email) await sendEmail(listing.owner_email, 'Listing Reactivated', templates.adReactivated(listing.title));
+    await notify(listing.owner_id, 'adReactivated', [listing.title], { link: '/dashboard#listings' });
     await db.query("UPDATE listings SET status='active' WHERE id=$1", [req.params.id]);
     await logAction(req.session.user.id, 'reactivate_listing', 'listing', req.params.id);
     res.json({ message: 'Listing reactivated' });
@@ -166,6 +172,7 @@ router.put('/requests/:id/status', admin, async (req, res) => {
     await db.query('UPDATE contact_requests SET status=$1, admin_notes=$2 WHERE id=$3', [status, admin_notes || null, req.params.id]);
     const emailTo = request.seeker_email || request.email;
     if (emailTo) await sendEmail(emailTo, 'Request Update', templates.requestUpdate(status));
+    if (request.seeker_id) await notify(request.seeker_id, 'requestUpdate', [status], { link: '/dashboard#requests' });
     await logAction(req.session.user.id, 'update_request_status', 'request', req.params.id, status);
     res.json({ message: 'Status updated' });
   } catch (err) {

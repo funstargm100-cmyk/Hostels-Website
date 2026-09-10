@@ -46,12 +46,12 @@
   </aside>
 
   <main class="dashboard-main">
-    <div id="ownerBanner" class="trust-band mb-3" style="display:none;padding:1.6rem">
+    <div class="dash-hero">
       <div>
-        <h3 style="color:#fff;margin-bottom:.2rem">Welcome back, <span id="ownerGreeting"></span></h3>
-        <p style="margin:0;color:#DCEAE7">Ready to list another room?</p>
+        <h1 class="dash-hero-title" id="greetingTitle">Welcome back 👋</h1>
+        <p class="dash-hero-sub" id="greetingSub"></p>
       </div>
-      <a href="/post-ad" class="btn btn-secondary">+ Post a room</a>
+      <a href="/post-ad" class="btn btn-primary" id="heroPostBtn" style="display:none">+ Post a room</a>
     </div>
 
     <div id="seekerActions" style="display:none" class="grid-3 mb-3">
@@ -73,6 +73,7 @@
     <!-- REQUESTS (seeker) -->
     <div id="tab-requests" style="display:none">
       <h2>My requests</h2>
+      <div id="requestsLegend" class="status-legend"></div>
       <div id="requestsList"></div>
     </div>
 
@@ -92,6 +93,12 @@
     <div id="tab-notifications" style="display:none">
       <h2>Notifications</h2>
       <div class="card" id="notificationsList"></div>
+    </div>
+
+    <!-- ACCOUNT -->
+    <div id="tab-account" style="display:none">
+      <h2>Account</h2>
+      <div id="accountPanel"></div>
     </div>
   </main>
 </div>

@@ -35,17 +35,67 @@ async function sendEmail(to, subject, html) {
   }
 }
 
+// Human-readable labels for contact-request statuses (shared by email + in-app copy).
+const REQUEST_STATUS_LABEL = {
+  received: 'Received',
+  in_progress: 'In progress',
+  connected: 'Connected',
+  closed: 'Closed'
+};
+
+// Single source of truth for user-facing wording. Each entry returns { title, message }.
+// Email templates below AND in-app notifications (utils/notify.js) both read from here
+// so the language a user sees in their inbox matches what they see on the dashboard.
+const copy = {
+  adApproved: (title) => ({
+    title: 'Your listing was approved',
+    message: `"${title}" has been approved and is now live.`
+  }),
+  adRejected: (title, reason) => ({
+    title: 'Your listing was not approved',
+    message: `"${title}" was rejected. Reason: ${reason || 'Policy violation'}.`
+  }),
+  adUnavailable: (title) => ({
+    title: 'Your listing was marked unavailable',
+    message: `"${title}" has been temporarily marked as unavailable by our team and is no longer visible to seekers. Contact support if you believe this is a mistake.`
+  }),
+  adReactivated: (title) => ({
+    title: 'Your listing is live again',
+    message: `Good news! "${title}" has been reactivated and is visible to seekers again.`
+  }),
+  adDeleted: (title) => ({
+    title: 'Your listing was removed',
+    message: `"${title}" has been permanently removed from the platform by our moderation team. Contact support if you believe this was done in error.`
+  }),
+  interestReceived: (listing) => ({
+    title: 'Someone is interested in your listing',
+    message: `Someone showed interest in "${listing}". We'll be in touch to connect you.`
+  }),
+  requestUpdate: (status, listing) => ({
+    title: status === 'received' ? 'We received your request' : `Your request was marked ${REQUEST_STATUS_LABEL[status] || status}`,
+    message: listing
+      ? `Your request for "${listing}" is now ${REQUEST_STATUS_LABEL[status] || status}.`
+      : `Your contact request is now ${REQUEST_STATUS_LABEL[status] || status}.`
+  }),
+  payoutConfirmed: (amount) => ({
+    title: 'Your payout was processed',
+    message: `Your payout of GHS ${amount} has been processed.`
+  })
+};
+
+const wrap = ({ title, message }) => `<p><strong>${title}</strong></p><p>${message}</p>`;
+
 const templates = {
   otp: (otp) => `<p>Your verification code is: <strong>${otp}</strong>. Expires in 10 minutes.</p>`,
-  adApproved: (title) => `<p>Your listing "<strong>${title}</strong>" has been approved and is now live!</p>`,
-  adRejected: (title, reason) => `<p>Your listing "<strong>${title}</strong>" was rejected. Reason: ${reason}</p>`,
-  adUnavailable: (title) => `<p>Your listing "<strong>${title}</strong>" has been temporarily marked as unavailable by our team. It is no longer visible to seekers. Contact support if you believe this is a mistake.</p>`,
-  adReactivated: (title) => `<p>Good news! Your listing "<strong>${title}</strong>" has been reactivated and is live again.</p>`,
-  adDeleted: (title) => `<p>Your listing "<strong>${title}</strong>" has been permanently removed from the platform by our moderation team. Contact support if you believe this was done in error.</p>`,
-  interestReceived: (listing) => `<p>Someone is interested in your listing "<strong>${listing}</strong>". We'll be in touch.</p>`,
-  requestUpdate: (status) => `<p>Your contact request status has been updated to: <strong>${status}</strong>.</p>`,
-  payoutConfirmed: (amount) => `<p>Your payout of <strong>GHS ${amount}</strong> has been processed.</p>`,
+  adApproved: (title) => wrap(copy.adApproved(title)),
+  adRejected: (title, reason) => wrap(copy.adRejected(title, reason)),
+  adUnavailable: (title) => wrap(copy.adUnavailable(title)),
+  adReactivated: (title) => wrap(copy.adReactivated(title)),
+  adDeleted: (title) => wrap(copy.adDeleted(title)),
+  interestReceived: (listing) => wrap(copy.interestReceived(listing)),
+  requestUpdate: (status, listing) => wrap(copy.requestUpdate(status, listing)),
+  payoutConfirmed: (amount) => wrap(copy.payoutConfirmed(amount)),
   resetPassword: (link) => `<p>We received a request to reset your Roomy password.</p><p><a href="${link}">Click here to choose a new password</a>. This link expires in 1 hour.</p><p>If you didn't request this, you can safely ignore this email — your password won't change.</p>`
 };
 
-module.exports = { sendEmail, templates };
+module.exports = { sendEmail, templates, copy, REQUEST_STATUS_LABEL };
