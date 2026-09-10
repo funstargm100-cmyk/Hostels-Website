@@ -87,7 +87,7 @@
         </div>
         <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:1.3rem">
           <div class="sidebar-avatar" style="width:36px;height:36px;font-size:.85rem" id="ownerAvatar">O</div>
-          <div><div style="font-weight:700;font-size:.9rem" id="ownerName"></div><div class="text-muted" style="font-size:.75rem">Listing owner</div></div>
+          <div><div style="font-weight:700;font-size:.9rem" id="ownerName"></div><div class="text-muted" style="font-size:.75rem">Room owner</div></div>
         </div>
         <!-- Seeker / visitor actions -->
         <div id="seekerActions">
@@ -95,17 +95,17 @@
             <button class="btn btn-primary" style="flex:1" onclick="openInterestModal()"><i data-lucide="send"></i> Send Request</button>
             <button class="btn btn-outline" id="favBtn" onclick="toggleFavorite()"><i data-lucide="heart"></i></button>
           </div>
-          <button class="btn btn-ghost btn-sm mt-2" style="width:100%" onclick="openReportModal()"><i data-lucide="flag"></i> Report this listing</button>
+          <button class="btn btn-ghost btn-sm mt-2" style="width:100%" onclick="openReportModal()"><i data-lucide="flag"></i> Report this room</button>
         </div>
 
         <!-- Owner actions: shown only to the listing's own owner/agent -->
         <div id="ownerActions" style="display:none">
-          <a class="btn btn-primary" style="width:100%" id="editListingBtn" href="#"><i data-lucide="pencil"></i> Edit listing</a>
+          <a class="btn btn-primary" style="width:100%" id="editListingBtn" href="#"><i data-lucide="pencil"></i> Edit room</a>
           <button class="btn btn-outline mt-2" style="width:100%" id="deactivateListingBtn" onclick="toggleListingActive()">
             <i data-lucide="pause-circle"></i> <span id="deactivateBtnLabel">Deactivate</span>
           </button>
           <button class="btn btn-ghost mt-2" style="width:100%;color:var(--danger,#dc2626)" onclick="deleteListing()">
-            <i data-lucide="trash-2"></i> Delete listing
+            <i data-lucide="trash-2"></i> Delete room
           </button>
         </div>
       </div>
@@ -145,13 +145,13 @@
 <!-- Report modal -->
 <div class="modal-overlay" id="reportModal">
   <div class="modal">
-    <h3>Report this listing</h3>
+    <h3>Report this room</h3>
     <form onsubmit="submitReport(event)">
       <div class="form-group">
         <label>Reason</label>
         <select id="reportReason" required>
           <option value="">Select a reason</option>
-          <option value="fake">Fake or misleading listing</option>
+          <option value="fake">Fake or misleading room</option>
           <option value="unavailable">Room no longer available</option>
           <option value="contact_info">Contains contact info</option>
           <option value="scam">Suspected scam</option>

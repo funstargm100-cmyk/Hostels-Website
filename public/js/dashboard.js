@@ -82,7 +82,7 @@ function renderSidebarNav() {
   const items = [
     { tab: 'overview', icon: 'layout-dashboard', label: 'Overview' }
   ];
-  if (isOwner) items.push({ tab: 'listings', icon: 'building-2', label: 'My listings' });
+  if (isOwner) items.push({ tab: 'listings', icon: 'building-2', label: 'My rooms' });
   else {
     items.push({ tab: 'requests', icon: 'message-circle', label: 'My requests' });
     items.push({ tab: 'favorites', icon: 'heart', label: 'Saved rooms' });
@@ -138,7 +138,7 @@ async function loadOverview() {
       const views = listings.reduce((s, l) => s + (l.views_count || 0), 0);
       const interest = listings.reduce((s, l) => s + (l.interest_count || 0), 0);
       statsEl.innerHTML = `
-        <div class="stat-card"><div class="stat-card-value">${listings.length}</div><div class="stat-card-label">My listings</div></div>
+        <div class="stat-card"><div class="stat-card-value">${listings.length}</div><div class="stat-card-label">My rooms</div></div>
         <div class="stat-card"><div class="stat-card-value">${listings.filter(l => l.status === 'active').length}</div><div class="stat-card-label">Active</div></div>
         <div class="stat-card"><div class="stat-card-value">${views}</div><div class="stat-card-label">Views</div></div>
         <div class="stat-card"><div class="stat-card-value">${interest}</div><div class="stat-card-label">Interest</div></div>`;
@@ -165,8 +165,8 @@ async function loadRequests() {
   renderStatusLegend();
   try {
     const { requests } = await api.get('/api/requests/mine');
-    if (!requests.length) { el.innerHTML = `<div class="empty-state"><div class="icon"><i data-lucide="message-circle" style="width:48px;height:48px"></i></div><p>You haven't reached out to any rooms yet — browse listings and tap “I'm Interested” to start.</p><a href="/listings" class="btn btn-primary btn-sm" style="margin-top:.9rem">Browse rooms</a></div>`; if (typeof lucide !== 'undefined') lucide.createIcons(); return; }
-    el.innerHTML = `<div class="table-wrap"><table><thead><tr><th>Listing</th><th>Status</th><th>Move-in</th><th>Date</th></tr></thead><tbody>` +
+    if (!requests.length) { el.innerHTML = `<div class="empty-state"><div class="icon"><i data-lucide="message-circle" style="width:48px;height:48px"></i></div><p>You haven't reached out to any rooms yet — browse rooms and tap “I'm Interested” to start.</p><a href="/listings" class="btn btn-primary btn-sm" style="margin-top:.9rem">Browse rooms</a></div>`; if (typeof lucide !== 'undefined') lucide.createIcons(); return; }
+    el.innerHTML = `<div class="table-wrap"><table><thead><tr><th>Room</th><th>Status</th><th>Move-in</th><th>Date</th></tr></thead><tbody>` +
       requests.map(r => `<tr>
         <td><a href="/listing?id=${r.listing_uuid}" style="color:var(--primary)">${r.listing_title}</a><br><span class="text-muted">${r.location_area}</span></td>
         <td><span class="status-badge status-${r.status}">${r.status.replace('_', ' ')}</span></td>
@@ -189,10 +189,10 @@ async function loadOwnerListings() {
   const el = document.getElementById('ownerListings');
   try {
     const { listings } = await api.get('/api/user/listings');
-    if (!listings.length) { el.innerHTML = `<div class="empty-state"><div class="icon"><i data-lucide="building-2" style="width:48px;height:48px"></i></div><p>You don't have any listings yet. Post your first room — it's free.</p><a href="/post-ad" class="btn btn-primary btn-sm" style="margin-top:.9rem">Post a room</a></div>`; if (typeof lucide !== 'undefined') lucide.createIcons(); return; }
-    // Performance nudge: listings with no views get more traction with more photos.
+    if (!listings.length) { el.innerHTML = `<div class="empty-state"><div class="icon"><i data-lucide="building-2" style="width:48px;height:48px"></i></div><p>You don't have any rooms yet. Post your first room — it's free.</p><a href="/post-ad" class="btn btn-primary btn-sm" style="margin-top:.9rem">Post a room</a></div>`; if (typeof lucide !== 'undefined') lucide.createIcons(); return; }
+    // Performance nudge: rooms with no views get more traction with more photos.
     const tip = listings.some(l => (l.views_count || 0) === 0)
-      ? `<div class="tip-box"><i data-lucide="lightbulb"></i><span>Add more photos to get up to 3× more interest — listings with a full gallery get noticed faster.</span></div>`
+      ? `<div class="tip-box"><i data-lucide="lightbulb"></i><span>Add more photos to get up to 3× more interest — rooms with a full gallery get noticed faster.</span></div>`
       : '';
     el.innerHTML = tip + `<div class="table-wrap"><table><thead><tr><th>Title</th><th>Status</th><th>Price</th><th>Views</th><th>Interest</th><th>Actions</th></tr></thead><tbody>` +
       listings.map(l => `<tr>
@@ -211,10 +211,10 @@ async function loadOwnerListings() {
 }
 
 async function deactivateListing(uuid) {
-  if (!confirm('Deactivate this listing?')) return;
+  if (!confirm('Deactivate this room?')) return;
   try {
     await api.delete(`/api/listings/${uuid}`);
-    showToast('Listing deactivated', 'success');
+    showToast('Room deactivated', 'success');
     loadOwnerListings();
   } catch (e) { showToast(e.message, 'error'); }
 }
@@ -223,7 +223,7 @@ async function loadFavorites() {
   const el = document.getElementById('favoritesList');
   try {
     const { favorites } = await api.get('/api/user/favorites');
-    if (!favorites.length) { el.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><div class="icon"><i data-lucide="heart" style="width:48px;height:48px"></i></div><p>Nothing saved yet. Tap the ♥ on any listing to shortlist it here.</p></div>'; if (typeof lucide !== 'undefined') lucide.createIcons(); return; }
+    if (!favorites.length) { el.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><div class="icon"><i data-lucide="heart" style="width:48px;height:48px"></i></div><p>Nothing saved yet. Tap the ♥ on any room to shortlist it here.</p></div>'; if (typeof lucide !== 'undefined') lucide.createIcons(); return; }
     el.innerHTML = favorites.map(renderListingCard).join('');
     if (typeof lucide !== 'undefined') lucide.createIcons();
   } catch (e) { el.innerHTML = `<p class="text-muted">${e.message}</p>`; }
@@ -262,7 +262,7 @@ async function loadActivity() {
 }
 
 function renderEvent(ev) {
-  const title = ev.title || 'your listing';
+  const title = ev.title || 'your room';
   const owner = isOwnerRole(currentUser.role);
   let icon = 'activity', text = title, linked = false;
   switch (ev.type) {

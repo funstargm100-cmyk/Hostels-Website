@@ -20,7 +20,7 @@ router.post('/', optionalAuth, async (req, res) => {
     const seeker_id = req.session.user?.id || null;
     // An owner cannot send a request to their own listing.
     if (seeker_id && seeker_id === listing.owner_id)
-      return res.status(403).json({ error: "You can't send a request to your own listing" });
+      return res.status(403).json({ error: "You can't send a request to your own room" });
     const result = await db.query(
       'INSERT INTO contact_requests (listing_id, seeker_id, seeker_name, seeker_phone, seeker_email, move_in_date, message) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING uuid',
       [listing.id, seeker_id, seeker_name, seeker_phone || null, seeker_email || null, move_in_date || null, message || null]

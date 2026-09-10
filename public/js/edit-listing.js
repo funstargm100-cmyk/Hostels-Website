@@ -46,7 +46,7 @@ async function initEdit() {
 
     if (typeof lucide !== 'undefined') lucide.createIcons();
   } catch (e) {
-    document.getElementById('editLoading').innerHTML = `<div class="alert alert-danger">Failed to load listing: ${e.message}</div><a href="/dashboard#listings" class="btn btn-outline mt-2">Back to dashboard</a>`;
+    document.getElementById('editLoading').innerHTML = `<div class="alert alert-danger">Failed to load room: ${e.message}</div><a href="/dashboard#listings" class="btn btn-outline mt-2">Back to dashboard</a>`;
   }
 }
 
@@ -70,7 +70,7 @@ function updatePhotoCount() {
     const small = drop.querySelector('small');
     if (small) small.textContent = atMax
       ? 'Photo limit reached — remove one to add another'
-      : 'JPG, PNG or WebP · up to 10 photos per listing';
+      : 'JPG, PNG or WebP · up to 10 photos per room';
   }
 }
 
@@ -91,7 +91,7 @@ function renderPhotoGrid() {
   wrap.innerHTML = photoItems.map((item, i) => {
     const src = item.type === 'existing' ? item.path : item.url;
     return `<div class="photo-tile" draggable="true" data-key="${item.key}" data-index="${i}" title="Drag to reorder">
-      <img src="${src}" alt="Listing photo ${i + 1}" loading="lazy" draggable="false" />
+      <img src="${src}" alt="Room photo ${i + 1}" loading="lazy" draggable="false" />
       <span class="photo-drag-handle"><i data-lucide="grip-vertical"></i></span>
       ${i === 0 ? '<span class="photo-primary-tag">Cover photo</span>' : `<span class="photo-order-tag">${i + 1}</span>`}
       <button type="button" class="photo-remove" title="Remove photo" onclick="removePhotoAt(${i})">&#10005;</button>
@@ -185,7 +185,7 @@ function handleNewPhotoSelect(files) {
   const incoming = Array.from(files);
   const room = MAX_PHOTOS - totalPhotoCount();
   if (incoming.length > room) {
-    showPhotoError(`You can only add ${Math.max(room, 0)} more photo${room === 1 ? '' : 's'} — a listing allows ${MAX_PHOTOS}.`);
+    showPhotoError(`You can only add ${Math.max(room, 0)} more photo${room === 1 ? '' : 's'} — a room allows ${MAX_PHOTOS}.`);
   } else {
     showPhotoError('');
   }
@@ -212,7 +212,7 @@ document.getElementById('editForm')?.addEventListener('submit', async (e) => {
   // Photos must go as multipart, so the whole update is sent as FormData.
   // The server sets the same text fields it always did and applies the photo changes.
   if (totalPhotoCount() < 1) {
-    errEl.textContent = 'A listing needs at least one photo.';
+    errEl.textContent = 'A room needs at least one photo.';
     errEl.style.display = 'block';
     btn.disabled = false; btn.classList.remove('btn-loading');
     return;

@@ -56,7 +56,7 @@ async function loadListing() {
     initNavAuth().then(() => { if (isOwnListing(currentListing)) setUpOwnerView(currentListing); });
     if (typeof lucide !== 'undefined') lucide.createIcons();
   } catch (e) {
-    document.getElementById('detailSkeleton').innerHTML = `<div class="alert alert-danger">Failed to load listing: ${e.message}</div>`;
+    document.getElementById('detailSkeleton').innerHTML = `<div class="alert alert-danger">Failed to load room: ${e.message}</div>`;
   }
 }
 
@@ -232,11 +232,11 @@ async function toggleListingActive() {
     if (inactive) {
       await api.put(`/api/listings/${listingUUID}/reactivate`);
       currentListing.status = 'active';
-      showToast('Listing reactivated — it is live again.', 'success');
+      showToast('Room reactivated — it is live again.', 'success');
     } else {
       await api.delete(`/api/listings/${listingUUID}`);
       currentListing.status = 'deactivated';
-      showToast('Listing deactivated — hidden from seekers.', 'success');
+      showToast('Room deactivated — hidden from seekers.', 'success');
     }
     refreshListingStatusUI(currentListing);
   } catch (e) {
@@ -248,10 +248,10 @@ async function toggleListingActive() {
 
 async function deleteListing() {
   if (!currentListing) return;
-  if (!confirm('Permanently delete this listing? This cannot be undone — photos, requests and reviews for it are removed too.')) return;
+  if (!confirm('Permanently delete this room? This cannot be undone — photos, requests and reviews for it are removed too.')) return;
   try {
     await api.delete(`/api/listings/${listingUUID}/permanent`);
-    showToast('Listing deleted.', 'success');
+    showToast('Room deleted.', 'success');
     setTimeout(() => { location.href = '/listings'; }, 1000);
   } catch (e) {
     showToast(e.message, 'error');
@@ -299,7 +299,7 @@ function initMap(lat, lng, area) {
 function openInterestModal() {
   // Belt-and-braces: the server rejects this too, but never open the form for
   // someone trying to book their own room.
-  if (isOwnListing(currentListing)) return showToast("You can't send a request to your own listing", 'error');
+  if (isOwnListing(currentListing)) return showToast("You can't send a request to your own room", 'error');
   openModal('interestModal');
 }
 function openReportModal() { openModal('reportModal'); }
@@ -347,7 +347,7 @@ async function submitReport(e) {
 async function toggleFavorite() {
   const user = JSON.parse(localStorage.getItem('user') || 'null');
   if (!user) return location.href = '/login?redirect=' + encodeURIComponent(location.pathname + location.search);
-  if (isOwnListing(currentListing)) return showToast("You can't save your own listing", 'error');
+  if (isOwnListing(currentListing)) return showToast("You can't save your own room", 'error');
   try {
     const { favorited } = await api.post(`/api/listings/${listingUUID}/favorite`);
     const btn = document.getElementById('favBtn');

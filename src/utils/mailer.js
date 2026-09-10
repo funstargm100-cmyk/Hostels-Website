@@ -48,27 +48,27 @@ const REQUEST_STATUS_LABEL = {
 // so the language a user sees in their inbox matches what they see on the dashboard.
 const copy = {
   adApproved: (title) => ({
-    title: 'Your listing was approved',
+    title: 'Your room was approved',
     message: `"${title}" has been approved and is now live.`
   }),
   adRejected: (title, reason) => ({
-    title: 'Your listing was not approved',
+    title: 'Your room was not approved',
     message: `"${title}" was rejected. Reason: ${reason || 'Policy violation'}.`
   }),
   adUnavailable: (title) => ({
-    title: 'Your listing was marked unavailable',
+    title: 'Your room was marked unavailable',
     message: `"${title}" has been temporarily marked as unavailable by our team and is no longer visible to seekers. Contact support if you believe this is a mistake.`
   }),
   adReactivated: (title) => ({
-    title: 'Your listing is live again',
+    title: 'Your room is live again',
     message: `Good news! "${title}" has been reactivated and is visible to seekers again.`
   }),
   adDeleted: (title) => ({
-    title: 'Your listing was removed',
+    title: 'Your room was removed',
     message: `"${title}" has been permanently removed from the platform by our moderation team. Contact support if you believe this was done in error.`
   }),
   interestReceived: (listing) => ({
-    title: 'Someone is interested in your listing',
+    title: 'Someone is interested in your room',
     message: `Someone showed interest in "${listing}". We'll be in touch to connect you.`
   }),
   requestUpdate: (status, listing) => ({

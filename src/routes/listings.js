@@ -39,9 +39,9 @@ async function applyImageChanges(listingId, removeIds, files, photoOrder) {
   const newFiles = files || [];
 
   if (keptIds.length + newFiles.length > MAX_LISTING_PHOTOS)
-    return `A listing can have at most ${MAX_LISTING_PHOTOS} photos (you would end up with ${keptIds.length + newFiles.length}).`;
+    return `A room can have at most ${MAX_LISTING_PHOTOS} photos (you would end up with ${keptIds.length + newFiles.length}).`;
   if (keptIds.length === 0 && newFiles.length === 0)
-    return 'A listing needs at least one photo.';
+    return 'A room needs at least one photo.';
 
   // Delete the removed rows (scoped to this listing so a stray id can't touch another listing).
   if (removeIds.length) {
@@ -449,7 +449,7 @@ router.post('/:uuid/favorite', requireAuth, async (req, res) => {
     if (!listing) return res.status(404).json({ error: 'Not found' });
     // An owner cannot favourite their own listing.
     if (listing.owner_id === req.session.user.id)
-      return res.status(403).json({ error: "You can't save your own listing" });
+      return res.status(403).json({ error: "You can't save your own room" });
     const existing = await db.query('SELECT id FROM favorites WHERE user_id=$1 AND listing_id=$2', [req.session.user.id, listing.id]);
     if (existing.rows.length) {
       await db.query('DELETE FROM favorites WHERE user_id=$1 AND listing_id=$2', [req.session.user.id, listing.id]);

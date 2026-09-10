@@ -112,7 +112,7 @@ async function loadAdminOverview() {
     const s = await api.get('/api/admin/dashboard');
     document.getElementById('adminStats').innerHTML = `
       <div class="stat-card"><div class="stat-card-value">${s.total_users}</div><div class="stat-card-label">Total Users</div></div>
-      <div class="stat-card"><div class="stat-card-value">${s.active_listings}</div><div class="stat-card-label">Active Listings</div></div>
+      <div class="stat-card"><div class="stat-card-value">${s.active_listings}</div><div class="stat-card-label">Active Rooms</div></div>
       <div class="stat-card"><div class="stat-card-value" style="color:#f59e0b">${s.pending_listings}</div><div class="stat-card-label">Pending Review</div></div>
       <div class="stat-card"><div class="stat-card-value" style="color:#3b82f6">${s.new_requests}</div><div class="stat-card-label">New Requests</div></div>
       <div class="stat-card"><div class="stat-card-value" style="color:#ef4444">${s.open_reports}</div><div class="stat-card-label">Open Reports</div></div>`;
@@ -124,7 +124,7 @@ async function loadAdminListings() {
   const el = document.getElementById('adminListingsTable');
   try {
     const { listings } = await api.get(`/api/admin/listings?status=${status}`);
-    if (!listings.length) { el.innerHTML = '<p class="text-muted">No listings.</p>'; return; }
+    if (!listings.length) { el.innerHTML = '<p class="text-muted">No rooms.</p>'; return; }
     el.innerHTML = `<div class="table-wrap"><table><thead><tr><th>Title</th><th>Owner</th><th>Price</th><th>Date</th><th>Actions</th></tr></thead><tbody>` +
       listings.map(l => `<tr>
         <td><a href="/listing?id=${l.uuid}" target="_blank" style="color:var(--primary)">${l.title}</a></td>
@@ -143,7 +143,7 @@ async function loadAdminListings() {
 async function approveListing(id) {
   try {
     await api.put(`/api/admin/listings/${id}/approve`);
-    showToast('Listing approved', 'success');
+    showToast('Room approved', 'success');
     loadAdminListings();
   } catch (e) { showToast(e.message, 'error'); }
 }
@@ -155,7 +155,7 @@ async function confirmReject() {
   try {
     await api.put(`/api/admin/listings/${pendingRejectId}/reject`, { reason });
     closeModal('rejectModal');
-    showToast('Listing rejected', 'success');
+    showToast('Room rejected', 'success');
     loadAdminListings();
   } catch (e) { showToast(e.message, 'error'); }
 }
@@ -166,7 +166,7 @@ async function loadAdminRequests() {
   try {
     const { requests } = await api.get(`/api/admin/requests${status ? '?status=' + status : ''}`);
     if (!requests.length) { el.innerHTML = '<p class="text-muted">No requests.</p>'; return; }
-    el.innerHTML = `<div class="table-wrap"><table><thead><tr><th>Seeker</th><th>Listing</th><th>Owner Contact</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead><tbody>` +
+    el.innerHTML = `<div class="table-wrap"><table><thead><tr><th>Seeker</th><th>Room</th><th>Owner Contact</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead><tbody>` +
       requests.map(r => `<tr>
         <td>${r.seeker_name}<br><span class="text-muted" style="font-size:0.75rem">${r.seeker_phone || r.seeker_email || ''}</span></td>
         <td><a href="/listing?id=${r.listing_uuid}" target="_blank" style="color:var(--primary)">${r.listing_title}</a></td>
@@ -228,7 +228,7 @@ async function unsuspendUser(id) {
   catch (e) { showToast(e.message, 'error'); }
 }
 async function deleteUser(id, name) {
-  if (!confirm(`Permanently delete "${name}"'s account?\n\nThis removes their listings, favourites and notifications. This cannot be undone.`)) return;
+  if (!confirm(`Permanently delete "${name}"'s account?\n\nThis removes their rooms, favourites and notifications. This cannot be undone.`)) return;
   if (!confirm('Are you sure? Type OK to confirm.')) return;
   try { await api.delete(`/api/admin/users/${id}`); showToast('Account deleted', 'success'); loadAdminUsers(); }
   catch (e) { showToast(e.message, 'error'); }
@@ -239,7 +239,7 @@ async function loadAdminReports() {
   try {
     const { reports } = await api.get('/api/admin/reports');
     if (!reports.length) { el.innerHTML = '<p class="text-muted">No open reports.</p>'; return; }
-    el.innerHTML = `<div class="table-wrap"><table><thead><tr><th>Reporter</th><th>Listing</th><th>Reason</th><th>Date</th><th>Actions</th></tr></thead><tbody>` +
+    el.innerHTML = `<div class="table-wrap"><table><thead><tr><th>Reporter</th><th>Room</th><th>Reason</th><th>Date</th><th>Actions</th></tr></thead><tbody>` +
       reports.map(r => `<tr>
         <td>${r.reporter_name || 'Anonymous'}</td>
         <td>${r.listing_title ? `<a href="/listing?id=${r.listing_uuid}" target="_blank" style="color:var(--primary)">${r.listing_title}</a>` : '—'}</td>
@@ -298,7 +298,7 @@ function filterUserListings() {
 function renderUserListings(listings) {
   const el = document.getElementById('adminUserListings');
   if (!el) return;
-  if (!listings.length) { el.innerHTML = '<p class="text-muted">No listings found.</p>'; return; }
+  if (!listings.length) { el.innerHTML = '<p class="text-muted">No rooms found.</p>'; return; }
 
   // Group by owner, preserving the search filter
   const groups = new Map();
@@ -327,7 +327,7 @@ function renderUserListings(listings) {
         <button class="user-listing-head" type="button" onclick="toggleUserGroup(this)">
           <i data-lucide="chevron-right" class="user-listing-caret"></i>
           <span class="user-listing-who"><strong>${g.name}</strong> <span class="text-muted" style="font-size:.8rem">${g.email || ''}</span></span>
-          <span class="tag">${g.listings.length} listing${g.listings.length === 1 ? '' : 's'}</span>
+          <span class="tag">${g.listings.length} room${g.listings.length === 1 ? '' : 's'}</span>
         </button>
         <div class="user-listing-body">
           <div class="table-wrap"><table><thead><tr><th>Title</th><th>Status</th><th>Price</th><th>Date</th><th>Actions</th></tr></thead><tbody>${rows}</tbody></table></div>
@@ -345,19 +345,19 @@ function toggleUserGroup(btn) {
 }
 
 async function adminDeactivateListing(id) {
-  if (!confirm('Deactivate this listing? It will be hidden from the public.')) return;
-  try { await api.put(`/api/admin/listings/${id}/deactivate`); showToast('Listing deactivated', 'success'); loadAdminListingsByUser(); }
+  if (!confirm('Deactivate this room? It will be hidden from the public.')) return;
+  try { await api.put(`/api/admin/listings/${id}/deactivate`); showToast('Room deactivated', 'success'); loadAdminListingsByUser(); }
   catch (e) { showToast(e.message, 'error'); }
 }
 
 async function adminReactivateListing(id) {
-  try { await api.put(`/api/admin/listings/${id}/reactivate`); showToast('Listing reactivated', 'success'); loadAdminListingsByUser(); }
+  try { await api.put(`/api/admin/listings/${id}/reactivate`); showToast('Room reactivated', 'success'); loadAdminListingsByUser(); }
   catch (e) { showToast(e.message, 'error'); }
 }
 
 async function adminDeleteListing(id, title) {
   if (!confirm(`Permanently delete "${title}"?\n\nThis cannot be undone.`)) return;
-  try { await api.delete(`/api/admin/listings/${id}`); showToast('Listing deleted', 'success'); loadAdminListingsByUser(); }
+  try { await api.delete(`/api/admin/listings/${id}`); showToast('Room deleted', 'success'); loadAdminListingsByUser(); }
   catch (e) { showToast(e.message, 'error'); }
 }
 

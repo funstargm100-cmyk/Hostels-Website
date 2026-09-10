@@ -25,7 +25,7 @@
     agent: [
       { href: '/agents', icon: 'home', label: 'Home' },
       { href: '/post-ad', icon: 'plus-circle', label: 'Post' },
-      { href: '/dashboard', icon: 'layout-dashboard', label: 'Listings' },
+      { href: '/dashboard', icon: 'layout-dashboard', label: 'Rooms' },
       { href: '/dashboard', icon: 'bell', label: 'Alerts' },
       { href: '/about', icon: 'info', label: 'About' }
     ]

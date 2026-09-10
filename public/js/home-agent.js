@@ -12,7 +12,7 @@ async function loadAgentListings() {
     grid.innerHTML = listings.map(renderListingCard).join('');
     if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [grid] });
   } catch {
-    grid.innerHTML = '<p class="text-muted">Could not load your listings.</p>';
+    grid.innerHTML = '<p class="text-muted">Could not load your rooms.</p>';
   }
 }
 

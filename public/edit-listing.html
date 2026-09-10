@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Edit listing — Roomy</title>
+<title>Edit room — Roomy</title>
 <link rel="stylesheet" href="/css/style.css" />
 </head>
 <body>
@@ -29,11 +29,11 @@
 </nav>
 
 <div class="container" style="max-width:760px;padding-top:2.5rem;padding-bottom:4rem">
-  <div id="editLoading" class="spinner-center"><span class="spinner spinner-lg"></span>Loading listing...</div>
+  <div id="editLoading" class="spinner-center"><span class="spinner spinner-lg"></span>Loading room...</div>
 
   <div id="editContent" style="display:none">
     <button class="back-btn" onclick="goBack('/dashboard')"><i data-lucide="arrow-left"></i> Back</button>
-    <h1 style="font-size:1.8rem">Edit listing</h1>
+    <h1 style="font-size:1.8rem">Edit room</h1>
     <p class="text-muted mb-3">Changes are resubmitted for a quick admin review.</p>
 
     <div class="alert alert-danger" id="editError" style="display:none"></div>
@@ -83,13 +83,13 @@
       <div class="checkbox-row mb-3"><input type="checkbox" id="edPets" /><label style="margin:0">Pet friendly</label></div>
 
       <h3>Photos <span class="text-muted" style="font-size:.85rem;font-weight:400">(<span id="photoCount">0</span>/10)</span></h3>
-      <p class="text-muted" style="font-size:.85rem;margin-top:-.4rem">Drag photos to rearrange them. The first photo is the <strong>cover</strong> shown on your listing card.</p>
+      <p class="text-muted" style="font-size:.85rem;margin-top:-.4rem">Drag photos to rearrange them. The first photo is the <strong>cover</strong> shown on your room card.</p>
       <div class="photo-preview mb-2" id="photoGrid"></div>
 
       <div class="photo-add" id="photoDropzone" onclick="document.getElementById('edNewPhotos').click()">
         <i data-lucide="image-plus"></i>
         <span>Add photos</span>
-        <small>JPG, PNG or WebP · up to 10 photos per listing</small>
+        <small>JPG, PNG or WebP · up to 10 photos per room</small>
       </div>
       <input type="file" id="edNewPhotos" accept="image/*" multiple hidden />
 

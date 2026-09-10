@@ -49,11 +49,11 @@ async function loadOwnerListingsView() {
   try {
     const { listings } = await api.get('/api/user/listings');
     const countEl = document.getElementById('resultsCount');
-    countEl.textContent = `${listings.length} listing${listings.length !== 1 ? 's' : ''}`;
+    countEl.textContent = `${listings.length} room${listings.length !== 1 ? 's' : ''}`;
 
     if (!listings.length) {
       grid.className = 'owner-grid';
-      grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="icon"><i data-lucide="building-2" style="width:48px;height:48px"></i></div><h3>No listings yet</h3><p>Post your first room — it's free and takes minutes.</p><a href="/post-ad" class="btn btn-primary btn-sm" style="margin-top:.9rem"><i data-lucide="plus-circle"></i> Post a room</a></div>`;
+      grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="icon"><i data-lucide="building-2" style="width:48px;height:48px"></i></div><h3>No rooms yet</h3><p>Post your first room — it's free and takes minutes.</p><a href="/post-ad" class="btn btn-primary btn-sm" style="margin-top:.9rem"><i data-lucide="plus-circle"></i> Post a room</a></div>`;
       if (typeof lucide !== 'undefined') lucide.createIcons();
       document.getElementById('pagination').innerHTML = '';
       return;
@@ -63,15 +63,15 @@ async function loadOwnerListingsView() {
     if (typeof lucide !== 'undefined') lucide.createIcons();
     document.getElementById('pagination').innerHTML = '';
   } catch (e) {
-    grid.innerHTML = `<p class="text-muted">Could not load your listings: ${e.message}</p>`;
+    grid.innerHTML = `<p class="text-muted">Could not load your rooms: ${e.message}</p>`;
   }
 }
 
 async function deactivateOwnListing(uuid) {
-  if (!confirm('Deactivate this listing?')) return;
+  if (!confirm('Deactivate this room?')) return;
   try {
     await api.delete(`/api/listings/${uuid}`);
-    showToast('Listing deactivated', 'success');
+    showToast('Room deactivated', 'success');
     loadOwnerListingsView();
   } catch (e) { showToast(e.message, 'error'); }
 }
@@ -79,8 +79,8 @@ async function deactivateOwnListing(uuid) {
 // Tailor the page chrome for owners: no browse filters, owner-appropriate copy.
 function setUpOwnerView() {
   const title = document.querySelector('.results-toolbar h2');
-  if (title) title.textContent = 'My listings';
-  document.title = 'My listings — Roomy';
+  if (title) title.textContent = 'My rooms';
+  document.title = 'My rooms — Roomy';
   const filters = document.getElementById('filtersPanel');
   if (filters) filters.remove();
   const layout = document.querySelector('.listings-layout');
@@ -138,7 +138,7 @@ async function loadListings() {
     if (typeof lucide !== 'undefined') lucide.createIcons();
     renderPagination(data.page, data.pages);
   } catch (e) {
-    grid.innerHTML = `<p class="text-muted">Failed to load listings: ${e.message}</p>`;
+    grid.innerHTML = `<p class="text-muted">Failed to load rooms: ${e.message}</p>`;
   }
 }
 

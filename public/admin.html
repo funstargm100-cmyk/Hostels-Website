@@ -34,8 +34,8 @@
     <button class="sidebar-toggle" id="sidebarToggle" type="button" aria-label="Collapse sidebar" title="Collapse sidebar"><i data-lucide="panel-left-close"></i></button>
     <ul class="sidebar-nav">
       <li><a href="#" class="active" title="Overview" onclick="showAdminTab('overview',this);return false"><i data-lucide="layout-dashboard"></i> <span class="sidebar-label">Overview</span></a></li>
-      <li><a href="#" title="Listings" onclick="showAdminTab('listings',this);return false"><i data-lucide="building-2"></i> <span class="sidebar-label">Listings</span></a></li>
-      <li><a href="#" title="User listings" onclick="showAdminTab('userlistings',this);return false"><i data-lucide="layers"></i> <span class="sidebar-label">User listings</span></a></li>
+      <li><a href="#" title="Rooms" onclick="showAdminTab('listings',this);return false"><i data-lucide="building-2"></i> <span class="sidebar-label">Rooms</span></a></li>
+      <li><a href="#" title="Rooms by user" onclick="showAdminTab('userlistings',this);return false"><i data-lucide="layers"></i> <span class="sidebar-label">Rooms by user</span></a></li>
       <li><a href="#" title="Requests" onclick="showAdminTab('requests',this);return false"><i data-lucide="message-circle"></i> <span class="sidebar-label">Requests</span></a></li>
       <li><a href="#" title="Users" onclick="showAdminTab('users',this);return false"><i data-lucide="users"></i> <span class="sidebar-label">Users</span></a></li>
       <li><a href="#" title="Reports" onclick="showAdminTab('reports',this);return false"><i data-lucide="flag"></i> <span class="sidebar-label">Reports</span></a></li>
@@ -51,7 +51,7 @@
 
     <div id="admin-tab-listings" style="display:none">
       <div class="section-head">
-        <h2 style="margin:0">Listings</h2>
+        <h2 style="margin:0">Rooms</h2>
         <select id="listingStatusFilter" onchange="loadAdminListings()" style="width:auto">
           <option value="pending">Pending review</option>
           <option value="active">Active</option>
@@ -63,10 +63,10 @@
 
     <div id="admin-tab-userlistings" style="display:none">
       <div class="section-head">
-        <h2 style="margin:0">Listings by user</h2>
+        <h2 style="margin:0">Rooms by user</h2>
         <input type="search" id="userListingSearch" placeholder="Search users…" style="width:auto" oninput="filterUserListings()" />
       </div>
-      <p class="text-muted" style="margin-top:-.4rem">Tap a user to expand their listings. Deactivate, reactivate or delete any room.</p>
+      <p class="text-muted" style="margin-top:-.4rem">Tap a user to expand their rooms. Deactivate, reactivate or delete any room.</p>
       <div id="adminUserListings"></div>
     </div>
 
@@ -110,23 +110,23 @@
   </main>
 </div>
 
-<!-- Reject listing modal -->
+<!-- Reject room modal -->
 <div class="modal-overlay" id="rejectModal">
-  <div class="modal">
-    <h3>Reject listing</h3>
-    <div class="form-group"><label>Reason</label><textarea id="rejectReason" placeholder="Explain why this listing is being rejected"></textarea></div>
+ <div class="modal">
+    <h3>Reject room</h3>
+    <div class="form-group"><label>Reason</label><textarea id="rejectReason" placeholder="Explain why this room is being rejected"></textarea></div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal('rejectModal')">Cancel</button>
-      <button class="btn btn-primary" onclick="confirmReject()">Reject listing</button>
+      <button class="btn btn-primary" onclick="confirmReject()">Reject room</button>
     </div>
   </div>
 </div>
 
-<!-- Delete listing modal -->
+<!-- Delete room modal -->
 <div class="modal-overlay" id="deleteModal">
-  <div class="modal">
-    <h3>Delete listing</h3>
-    <p class="text-muted">This permanently removes the listing. This can't be undone.</p>
+ <div class="modal">
+    <h3>Delete room</h3>
+    <p class="text-muted">This permanently removes the room. This can't be undone.</p>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal('deleteModal')">Cancel</button>
       <button class="btn btn-primary" style="background:var(--brick)" onclick="confirmDelete()">Delete permanently</button>
