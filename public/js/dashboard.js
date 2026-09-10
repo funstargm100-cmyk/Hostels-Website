@@ -200,7 +200,10 @@ async function loadOwnerListings() {
         <td>GHS ${Number(l.price_per_head).toLocaleString()} / person</td>
         <td>${l.views_count}</td>
         <td>${l.interest_count}</td>
-        <td><button class="btn btn-ghost btn-sm" onclick="deactivateListing('${l.uuid}')">Deactivate</button></td>
+        <td style="white-space:nowrap">
+          <a href="/edit-listing?id=${l.uuid}" class="btn btn-outline btn-sm"><i data-lucide="pencil"></i> Edit</a>
+          ${l.status === 'active' ? `<button class="btn btn-ghost btn-sm" onclick="deactivateListing('${l.uuid}')">Deactivate</button>` : ''}
+        </td>
       </tr>`).join('') + '</tbody></table></div>';
     if (typeof lucide !== 'undefined') lucide.createIcons();
   } catch (e) { el.innerHTML = `<p class="text-muted">${e.message}</p>`; }

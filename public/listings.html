@@ -166,7 +166,9 @@
 <script>
   // mobile filter drawer close button visibility
   window.addEventListener('load', () => {
-    if (window.innerWidth <= 900) document.getElementById('closeFiltersBtn').style.display = 'block';
+    const btn = document.getElementById('closeFiltersBtn');
+    // The filters panel is removed for owners (they see their own listings).
+    if (btn && window.innerWidth <= 900) btn.style.display = 'block';
   });
 </script>
 </body>

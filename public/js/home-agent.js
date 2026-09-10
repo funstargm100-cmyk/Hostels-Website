@@ -1,16 +1,18 @@
-// Home page for logged-in agents/owners
+// Home page for logged-in agents/owners.
+// Owners don't browse other people's rooms — this section shows THEIR listings.
 async function loadAgentListings() {
   const grid = document.getElementById('agentListings');
+  if (!grid) return;
   try {
-    const { listings } = await api.get('/api/listings?limit=8&sort=featured');
+    const { listings } = await api.get('/api/user/listings');
     if (!listings.length) {
-      grid.innerHTML = '<p class="text-muted">No listings yet. <a href="/post-ad" style="color:var(--primary)">Be the first to post!</a></p>';
+      grid.innerHTML = '<p class="text-muted">You haven\'t posted any rooms yet. <a href="/post-ad" style="color:var(--primary)">Post your first room.</a></p>';
       return;
     }
     grid.innerHTML = listings.map(renderListingCard).join('');
     if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [grid] });
   } catch {
-    grid.innerHTML = '<p class="text-muted">Could not load listings.</p>';
+    grid.innerHTML = '<p class="text-muted">Could not load your listings.</p>';
   }
 }
 

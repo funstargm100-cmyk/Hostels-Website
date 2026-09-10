@@ -57,14 +57,18 @@
   function itemsFor() {
     const user = cachedUser();
     const role = user?.role;
-    const home = role === 'owner' || role === 'agent' ? '/home-agent' : role === 'seeker' ? '/home-seeker' : '/';
+    const isOwner = role === 'owner' || role === 'agent';
+    const home = isOwner ? '/home-agent' : role === 'seeker' ? '/home-seeker' : '/';
     const base = [
       { href: home, icon: 'home', label: 'Home' },
-      { href: '/listings', icon: 'search', label: 'Browse' },
+      // Owners never browse others' rooms — /listings shows their own listings.
+      isOwner
+        ? { href: '/listings', icon: 'building-2', label: 'My Rooms' }
+        : { href: '/listings', icon: 'search', label: 'Browse' },
       { href: '/post-ad', icon: 'plus-circle', label: 'Post Room' },
       { href: '/about', icon: 'info', label: 'About' }
     ];
-    if (role === 'owner' || role === 'agent') {
+    if (isOwner) {
       base.push({ href: '/dashboard', icon: 'layout-dashboard', label: 'Dashboard' });
     } else if (role === 'seeker') {
       base.push({ href: '/dashboard', icon: 'user', label: 'Profile' });

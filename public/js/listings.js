@@ -3,6 +3,93 @@ let currentView = 'grid';
 let nearMeLat = null;
 let nearMeLng = null;
 
+// ─── OWNER / AGENT VIEW ──────────────────────
+// Owners don't browse other people's rooms — /listings becomes their own
+// listings manager. We reuse the same page (all the "Browse rooms" nav links
+// point here) but swap the content: filters off, their listings in, each with
+// View / Edit / Deactivate actions.
+const ownerUser = (() => {
+  if (!localStorage.getItem('token')) return null;
+  try { return JSON.parse(localStorage.getItem('user') || 'null'); } catch { return null; }
+})();
+const isOwnerView = ownerUser && ['owner', 'agent', 'admin'].includes(ownerUser.role);
+
+function renderOwnerCard(l) {
+  const img = l.primary_image || '/images/placeholder.jpg';
+  const statusClass = 'status-' + (l.status || 'pending');
+  return `
+    <div class="card">
+      <div style="position:relative;cursor:pointer" onclick="location.href='/listing?id=${l.uuid}'">
+        <img class="card-img" src="${img}" alt="${l.title}" loading="lazy" onerror="this.onerror=null;this.src='/images/placeholder.jpg'" />
+        <span class="status-badge ${statusClass}" style="position:absolute;top:.6rem;left:.6rem">${l.status}</span>
+      </div>
+      <div class="card-body">
+        <div class="card-title">${l.title}</div>
+        <div class="card-location"><i data-lucide="map-pin"></i> <span>${l.location_area || ''}</span></div>
+        <div class="amenity-icons" style="gap:1rem">
+          <span class="amenity-icon"><i data-lucide="eye"></i> ${l.views_count || 0} views</span>
+          <span class="amenity-icon"><i data-lucide="message-circle"></i> ${l.interest_count || 0} interest</span>
+        </div>
+      </div>
+      <div class="card-footer" style="gap:.5rem;flex-wrap:wrap">
+        <div class="card-price">GHS ${Number(l.price_per_head).toLocaleString()}</div>
+        <div style="display:flex;gap:.4rem">
+          <a href="/edit-listing?id=${l.uuid}" class="btn btn-outline btn-sm"><i data-lucide="pencil"></i> Edit</a>
+          ${l.status === 'active'
+            ? `<button class="btn btn-ghost btn-sm" onclick="deactivateOwnListing('${l.uuid}')">Deactivate</button>`
+            : ''}
+        </div>
+      </div>
+    </div>`;
+}
+
+async function loadOwnerListingsView() {
+  const grid = document.getElementById('listingsGrid');
+  renderSkeletons(grid, 4);
+  try {
+    const { listings } = await api.get('/api/user/listings');
+    const countEl = document.getElementById('resultsCount');
+    countEl.textContent = `${listings.length} listing${listings.length !== 1 ? 's' : ''}`;
+
+    if (!listings.length) {
+      grid.className = 'grid-2';
+      grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="icon"><i data-lucide="building-2" style="width:48px;height:48px"></i></div><h3>No listings yet</h3><p>Post your first room — it's free and takes minutes.</p><a href="/post-ad" class="btn btn-primary btn-sm" style="margin-top:.9rem"><i data-lucide="plus-circle"></i> Post a room</a></div>`;
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+      document.getElementById('pagination').innerHTML = '';
+      return;
+    }
+    grid.className = 'grid-2';
+    grid.innerHTML = listings.map(renderOwnerCard).join('');
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+    document.getElementById('pagination').innerHTML = '';
+  } catch (e) {
+    grid.innerHTML = `<p class="text-muted">Could not load your listings: ${e.message}</p>`;
+  }
+}
+
+async function deactivateOwnListing(uuid) {
+  if (!confirm('Deactivate this listing?')) return;
+  try {
+    await api.delete(`/api/listings/${uuid}`);
+    showToast('Listing deactivated', 'success');
+    loadOwnerListingsView();
+  } catch (e) { showToast(e.message, 'error'); }
+}
+
+// Tailor the page chrome for owners: no browse filters, owner-appropriate copy.
+function setUpOwnerView() {
+  const title = document.querySelector('.results-toolbar h2');
+  if (title) title.textContent = 'My listings';
+  document.title = 'My listings — Roomy';
+  const filters = document.getElementById('filtersPanel');
+  if (filters) filters.remove();
+  const layout = document.querySelector('.listings-layout');
+  if (layout) layout.style.display = 'block';
+  // Hide search / sort / near-me / filter controls — they don't apply to own rooms.
+  const toolbar = document.querySelector('.results-toolbar > div:last-child');
+  if (toolbar) toolbar.innerHTML = `<a href="/post-ad" class="btn btn-primary btn-sm"><i data-lucide="plus-circle"></i> Post a room</a>`;
+}
+
 function getFilters() {
   const f = {
     location: document.getElementById('searchLocation').value,
@@ -142,4 +229,21 @@ if (urlParams.get('occupancy')) {
   if (radio) radio.checked = true;
 }
 
-loadListings();
+// Owners/agents never browse other people's rooms — this page is their own
+// listings manager. Decide using the freshly-verified user (not just the cached
+// one) so a stale cache can't expose the browse view.
+(async function initListingsPage() {
+  let role = ownerUser?.role;
+  try {
+    const verified = await initNavAuth();
+    if (verified?.role) role = verified.role;
+  } catch { /* fall back to the cached role */ }
+
+  if (['owner', 'agent', 'admin'].includes(role)) {
+    setUpOwnerView();
+    loadOwnerListingsView();
+    if (window.renderFooterNav) window.renderFooterNav();
+  } else {
+    loadListings();
+  }
+})();
