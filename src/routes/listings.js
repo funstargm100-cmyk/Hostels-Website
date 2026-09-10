@@ -291,6 +291,7 @@ router.put('/:uuid', requireAuth, upload.array('images', 10), async (req, res) =
     if (!listing && req.session.user.role !== 'admin') return res.status(404).json({ error: 'Listing not found' });
 
     const { title, description, original_price, occupancy_type, location_area, full_address, nearest_landmark, gender_preference, move_in_date,
+            location_lat, location_lng,
             water, electricity, security, furnishing, bathroom, kitchen_access, wifi, parking, pet_friendly } = req.body;
     if (title || description) {
       const check = validateAdContent(title || listing.title, description || listing.description);
@@ -303,6 +304,8 @@ router.put('/:uuid', requireAuth, upload.array('images', 10), async (req, res) =
     if (location_area) { fields.push(`location_area=$${p++}`); vals.push(location_area); }
     if (full_address !== undefined) { fields.push(`full_address=$${p++}`); vals.push(full_address); }
     if (nearest_landmark !== undefined) { fields.push(`nearest_landmark=$${p++}`); vals.push(nearest_landmark); }
+    if (location_lat !== undefined && location_lat !== '') { fields.push(`location_lat=$${p++}`); vals.push(parseFloat(location_lat)); }
+    if (location_lng !== undefined && location_lng !== '') { fields.push(`location_lng=$${p++}`); vals.push(parseFloat(location_lng)); }
     if (gender_preference) { fields.push(`gender_preference=$${p++}`); vals.push(gender_preference); }
     if (move_in_date) { fields.push(`move_in_date=$${p++}`); vals.push(move_in_date); }
     if (original_price) {
@@ -314,7 +317,8 @@ router.put('/:uuid', requireAuth, upload.array('images', 10), async (req, res) =
       vals.push(op, lp, pph);
     }
     if (occupancy_type && original_price) { fields.push(`occupancy_type=$${p++}`); vals.push(parseInt(occupancy_type)); }
-    fields.push(`status='pending'`);
+    // Editing an existing listing must NOT send it back through admin review —
+    // an already-approved room stays live. Only new posts (POST /) require review.
     vals.push(req.params.uuid);
     await db.query(`UPDATE listings SET ${fields.join(', ')} WHERE uuid=$${p}`, vals);
 
@@ -362,7 +366,7 @@ router.put('/:uuid', requireAuth, upload.array('images', 10), async (req, res) =
     const imageErr = await applyImageChanges(listing.id, removeIds, req.files, photoOrder);
     if (imageErr) return res.status(400).json({ error: imageErr });
 
-    res.json({ message: 'Listing updated and resubmitted for review' });
+    res.json({ message: 'Listing updated' });
   } catch (err) {
     res.status(500).json({ error: 'Server error' });
   }
@@ -433,7 +437,6 @@ router.get('/:uuid/edit-data', requireAuth, async (req, res) => {
     const listing = lr.rows[0];
     const amenities = (await db.query('SELECT * FROM amenities WHERE listing_id=$1', [listing.id])).rows[0] || {};
     const images = (await db.query('SELECT id, image_path, is_primary FROM listing_images WHERE listing_id=$1 ORDER BY sort_order', [listing.id])).rows;
-    delete listing.location_lat; delete listing.location_lng;
     res.json({ listing, amenities, images });
   } catch (err) {
     console.error(err);

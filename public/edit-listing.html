@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Edit room — Roomy</title>
 <link rel="stylesheet" href="/css/style.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
 <body>
 
@@ -34,7 +35,7 @@
   <div id="editContent" style="display:none">
     <button class="back-btn" onclick="goBack('/dashboard')"><i data-lucide="arrow-left"></i> Back</button>
     <h1 style="font-size:1.8rem">Edit room</h1>
-    <p class="text-muted mb-3">Changes are resubmitted for a quick admin review.</p>
+    <p class="text-muted mb-3">Your changes go live right away.</p>
 
     <div class="alert alert-danger" id="editError" style="display:none"></div>
 
@@ -53,6 +54,17 @@
       <div class="form-row">
         <div class="form-group"><label>Location area</label><input type="text" id="edLocation" required /></div>
         <div class="form-group"><label>Nearest landmark</label><input type="text" id="edLandmark" /></div>
+      </div>
+
+      <div class="form-group">
+        <label>Location on map</label>
+        <p class="text-muted" style="font-size:.85rem;margin-top:-.3rem">Tap the map or drag the pin to correct the location. We blur the exact spot slightly for privacy.</p>
+        <button type="button" class="btn btn-outline btn-sm mb-2" onclick="getMyEditLocation()"><i data-lucide="locate-fixed"></i> Use my current location</button>
+        <div id="editMap"></div>
+        <p class="text-muted" style="font-size:.8rem;margin-top:.4rem" id="editPinStatus">Loading location...</p>
+        <input type="hidden" id="edLat" />
+        <input type="hidden" id="edLng" />
+        <input type="hidden" id="edFullAddress" />
       </div>
 
       <div class="form-row">
@@ -106,6 +118,7 @@
 <nav class="footer-nav" id="footerNav" data-mode="visitor"></nav>
 
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js" defer></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
 <script src="/js/app.js" defer></script>
 <script src="/js/edit-listing.js" defer></script>
 <script src="/js/footernav.js" defer></script>

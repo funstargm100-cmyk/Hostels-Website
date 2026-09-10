@@ -461,6 +461,10 @@ textarea{ resize:vertical; min-height:110px; }
 #postMap .leaflet-pane{ z-index:10 !important; }
 #postMap .leaflet-top, #postMap .leaflet-bottom{ z-index:20 !important; }
 #postMap .leaflet-popup-pane{ z-index:30 !important; }
+#editMap{ height:320px; border-radius:var(--radius-sm); margin:.8rem 0; }
+#editMap .leaflet-pane{ z-index:10 !important; }
+#editMap .leaflet-top, #editMap .leaflet-bottom{ z-index:20 !important; }
+#editMap .leaflet-popup-pane{ z-index:30 !important; }
 
 /* ── wizard (post-ad) ────────────────────────────────────────────────── */
 .wizard-steps{ display:flex; justify-content:space-between; margin-bottom:2.2rem; position:relative; }

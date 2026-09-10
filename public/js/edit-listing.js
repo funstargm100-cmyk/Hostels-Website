@@ -12,6 +12,12 @@ let photoItems = [];
 let newPhotoFiles = []; // staged uploads, in the order they were chosen
 let removedImageIds = []; // existing ids the owner removed (undone by re-adding from the grid)
 
+// ─── LOCATION MAP ─────────────────────────────
+let editMap = null;
+let editMarker = null;
+let editInitialLat = null; // saved coords, restored onto the map
+let editInitialLng = null;
+
 async function initEdit() {
   const user = await initNavAuth();
   if (!user) { location.href = '/login?redirect=' + encodeURIComponent(location.pathname + location.search); return; }
@@ -30,6 +36,11 @@ async function initEdit() {
     document.getElementById('edOccupancy').value = String(listing.occupancy_type || 1);
     document.getElementById('edLocation').value = listing.location_area || '';
     document.getElementById('edLandmark').value = listing.nearest_landmark || '';
+    // Seed the hidden location fields with the saved coords so the map can restore
+    // the pin, and so saving without touching the map keeps the location intact.
+    editInitialLat = listing.location_lat != null ? Number(listing.location_lat) : null;
+    editInitialLng = listing.location_lng != null ? Number(listing.location_lng) : null;
+    document.getElementById('edFullAddress').value = listing.full_address || '';
     if (amenities.water) document.getElementById('edWater').value = amenities.water;
     if (amenities.electricity) document.getElementById('edElectricity').value = amenities.electricity;
     if (amenities.furnishing) document.getElementById('edFurnishing').value = amenities.furnishing;
@@ -44,11 +55,94 @@ async function initEdit() {
     renderPhotoGrid();
     updatePhotoCount();
 
+    initEditMap();
+
     if (typeof lucide !== 'undefined') lucide.createIcons();
   } catch (e) {
     document.getElementById('editLoading').innerHTML = `<div class="alert alert-danger">Failed to load room: ${e.message}</div><a href="/dashboard#listings" class="btn btn-outline mt-2">Back to dashboard</a>`;
   }
 }
+
+// ─── LOCATION MAP (LEAFLET) ───────────────────
+// Mirrors the map on the post-ad page so owners can correct the pin while editing.
+function initEditMap() {
+  const el = document.getElementById('editMap');
+  if (!el || typeof L === 'undefined') return;
+  if (editMap) { editMap.invalidateSize(); return; }
+
+  const defaultLat = 5.6037; // Accra, Ghana
+  const defaultLng = -0.1870;
+  const startLat = editInitialLat != null ? editInitialLat : defaultLat;
+  const startLng = editInitialLng != null ? editInitialLng : defaultLng;
+
+  editMap = L.map(el).setView([startLat, startLng], editInitialLat != null ? 16 : 13);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    maxZoom: 19
+  }).addTo(editMap);
+
+  // Restore the saved pin (no reverse-geocode — the area/landmark fields already hold it).
+  if (editInitialLat != null && editInitialLng != null) {
+    placeEditPin(editInitialLat, editInitialLng, false);
+  } else {
+    document.getElementById('editPinStatus').textContent = 'No pin set — tap the map to place one.';
+  }
+
+  editMap.on('click', (e) => placeEditPin(e.latlng.lat, e.latlng.lng, true));
+  // The container may have been hidden while the form rendered; size it now.
+  setTimeout(() => editMap.invalidateSize(), 150);
+}
+
+function placeEditPin(lat, lng, reverseGeocode) {
+  if (editMarker) editMap.removeLayer(editMarker);
+  editMarker = L.marker([lat, lng], { draggable: true }).addTo(editMap);
+  editMarker.bindPopup('Room location').openPopup();
+  editMarker.on('dragend', (e) => {
+    const pos = e.target.getLatLng();
+    setEditLocationFields(pos.lat, pos.lng, true);
+  });
+  setEditLocationFields(lat, lng, reverseGeocode);
+}
+
+function setEditLocationFields(lat, lng, reverseGeocode) {
+  document.getElementById('edLat').value = lat.toFixed(7);
+  document.getElementById('edLng').value = lng.toFixed(7);
+  document.getElementById('editPinStatus').textContent = 'Pin set at ' + lat.toFixed(5) + ', ' + lng.toFixed(5);
+  if (reverseGeocode) reverseGeocodeEditPin(lat, lng);
+}
+
+async function reverseGeocodeEditPin(lat, lng) {
+  const status = document.getElementById('editPinStatus');
+  status.textContent = 'Looking up address...';
+  try {
+    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1`, {
+      headers: { 'Accept-Language': 'en' }
+    });
+    const data = await res.json();
+    if (!data.address) return;
+    const addr = data.address;
+    const area = addr.suburb || addr.neighbourhood || addr.quarter || addr.town || addr.city || addr.county || addr.state || '';
+    const city = addr.city || addr.town || addr.county || '';
+    const areaFull = area && city && area !== city ? `${area}, ${city}` : area || city;
+    if (areaFull) document.getElementById('edLocation').value = areaFull;
+    if (data.display_name) document.getElementById('edFullAddress').value = data.display_name;
+    status.textContent = areaFull || 'Location pinned';
+  } catch {
+    status.textContent = 'Pin set at ' + parseFloat(document.getElementById('edLat').value).toFixed(5) + ', ' + parseFloat(document.getElementById('edLng').value).toFixed(5);
+  }
+}
+
+function getMyEditLocation() {
+  if (!navigator.geolocation) return showToast('Geolocation not supported', 'error');
+  document.getElementById('editPinStatus').textContent = 'Getting your location...';
+  navigator.geolocation.getCurrentPosition(pos => {
+    const { latitude: lat, longitude: lng } = pos.coords;
+    if (!editMap) initEditMap();
+    editMap.setView([lat, lng], 17);
+    placeEditPin(lat, lng, true);
+  }, () => showToast('Could not get location. Please pin manually.', 'error'));
+}
+window.getMyEditLocation = getMyEditLocation;
 
 // ─── PHOTOS ───────────────────
 // Owners can remove, add and REORDER photos (capped at 10). The first photo in
@@ -225,6 +319,9 @@ document.getElementById('editForm')?.addEventListener('submit', async (e) => {
     fd.append('occupancy_type', document.getElementById('edOccupancy').value);
     fd.append('location_area', document.getElementById('edLocation').value.trim());
     fd.append('nearest_landmark', document.getElementById('edLandmark').value.trim());
+    fd.append('location_lat', document.getElementById('edLat').value);
+    fd.append('location_lng', document.getElementById('edLng').value);
+    fd.append('full_address', document.getElementById('edFullAddress').value);
     fd.append('water', document.getElementById('edWater').value);
     fd.append('electricity', document.getElementById('edElectricity').value);
     fd.append('furnishing', document.getElementById('edFurnishing').value);
@@ -248,7 +345,7 @@ document.getElementById('editForm')?.addEventListener('submit', async (e) => {
     fd.append('photo_order', JSON.stringify(photoOrder));
 
     await api.upload(`/api/listings/${editUUID}`, fd, 'PUT');
-    showToast('Changes saved! Resubmitted for review.', 'success');
+    showToast('Changes saved!', 'success');
     setTimeout(() => location.href = '/dashboard#listings', 1200);
   } catch (ex) {
     errEl.textContent = ex.message;
