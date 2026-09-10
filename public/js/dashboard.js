@@ -15,9 +15,14 @@ async function initDashboard() {
   const initial = (currentUser.name || 'R').trim().charAt(0).toUpperCase();
   ['sidebarAvatar', 'mobileAvatar'].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = initial; });
 
+  // Point the top-bar logo at the user's role-specific home page.
+  const homeLogo = document.getElementById('navHomeLogo');
+  if (homeLogo && window.goHomeForRole) homeLogo.href = window.goHomeForRole(currentUser.role);
+
   // Greeting header removed — the sidebar is now the single navigation surface.
   renderSidebarNav();
   initDashboardSidebar();
+  if (window.renderFooterNav) window.renderFooterNav();
 
   const hash = location.hash.replace('#', '') || 'overview';
   showTab(hash);
@@ -76,10 +81,11 @@ function renderSidebarNav() {
   items.push({ tab: 'notifications', icon: 'bell', label: 'Notifications' });
   items.push({ tab: 'account', icon: 'user', label: 'Account' });
 
+  const home = (window.goHomeForRole ? window.goHomeForRole(currentUser.role) : '/');
   const nav = document.getElementById('sidebarNav');
   if (nav) {
     nav.innerHTML =
-      `<a href="/" ><i data-lucide="home"></i> Home</a>` +
+      `<a href="${home}"><i data-lucide="home"></i> Home</a>` +
       items.map(it => `<a href="#${it.tab}" data-tab="${it.tab}"><i data-lucide="${it.icon}"></i> ${it.label}</a>`).join('');
     nav.querySelectorAll('a[data-tab]').forEach(a =>
       a.addEventListener('click', e => { e.preventDefault(); showTab(a.dataset.tab, a); }));
