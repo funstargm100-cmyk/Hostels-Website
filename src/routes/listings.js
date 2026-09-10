@@ -2,7 +2,7 @@ const router = require('express').Router();
 const multer = require('multer');
 const { v4: uuidv4 } = require('uuid');
 const db = require('../utils/db');
-const { requireAuth, requireRole } = require('../middleware/auth');
+const { requireAuth, requireRole, optionalAuth } = require('../middleware/auth');
 const { validateAdContent } = require('../utils/contactDetector');
 const { applyLocationJitter, calculateDistance } = require('../utils/location');
 const { storeImage } = require('../utils/imageStorage');
@@ -114,16 +114,19 @@ router.get('/', async (req, res) => {
 });
 
 // GET /api/listings/:uuid
-router.get('/:uuid', async (req, res) => {
+// optionalAuth so the owner (or an admin) can open their OWN listing even when it
+// is deactivated/unavailable/pending — public visitors only ever see active ones.
+router.get('/:uuid', optionalAuth, async (req, res) => {
   try {
+    const viewer = req.session.user;
     const result = await db.query(`
       SELECT l.*, u.name as owner_name, u.is_kyc_verified as owner_verified,
              ROUND(AVG(r.rating)::numeric, 1) as avg_rating, COUNT(r.id) as review_count
       FROM listings l
       LEFT JOIN users u ON l.owner_id = u.id
       LEFT JOIN reviews r ON r.listing_id = l.id
-      WHERE l.uuid=$1 AND l.status='active'
-      GROUP BY l.id, u.name, u.is_kyc_verified`, [req.params.uuid]);
+      WHERE l.uuid=$1 AND (l.status='active' OR l.owner_id=$2 OR $3=TRUE)
+      GROUP BY l.id, u.name, u.is_kyc_verified`, [req.params.uuid, viewer?.id || null, viewer?.role === 'admin']);
 
     const listing = result.rows[0];
     if (!listing) return res.status(404).json({ error: 'Listing not found' });
@@ -265,6 +268,36 @@ router.delete('/:uuid', requireAuth, async (req, res) => {
   }
 });
 
+// PUT /api/listings/:uuid/reactivate  — owner brings a deactivated listing back online
+router.put('/:uuid/reactivate', requireAuth, async (req, res) => {
+  try {
+    const owned = await db.query('SELECT id, status FROM listings WHERE uuid=$1 AND owner_id=$2', [req.params.uuid, req.session.user.id]);
+    if (!owned.rows.length && req.session.user.role !== 'admin') return res.status(404).json({ error: 'Not found' });
+    if (owned.rows.length && owned.rows[0].status === 'active') return res.status(400).json({ error: 'Listing is already active' });
+    // Bring it back online. Going through 'pending' would demand a re-review, but
+    // reactivating a listing its owner paused should be instant.
+    await db.query("UPDATE listings SET status='active' WHERE uuid=$1", [req.params.uuid]);
+    res.json({ message: 'Listing reactivated', status: 'active' });
+  } catch (err) {
+    console.error('REACTIVATE ERROR:', err.message);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// DELETE /api/listings/:uuid/permanent  — owner permanently removes a listing
+router.delete('/:uuid/permanent', requireAuth, async (req, res) => {
+  try {
+    const owned = await db.query('SELECT id FROM listings WHERE uuid=$1 AND owner_id=$2', [req.params.uuid, req.session.user.id]);
+    if (!owned.rows.length && req.session.user.role !== 'admin') return res.status(404).json({ error: 'Not found' });
+    // Images, amenities, requests, favorites and reports all cascade from the listing.
+    await db.query('DELETE FROM listings WHERE uuid=$1', [req.params.uuid]);
+    res.json({ message: 'Listing permanently deleted' });
+  } catch (err) {
+    console.error('DELETE LISTING ERROR:', err.message);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // PUT /api/listings/:uuid/availability  — owner marks listing available / unavailable
 router.put('/:uuid/availability', requireAuth, async (req, res) => {
   try {
@@ -299,9 +332,12 @@ router.get('/:uuid/edit-data', requireAuth, async (req, res) => {
 // POST /api/listings/:uuid/favorite
 router.post('/:uuid/favorite', requireAuth, async (req, res) => {
   try {
-    const lr = await db.query('SELECT id FROM listings WHERE uuid=$1', [req.params.uuid]);
+    const lr = await db.query('SELECT id, owner_id FROM listings WHERE uuid=$1', [req.params.uuid]);
     const listing = lr.rows[0];
     if (!listing) return res.status(404).json({ error: 'Not found' });
+    // An owner cannot favourite their own listing.
+    if (listing.owner_id === req.session.user.id)
+      return res.status(403).json({ error: "You can't save your own listing" });
     const existing = await db.query('SELECT id FROM favorites WHERE user_id=$1 AND listing_id=$2', [req.session.user.id, listing.id]);
     if (existing.rows.length) {
       await db.query('DELETE FROM favorites WHERE user_id=$1 AND listing_id=$2', [req.session.user.id, listing.id]);

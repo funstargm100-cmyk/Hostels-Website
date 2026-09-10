@@ -50,6 +50,10 @@ async function loadListing() {
     renderPriceBox(listing);
     renderReviews(reviews, listing.avg_rating, listing.review_count);
     initMap(listing.display_lat, listing.display_lng, listing.location_area);
+    // Owners get management actions instead of Request / Favorite. Re-check after
+    // initNavAuth refreshes the cached user, so the correct actions always show.
+    if (isOwnListing(listing)) setUpOwnerView(listing);
+    initNavAuth().then(() => { if (isOwnListing(currentListing)) setUpOwnerView(currentListing); });
     if (typeof lucide !== 'undefined') lucide.createIcons();
   } catch (e) {
     document.getElementById('detailSkeleton').innerHTML = `<div class="alert alert-danger">Failed to load listing: ${e.message}</div>`;
@@ -179,6 +183,77 @@ function renderPriceBox(l) {
   if (l.move_in_date) document.getElementById('moveInDate').innerHTML = `<i data-lucide="calendar" style="width:13px;height:13px"></i> Available from: ${new Date(l.move_in_date).toLocaleDateString()}`;
 }
 
+// ─── OWNER VIEW ──────────────────────────────
+// The listing's own owner must not be able to send a request to, or favourite,
+// their own room. Instead they get management actions: edit, deactivate /
+// reactivate and permanently delete.
+function isOwnListing(listing) {
+  if (!listing || !localStorage.getItem('token')) return false;
+  let user = null;
+  try { user = JSON.parse(localStorage.getItem('user') || 'null'); } catch { return false; }
+  if (!user) return false;
+  if (user.role === 'admin') return true; // admins manage any listing
+  return listing.owner_id != null && String(listing.owner_id) === String(user.id);
+}
+
+function setUpOwnerView(listing) {
+  const seekerActions = document.getElementById('seekerActions');
+  const ownerActions = document.getElementById('ownerActions');
+  if (seekerActions) seekerActions.style.display = 'none';
+  if (ownerActions) ownerActions.style.display = 'block';
+
+  const editBtn = document.getElementById('editListingBtn');
+  if (editBtn) editBtn.href = '/edit-listing?id=' + listing.uuid;
+
+  refreshListingStatusUI(listing);
+}
+
+// Reflect the listing's current status on the deactivate / reactivate button.
+function refreshListingStatusUI(listing) {
+  const btn = document.getElementById('deactivateListingBtn');
+  const label = document.getElementById('deactivateBtnLabel');
+  if (!btn || !label) return;
+  const inactive = listing.status === 'deactivated' || listing.status === 'unavailable';
+  label.textContent = inactive ? 'Reactivate' : 'Deactivate';
+  btn.querySelector('i')?.setAttribute('data-lucide', inactive ? 'play-circle' : 'pause-circle');
+  if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [btn] });
+}
+
+async function toggleListingActive() {
+  if (!currentListing) return;
+  const inactive = currentListing.status === 'deactivated' || currentListing.status === 'unavailable';
+  const btn = document.getElementById('deactivateListingBtn');
+  if (btn) btn.disabled = true;
+  try {
+    if (inactive) {
+      await api.put(`/api/listings/${listingUUID}/reactivate`);
+      currentListing.status = 'active';
+      showToast('Listing reactivated — it is live again.', 'success');
+    } else {
+      await api.delete(`/api/listings/${listingUUID}`);
+      currentListing.status = 'deactivated';
+      showToast('Listing deactivated — hidden from seekers.', 'success');
+    }
+    refreshListingStatusUI(currentListing);
+  } catch (e) {
+    showToast(e.message, 'error');
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+async function deleteListing() {
+  if (!currentListing) return;
+  if (!confirm('Permanently delete this listing? This cannot be undone — photos, requests and reviews for it are removed too.')) return;
+  try {
+    await api.delete(`/api/listings/${listingUUID}/permanent`);
+    showToast('Listing deleted.', 'success');
+    setTimeout(() => { location.href = '/listings'; }, 1000);
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
+}
+
 function renderReviews(reviews, avgRating, reviewCount) {
   const el = document.getElementById('reviewsList');
   if (!reviews.length) { el.innerHTML = '<p class="text-muted" style="font-size:0.875rem">No reviews yet.</p>'; return; }
@@ -217,7 +292,12 @@ function initMap(lat, lng, area) {
     .bindPopup(`${area}<br><small>Approximate area — exact address shared after booking</small>`).openPopup();
 }
 
-function openInterestModal() { openModal('interestModal'); }
+function openInterestModal() {
+  // Belt-and-braces: the server rejects this too, but never open the form for
+  // someone trying to book their own room.
+  if (isOwnListing(currentListing)) return showToast("You can't send a request to your own listing", 'error');
+  openModal('interestModal');
+}
 function openReportModal() { openModal('reportModal'); }
 
 async function submitInterest(e) {
@@ -263,6 +343,7 @@ async function submitReport(e) {
 async function toggleFavorite() {
   const user = JSON.parse(localStorage.getItem('user') || 'null');
   if (!user) return location.href = '/login?redirect=' + encodeURIComponent(location.pathname + location.search);
+  if (isOwnListing(currentListing)) return showToast("You can't save your own listing", 'error');
   try {
     const { favorited } = await api.post(`/api/listings/${listingUUID}/favorite`);
     const btn = document.getElementById('favBtn');

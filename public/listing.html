@@ -89,11 +89,28 @@
           <div class="sidebar-avatar" style="width:36px;height:36px;font-size:.85rem" id="ownerAvatar">O</div>
           <div><div style="font-weight:700;font-size:.9rem" id="ownerName"></div><div class="text-muted" style="font-size:.75rem">Listing owner</div></div>
         </div>
-        <div style="display:flex;gap:.6rem">
-          <button class="btn btn-primary" style="flex:1" onclick="openInterestModal()"><i data-lucide="send"></i> Send Request</button>
-          <button class="btn btn-outline" id="favBtn" onclick="toggleFavorite()"><i data-lucide="heart"></i></button>
+        <!-- Seeker / visitor actions -->
+        <div id="seekerActions">
+          <div style="display:flex;gap:.6rem">
+            <button class="btn btn-primary" style="flex:1" onclick="openInterestModal()"><i data-lucide="send"></i> Send Request</button>
+            <button class="btn btn-outline" id="favBtn" onclick="toggleFavorite()"><i data-lucide="heart"></i></button>
+          </div>
+          <button class="btn btn-ghost btn-sm mt-2" style="width:100%" onclick="openReportModal()"><i data-lucide="flag"></i> Report this listing</button>
         </div>
-        <button class="btn btn-ghost btn-sm mt-2" style="width:100%" onclick="openReportModal()"><i data-lucide="flag"></i> Report this listing</button>
+
+        <!-- Owner actions: shown only to the listing's own owner/agent -->
+        <div id="ownerActions" style="display:none">
+          <div class="alert alert-info" style="font-size:.8rem;padding:.6rem .8rem">
+            <i data-lucide="info" style="width:14px;height:14px"></i> This is your listing.
+          </div>
+          <a class="btn btn-primary" style="width:100%" id="editListingBtn" href="#"><i data-lucide="pencil"></i> Edit listing</a>
+          <button class="btn btn-outline mt-2" style="width:100%" id="deactivateListingBtn" onclick="toggleListingActive()">
+            <i data-lucide="pause-circle"></i> <span id="deactivateBtnLabel">Deactivate</span>
+          </button>
+          <button class="btn btn-ghost mt-2" style="width:100%;color:var(--danger,#dc2626)" onclick="deleteListing()">
+            <i data-lucide="trash-2"></i> Delete listing
+          </button>
+        </div>
       </div>
     </div>
   </div>

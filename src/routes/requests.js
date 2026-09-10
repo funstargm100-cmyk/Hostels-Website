@@ -1,11 +1,14 @@
 const router = require('express').Router();
 const db = require('../utils/db');
-const { requireAuth } = require('../middleware/auth');
+const { requireAuth, optionalAuth } = require('../middleware/auth');
 const { sendEmail, templates } = require('../utils/mailer');
 const { notify } = require('../utils/notify');
 
 // POST /api/requests
-router.post('/', async (req, res) => {
+// optionalAuth: guests can still send a request, but when the caller IS signed in
+// we know their id — which links the request to their account AND lets us block
+// an owner from requesting their own listing.
+router.post('/', optionalAuth, async (req, res) => {
   const { listing_uuid, seeker_name, seeker_phone, seeker_email, move_in_date, message } = req.body;
   if (!listing_uuid || !seeker_name || (!seeker_phone && !seeker_email)) return res.status(400).json({ error: 'Missing required fields' });
 
@@ -15,6 +18,9 @@ router.post('/', async (req, res) => {
     if (!listing) return res.status(404).json({ error: 'Listing not found' });
 
     const seeker_id = req.session.user?.id || null;
+    // An owner cannot send a request to their own listing.
+    if (seeker_id && seeker_id === listing.owner_id)
+      return res.status(403).json({ error: "You can't send a request to your own listing" });
     const result = await db.query(
       'INSERT INTO contact_requests (listing_id, seeker_id, seeker_name, seeker_phone, seeker_email, move_in_date, message) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING uuid',
       [listing.id, seeker_id, seeker_name, seeker_phone || null, seeker_email || null, move_in_date || null, message || null]
