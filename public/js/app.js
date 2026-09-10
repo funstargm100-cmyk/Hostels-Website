@@ -144,6 +144,7 @@ window.signOutAndRedirect = signOutAndRedirect;
 
 // Send each role to its own dedicated home page
 function goHomeForRole(role) {
+  if (role === 'admin') return '/admin';
   if (role === 'owner' || role === 'agent') return '/home-agent';
   if (role === 'seeker') return '/home-seeker';
   return '/';

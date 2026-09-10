@@ -615,33 +615,38 @@ td{ padding:.8rem 1rem; border-top:1px solid var(--border); vertical-align:top; 
 }
 
 /* ── collapsible sidebar (admin) ─────────────────────── */
-.sidebar-toggle{
-  margin-left:auto; background:none; border:1px solid var(--border); color:var(--text-muted);
-  width:30px; height:30px; border-radius:var(--radius-sm); cursor:pointer;
-  display:flex; align-items:center; justify-content:center; flex-shrink:0;
-}
-.sidebar-toggle:hover{ background:var(--primary-light); color:var(--primary); }
-.sidebar-toggle i,.sidebar-toggle svg{ width:16px; height:16px; }
-.sidebar-profile-text{ min-width:0; }
-.sidebar-label{ transition:opacity .15s ease; }
+/* The toggle lives on its OWN full-width row so collapsing/expanding
+   never changes the profile height and the nav never shifts vertically. */
+.admin-mobilebar{ display:none; }
 
-/* flex layout so the sidebar width can animate */
 .dashboard-shell.collapsible{ display:flex; align-items:stretch; }
 .dashboard-shell.collapsible .sidebar{
   display:flex; flex-direction:column; width:250px; flex:0 0 auto;
-  overflow:hidden; transition:width .22s ease, padding .22s ease;
+  overflow:hidden; transition:width .2s ease, padding .2s ease;
 }
 .dashboard-shell.collapsible .dashboard-main{ flex:1 1 auto; min-width:0; }
 
+.sidebar-profile{ display:flex; align-items:center; gap:.7rem; margin-bottom:1rem; height:42px; overflow:hidden; flex-shrink:0; }
+.sidebar-profile-text{ min-width:0; overflow:hidden; white-space:nowrap; transition:opacity .15s ease; }
+.sidebar-label{ white-space:nowrap; overflow:hidden; transition:opacity .15s ease; }
+
+/* full-width toggle row — constant height, so nothing above/below moves */
+.sidebar-toggle{
+  width:100%; height:34px; margin-bottom:1rem; flex-shrink:0;
+  display:flex; align-items:center; justify-content:flex-end;
+  background:none; border:1px solid var(--border); border-radius:var(--radius-sm);
+  color:var(--text-muted); cursor:pointer;
+}
+.sidebar-toggle:hover{ background:var(--primary-light); color:var(--primary); }
+.sidebar-toggle i,.sidebar-toggle svg{ width:16px; height:16px; }
+
 /* collapsed (icon-only) state */
 .dashboard-shell.sidebar-collapsed .sidebar{ width:64px; padding-left:.55rem; padding-right:.55rem; }
-.dashboard-shell.sidebar-collapsed .sidebar .sidebar-label,
-.dashboard-shell.sidebar-collapsed .sidebar .sidebar-profile-text{
-  opacity:0; width:0; overflow:hidden; white-space:nowrap; pointer-events:none;
-}
-.dashboard-shell.sidebar-collapsed .sidebar .sidebar-nav a{ justify-content:center; padding-left:.3rem; padding-right:.3rem; }
-.dashboard-shell.sidebar-collapsed .sidebar .sidebar-profile{ flex-direction:column; gap:.6rem; }
-.dashboard-shell.sidebar-collapsed .sidebar .sidebar-toggle{ margin-left:0; }
+.dashboard-shell.sidebar-collapsed .sidebar-profile{ justify-content:center; }
+.dashboard-shell.sidebar-collapsed .sidebar-profile-text,
+.dashboard-shell.sidebar-collapsed .sidebar-label{ opacity:0; width:0; flex:0 1 0; pointer-events:none; }
+.dashboard-shell.sidebar-collapsed .sidebar-nav a{ justify-content:center; padding-left:.3rem; padding-right:.3rem; }
+.dashboard-shell.sidebar-collapsed .sidebar-toggle{ justify-content:center; }
 
 /* expand on hover — only for devices that actually have hover (desktop) */
 @media (hover:hover) and (min-width:901px){
@@ -649,21 +654,43 @@ td{ padding:.8rem 1rem; border-top:1px solid var(--border); vertical-align:top; 
     width:250px; padding-left:1.2rem; padding-right:1.2rem; z-index:40;
     box-shadow:var(--shadow-md);
   }
-  .dashboard-shell.sidebar-collapsed .sidebar:hover .sidebar-label,
-  .dashboard-shell.sidebar-collapsed .sidebar:hover .sidebar-profile-text{
-    opacity:1; width:auto; pointer-events:auto;
-  }
+  .dashboard-shell.sidebar-collapsed .sidebar:hover .sidebar-profile-text,
+  .dashboard-shell.sidebar-collapsed .sidebar:hover .sidebar-label{ opacity:1; width:auto; flex:0 0 auto; pointer-events:auto; }
   .dashboard-shell.sidebar-collapsed .sidebar:hover .sidebar-nav a{ justify-content:flex-start; padding-left:.8rem; padding-right:.8rem; }
-  .dashboard-shell.sidebar-collapsed .sidebar:hover .sidebar-profile{ flex-direction:row; gap:.7rem; }
-  .dashboard-shell.sidebar-collapsed .sidebar:hover .sidebar-toggle{ margin-left:auto; }
+  .dashboard-shell.sidebar-collapsed .sidebar:hover .sidebar-profile{ justify-content:flex-start; }
+  .dashboard-shell.sidebar-collapsed .sidebar:hover .sidebar-toggle{ justify-content:flex-end; }
 }
 
-/* mobile: the sidebar becomes a full-width panel toggled by the button */
+/* mobile: dedicated always-visible top bar toggles the panel (no hover needed) */
 @media (max-width:900px){
+  .admin-mobilebar{
+    display:flex; align-items:center; gap:.6rem; padding:.7rem 1rem;
+    border-bottom:1px solid var(--border); background:var(--card-bg);
+    position:sticky; top:0; z-index:45;
+  }
+  .admin-mobilebar-title{ font-weight:700; font-family:var(--font-display); }
+  #sidebarMobileToggle{
+    background:none; border:1px solid var(--border); border-radius:var(--radius-sm);
+    width:34px; height:34px; display:flex; align-items:center; justify-content:center;
+    color:var(--text); cursor:pointer;
+  }
+  #sidebarMobileToggle i,#sidebarMobileToggle svg{ width:18px; height:18px; }
+
   .dashboard-shell.collapsible{ display:block; }
-  .dashboard-shell.collapsible .sidebar{ display:flex; width:100%; border-right:none; border-bottom:1px solid var(--border); }
-  .dashboard-shell.collapsible .sidebar .sidebar-profile{ flex-direction:row; }
-  .dashboard-shell.sidebar-collapsed .sidebar{ display:none; }
+  .dashboard-shell.collapsible .sidebar{
+    display:none; width:100%; border-right:none; border-bottom:1px solid var(--border);
+  }
+  /* visible only when the mobile menu is opened */
+  .dashboard-shell.mobile-sidebar-open .sidebar{ display:flex; }
+
+  /* on mobile the in-sidebar desktop toggle is redundant */
+  .dashboard-shell.collapsible .sidebar-toggle{ display:none; }
+
+  /* always show full labels while the mobile panel is open */
+  .dashboard-shell.collapsible .sidebar{ padding-left:1.2rem; padding-right:1.2rem; }
+  .dashboard-shell.sidebar-collapsed .sidebar-profile-text,
+  .dashboard-shell.sidebar-collapsed .sidebar-label{ opacity:1; width:auto; flex:0 0 auto; pointer-events:auto; }
+  .dashboard-shell.sidebar-collapsed .sidebar-nav a{ justify-content:flex-start; padding-left:.8rem; padding-right:.8rem; }
 }
 
 /* ── "listings by user" accordion (admin) ────────────────────────────── */

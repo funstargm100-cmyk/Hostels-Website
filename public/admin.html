@@ -21,12 +21,16 @@
 </nav>
 
 <div class="dashboard-shell collapsible" id="adminShell">
+  <div class="admin-mobilebar">
+    <button id="sidebarMobileToggle" type="button" aria-label="Toggle menu"><i data-lucide="menu"></i></button>
+    <span class="admin-mobilebar-title">Admin panel</span>
+  </div>
   <aside class="sidebar" id="adminSidebar">
     <div class="sidebar-profile">
       <div class="sidebar-avatar" style="background:var(--teal)">A</div>
       <div class="sidebar-profile-text"><div style="font-weight:700">Admin panel</div><div class="text-muted" style="font-size:.78rem">Moderation &amp; ops</div></div>
-      <button class="sidebar-toggle" id="sidebarToggle" type="button" aria-label="Collapse sidebar" title="Collapse sidebar"><i data-lucide="panel-left-close"></i></button>
     </div>
+    <button class="sidebar-toggle" id="sidebarToggle" type="button" aria-label="Collapse sidebar" title="Collapse sidebar"><i data-lucide="panel-left-close"></i></button>
     <ul class="sidebar-nav">
       <li><a href="#" class="active" title="Overview" onclick="showAdminTab('overview',this);return false"><i data-lucide="layout-dashboard"></i> <span class="sidebar-label">Overview</span></a></li>
       <li><a href="#" title="Listings" onclick="showAdminTab('listings',this);return false"><i data-lucide="building-2"></i> <span class="sidebar-label">Listings</span></a></li>

@@ -9,8 +9,8 @@ async function initAdmin() {
 }
 
 // ── Collapsible sidebar ──────────────────────
-// Desktop: collapses to icons and expands on hover.
-// Mobile (no hover): the toggle button shows/hides the panel.
+// Desktop: collapses to icons (\u0026 expands on hover); the in-sidebar button pins it open/closed.
+// Mobile (no hover): the top-bar button shows/hides the whole panel.
 function isMobileSidebar() { return window.matchMedia('(max-width: 900px)').matches; }
 
 function setSidebarCollapsed(collapsed) {
@@ -28,18 +28,41 @@ function setSidebarCollapsed(collapsed) {
   try { localStorage.setItem('adminSidebarCollapsed', collapsed ? '1' : '0'); } catch {}
 }
 
-function initAdminSidebar() {
-  const btn = document.getElementById('sidebarToggle');
+function toggleMobileSidebar(force) {
   const shell = document.getElementById('adminShell');
-  if (!btn || !shell) return;
-  btn.addEventListener('click', () => {
-    setSidebarCollapsed(!shell.classList.contains('sidebar-collapsed'));
-  });
-  // Restore last choice (default: collapsed on desktop, expanded on mobile)
+  const btn = document.getElementById('sidebarMobileToggle');
+  if (!shell) return;
+  const open = typeof force === 'boolean' ? force : !shell.classList.contains('mobile-sidebar-open');
+  shell.classList.toggle('mobile-sidebar-open', open);
+  if (btn) {
+    btn.innerHTML = `<i data-lucide="${open ? 'x' : 'menu'}"></i>`;
+    btn.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
+    if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [btn] });
+  }
+}
+
+function initAdminSidebar() {
+  const shell = document.getElementById('adminShell');
+  if (!shell) return;
+
+  const btn = document.getElementById('sidebarToggle');
+  if (btn) btn.addEventListener('click', () => setSidebarCollapsed(!shell.classList.contains('sidebar-collapsed')));
+
+  const mBtn = document.getElementById('sidebarMobileToggle');
+  if (mBtn) mBtn.addEventListener('click', () => toggleMobileSidebar());
+
+  // Desktop collapse preference (default collapsed to icon-only on desktop)
   let collapsed;
   try { collapsed = localStorage.getItem('adminSidebarCollapsed'); } catch {}
-  if (collapsed === null) collapsed = isMobileSidebar() ? '0' : '1';
-  setSidebarCollapsed(collapsed === '1');
+  setSidebarCollapsed(collapsed === null ? true : collapsed === '1');
+
+  // Play nice with viewport changes
+  window.addEventListener('resize', () => {
+    if (!isMobileSidebar()) {
+      shell.classList.remove('mobile-sidebar-open');
+      if (mBtn) { mBtn.innerHTML = '<i data-lucide="menu"></i>'; if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [mBtn] }); }
+    }
+  });
 }
 
 function showAdminTab(tab, link) {
@@ -50,6 +73,8 @@ function showAdminTab(tab, link) {
   if (link) link.classList.add('active');
   const loaders = { overview: loadAdminOverview, listings: loadAdminListings, userlistings: loadAdminListingsByUser, requests: loadAdminRequests, users: loadAdminUsers, reports: loadAdminReports, logs: loadAdminLogs };
   loaders[tab]?.();
+  // On mobile, close the panel after choosing a tab
+  if (isMobileSidebar()) toggleMobileSidebar(false);
 }
 
 async function loadAdminOverview() {
