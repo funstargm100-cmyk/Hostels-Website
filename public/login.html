@@ -133,8 +133,21 @@ function showVerifyPanel(uuid, email, bannerMsg, sentAtMs) {
 const params = new URLSearchParams(location.search);
 if (params.get('verify') === '1' && params.get('uuid')) {
   showVerifyPanel(params.get('uuid'), params.get('email') || '',
-    'Account created! Enter the verification code we emailed to ' + (params.get('email') || 'you') + '.',
+    'Account created! Sending your verification code…',
     parseInt(params.get('t') || '0', 10) || Date.now());
+
+  // Automatically send the OTP right away — no need to click "Resend code".
+  (async () => {
+    try {
+      const res = await api.post('/api/auth/resend-otp', { uuid: params.get('uuid') });
+      document.getElementById('verifyBanner').textContent =
+        res.message || 'We sent a verification code to ' + (params.get('email') || 'your email') + '.';
+    } catch (ex) {
+      // The signup request already attempted to send one; fall back to manual resend.
+      document.getElementById('verifyBanner').textContent =
+        'Could not auto-send the code. Click "Resend code" to try again.';
+    }
+  })();
 }
 
 verifyForm.addEventListener('submit', async (e) => {

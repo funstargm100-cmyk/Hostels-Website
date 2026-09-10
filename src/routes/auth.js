@@ -6,6 +6,10 @@ const db = require('../utils/db');
 const { sendEmail, templates } = require('../utils/mailer');
 
 const SECRET = process.env.SESSION_SECRET || 'hostel_secret';
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+const PHONE_RE = /^\+?[0-9]{9,15}$/; // digits only after optional +, 9–15 digits (E.164-ish)
+
+const normalizePhone = (p) => (p || '').replace(/[\s()\-]/g, '');
 const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
 const signToken = (user) => jwt.sign(
   { id: user.id, uuid: user.uuid, name: user.name, role: user.role },
@@ -20,12 +24,26 @@ router.post('/signup', async (req, res) => {
     return res.status(400).json({ error: 'Name, password, and email or phone required' });
   if (!['seeker', 'owner'].includes(role))
     return res.status(400).json({ error: 'Invalid role' });
+
+  // Contact validation — if a contact is provided it must be a REAL email or phone,
+  // not just any text (never allow garbage input to bypass).
+  if (email && !EMAIL_RE.test(email.trim()))
+    return res.status(400).json({ error: 'Please enter a valid email address' });
+  const normPhone = normalizePhone(phone);
+  if (phone && !PHONE_RE.test(normPhone))
+    return res.status(400).json({ error: 'Please enter a valid phone number (9–15 digits)' });
+  if (!email && !normPhone)
+    return res.status(400).json({ error: 'A valid email or phone number is required' });
+  if (password.length < 6)
+    return res.status(400).json({ error: 'Password must be at least 6 characters' });
+  if (name.trim().length < 2)
+    return res.status(400).json({ error: 'Please enter your full name' });
   // Seekers should provide their workplace/school base (lat/lng or at least a text)
   if (role === 'seeker' && !base_location)
     return res.status(400).json({ error: 'Please pin your workplace or school location' });
 
   try {
-    const existing = await db.query('SELECT id FROM users WHERE email=$1 OR phone=$2', [email || null, phone || null]);
+    const existing = await db.query('SELECT id FROM users WHERE email=$1 OR phone=$2', [email || null, normPhone || null]);
     if (existing.rows.length)
       return res.status(409).json({ error: 'Account already exists with this email or phone' });
 
@@ -39,7 +57,7 @@ router.post('/signup', async (req, res) => {
     const result = await db.query(
       `INSERT INTO users (name, email, phone, password_hash, role, otp_code, otp_expires_at, base_location, base_lat, base_lng)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING uuid`,
-      [name, email || null, phone || null, hash, role, otp, otpExpiry,
+      [name.trim(), email ? email.trim().toLowerCase() : null, normPhone || null, hash, role, otp, otpExpiry,
        role === 'seeker' ? base_location : null,
        role === 'seeker' && Number.isFinite(lat) ? lat : null,
        role === 'seeker' && Number.isFinite(lng) ? lng : null]
