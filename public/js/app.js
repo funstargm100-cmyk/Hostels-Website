@@ -210,6 +210,36 @@ function applyRoleToLogo(role) {
 }
 window.applyRoleToLogo = applyRoleToLogo;
 
+// ─── DISTANCE FROM DAILY BASE LOCATION ───────────────────────────────────────
+// window.__userBaseLoc is set by listings.js once /api/auth/me returns the
+// seeker's daily base location. When present, cards show straight-line distance
+// with estimated walking / driving times.
+function haversineKm(lat1, lng1, lat2, lng2) {
+  const R = 6371, dLat = (lat2 - lat1) * Math.PI / 180, dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
+
+// Rough travel estimates for straight-line distance. Walking ~5 km/h with a
+// 1.25 road-factor; driving ~30 km/h average city speed in Ghana with 1.4 factor.
+function estimateTravel(km) {
+  const walkMin = Math.round((km * 1.25 / 5) * 60);
+  const driveMin = Math.round((km * 1.4 / 30) * 60) + 1;
+  const fmt = m => m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m} min`;
+  const dist = km < 1 ? `${Math.round(km * 1000)} m` : `${km.toFixed(1)} km`;
+  return { dist, walk: fmt(walkMin), drive: fmt(driveMin) };
+}
+
+// Renders the "from your base location" line, or '' when no base is known.
+function renderDistanceLine(l) {
+  const b = window.__userBaseLoc;
+  if (!b || !b.lat || !b.lng || !l.location_lat || !l.location_lng) return '';
+  const km = haversineKm(b.lat, b.lng, l.location_lat, l.location_lng);
+  if (km > 100) return ''; // base location probably unrelated to search area
+  const t = estimateTravel(km);
+  return `<div class="card-distance"><i data-lucide="route"></i> <span>${t.dist} from your base · ~${t.walk} walk · ~${t.drive} drive</span></div>`;
+}
+
 // ─── LISTING CARD RENDERER ────────────────────────────────────────────────────
 function renderListingCard(l) {
   const img = l.primary_image ? l.primary_image : '/images/placeholder.jpg';
@@ -238,6 +268,7 @@ function renderListingCard(l) {
       <div class="card-body">
         <div class="card-title">${l.title}</div>
         <div class="card-location"><i data-lucide="map-pin"></i> <span>${locText}</span></div>
+        ${renderDistanceLine(l)}
         <div class="amenity-icons">${amenityIcons.map(a => `<span class="amenity-icon">${a}</span>`).join('')}</div>
       </div>
       <div class="card-footer">

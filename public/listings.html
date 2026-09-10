@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Browse rooms — Roomy</title>
 <link rel="stylesheet" href="/css/style.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
 <body>
 
@@ -48,8 +49,9 @@
         <option value="featured">Featured</option>
       </select>
       <div class="view-toggle">
-        <button class="active" id="gridViewBtn" onclick="setView('grid');document.getElementById('gridViewBtn').classList.add('active');document.getElementById('listViewBtn').classList.remove('active')"><i data-lucide="grid-2x2"></i></button>
-        <button id="listViewBtn" onclick="setView('list');document.getElementById('listViewBtn').classList.add('active');document.getElementById('gridViewBtn').classList.remove('active')"><i data-lucide="list"></i></button>
+        <button class="active" id="gridViewBtn" onclick="setView('grid');document.getElementById('gridViewBtn').classList.add('active');document.getElementById('listViewBtn').classList.remove('active');document.getElementById('mapViewBtn').classList.remove('active')"><i data-lucide="grid-2x2"></i></button>
+        <button id="listViewBtn" onclick="setView('list');document.getElementById('listViewBtn').classList.add('active');document.getElementById('gridViewBtn').classList.remove('active');document.getElementById('mapViewBtn').classList.remove('active')"><i data-lucide="list"></i></button>
+        <button id="mapViewBtn" onclick="setView('map');document.getElementById('mapViewBtn').classList.add('active');document.getElementById('gridViewBtn').classList.remove('active');document.getElementById('listViewBtn').classList.remove('active')" title="Map view"><i data-lucide="map"></i></button>
       </div>
       <button class="btn btn-outline btn-sm" id="nearMeBtn" onclick="filterNearMe()"><i data-lucide="navigation"></i> Near Me</button>
       <button class="btn btn-outline btn-sm" onclick="toggleFilters()" id="mobileFilterBtn"><i data-lucide="sliders-horizontal"></i> Filters</button>
@@ -132,6 +134,10 @@
 
     <div>
       <div class="grid-2" id="listingsGrid"></div>
+      <div id="mapWrap" style="display:none">
+        <div id="mapSearch"></div>
+        <div id="mapSidebar" class="card" style="display:none;position:absolute;left:12px;bottom:12px;z-index:900;width:280px;padding:.9rem"></div>
+      </div>
       <div class="pagination" id="pagination"></div>
     </div>
   </div>
@@ -158,6 +164,7 @@
 <nav class="footer-nav" id="footerNav" data-mode="visitor"></nav>
 
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js" defer></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
 <script src="/js/app.js" defer></script>
 <script src="/js/listings.js" defer></script>
 <script src="/js/footernav.js" defer></script>

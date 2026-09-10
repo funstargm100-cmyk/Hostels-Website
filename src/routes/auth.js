@@ -334,7 +334,7 @@ router.get('/me', async (req, res) => {
   try {
     const payload = jwt.verify(token, SECRET);
     // Confirm the account still exists (deleted accounts must appear logged out)
-    const result = await db.query('SELECT id, uuid, name, role, is_suspended FROM users WHERE id=$1', [payload.id]);
+    const result = await db.query('SELECT id, uuid, name, role, is_suspended, base_location, base_lat, base_lng FROM users WHERE id=$1', [payload.id]);
     const user = result.rows[0];
     if (!user)
       return res.status(401).json({ error: 'Account no longer exists. Please log in again.', accountDeleted: true });

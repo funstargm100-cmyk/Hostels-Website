@@ -4,10 +4,13 @@ function applyLocationJitter(lat, lng) {
   const metersToDegreesLng = 1 / (111320 * Math.cos(lat * Math.PI / 180));
   const offsetMeters = 150 + Math.random() * 150; // 150–300m
   const angle = Math.random() * 2 * Math.PI;
-  return {
-    lat: lat + offsetMeters * Math.cos(angle) * metersToDegreesLat,
-    lng: lng + offsetMeters * Math.sin(angle) * metersToDegreesLng
-  };
+  let jLat = lat + offsetMeters * Math.cos(angle) * metersToDegreesLat;
+  let jLng = lng + offsetMeters * Math.sin(angle) * metersToDegreesLng;
+  // Defensive clamp: never let a bad input (NaN/undefined) or numeric
+  // overflow produce a marker that lands far from the real room.
+  if (!Number.isFinite(jLat) || Math.abs(jLat - lat) > 0.01) jLat = lat;   // ~1.1 km cap
+  if (!Number.isFinite(jLng) || Math.abs(jLng - lng) > 0.01) jLng = lng;
+  return { lat: jLat, lng: jLng };
 }
 
 // Haversine distance in km

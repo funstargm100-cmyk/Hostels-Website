@@ -124,6 +124,7 @@ async function loadListings() {
 
   try {
     const data = await api.get('/api/listings?' + params.toString());
+    lastFetchedListings = data.listings;
     document.getElementById('resultsCount').textContent = `${data.total} room${data.total !== 1 ? 's' : ''} found`;
 
     if (!data.listings.length) {
@@ -136,8 +137,10 @@ async function loadListings() {
     grid.className = currentView === 'list' ? '' : 'grid-2';
     grid.innerHTML = data.listings.map(renderListingCard).join('');
     if (typeof lucide !== 'undefined') lucide.createIcons();
+    if (currentView === 'map') renderMapListings();
     renderPagination(data.page, data.pages);
   } catch (e) {
+    document.getElementById('resultsCount').textContent = 'Could not load rooms';
     grid.innerHTML = `<p class="text-muted">Failed to load rooms: ${e.message}</p>`;
   }
 }
@@ -200,7 +203,84 @@ function filterNearMe() {
 }
 function toggleFilters() { document.getElementById('filtersPanel').classList.toggle('open'); }
 function closeFilters() { document.getElementById('filtersPanel').classList.remove('open'); }
-function setView(v) { currentView = v; loadListings(); }
+// ─── MAP VIEW ────────────────────────────────
+// Seekers can switch to a map: listings are plotted with their jittered
+// (privacy-safe) coordinates. Distances/times in popups use the REAL
+// coordinates against the seeker's daily base location.
+let mapInstance = null;
+let mapMarkersLayer = null;
+let lastFetchedListings = [];
+
+function ensureMap() {
+  const el = document.getElementById('mapSearch');
+  if (!el) return null;
+  if (!mapInstance) {
+    mapInstance = L.map(el, { scrollWheelZoom: true }).setView([5.6037, -0.1870], 12); // Accra default
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19, attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(mapInstance);
+    mapMarkersLayer = L.layerGroup().addTo(mapInstance);
+  }
+  // The container may have been hidden (display:none) until now — Leaflet
+  // computes bounds against the CURRENT container size, so it MUST be resized
+  // and repainted BEFORE markers/fitBounds run, or the view collapses and
+  // markers appear missing. Invalidate now and once more after a repaint tick.
+  mapInstance.invalidateSize();
+  setTimeout(() => mapInstance && mapInstance.invalidateSize(), 80);
+  return mapInstance;
+}
+
+function renderMapListings() {
+  const map = ensureMap();
+  if (!map) return;
+  mapMarkersLayer.clearLayers();
+  if (!lastFetchedListings.length) {
+    map.setView([5.6037, -0.1870], 12);
+    return;
+  }
+  const b = window.__userBaseLoc;
+  const pts = [];
+  lastFetchedListings.forEach(l => {
+    const lat = parseFloat(l.display_lat), lng = parseFloat(l.display_lng);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+    pts.push([lat, lng]);
+    let distHtml = '';
+    if (b?.lat && b?.lng && l.location_lat && l.location_lng) {
+      const km = haversineKm(b.lat, b.lng, l.location_lat, l.location_lng);
+      if (km <= 100) {
+        const t = estimateTravel(km);
+        distHtml = `<div style="margin-top:.35rem;color:#555">${t.dist} from your base · ~${t.walk} walk · ~${t.drive} drive</div>`;
+      }
+    }
+    L.marker([lat, lng]).addTo(mapMarkersLayer)
+      .bindPopup(`<a href="/listing?id=${l.uuid}" style="font-weight:700">${l.title}</a><br/>GHS ${Number(l.price_per_head).toLocaleString()}/mo · ${l.location_area || ''}${distHtml}`);
+  });
+  if (pts.length) {
+    map.fitBounds(L.latLngBounds(pts).pad(0.25), { maxZoom: 15 });
+    // If we know the user's base location, draw it as a reference point.
+    if (b?.lat && b?.lng) {
+      L.circleMarker([b.lat, b.lng], { radius: 7, color: '#2563eb', fillOpacity: 1 })
+        .bindTooltip('Your base location')
+        .addTo(mapMarkersLayer);
+    }
+  }
+}
+
+function setView(v) {
+  currentView = v;
+  const grid = document.getElementById('listingsGrid');
+  const mapWrap = document.getElementById('mapWrap');
+  if (grid) grid.style.display = v === 'map' ? 'none' : '';
+  if (mapWrap) mapWrap.style.display = v === 'map' ? 'block' : 'none';
+  if (v === 'map') {
+    // If data hasn't arrived yet (user clicked Map immediately), load it —
+    // loadListings() renders the map once the rooms come back.
+    if (lastFetchedListings.length) renderMapListings();
+    else loadListings();
+  } else {
+    loadListings();
+  }
+}
 
 // Pre-fill from URL params
 const urlParams = new URLSearchParams(location.search);
@@ -244,6 +324,15 @@ if (urlParams.get('occupancy')) {
     loadOwnerListingsView();
     if (window.renderFooterNav) window.renderFooterNav();
   } else {
+    // Fetch the seeker's daily base location once — used for distance/time lines.
+    if (localStorage.getItem('token')) {
+      try {
+        const me = await api.get('/api/auth/me');
+        if (me?.user?.base_lat && me?.user?.base_lng) {
+          window.__userBaseLoc = { lat: me.user.base_lat, lng: me.user.base_lng };
+        }
+      } catch { /* distances just won't show */ }
+    }
     loadListings();
   }
 })();

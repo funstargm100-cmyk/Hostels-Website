@@ -164,7 +164,7 @@ router.get('/', async (req, res) => {
     const sql = `
       SELECT l.id, l.uuid, l.title, l.location_area, l.full_address, l.nearest_landmark, l.listed_price, l.price_per_head,
              l.occupancy_type, l.gender_preference, l.is_featured, l.views_count, l.interest_count,
-             l.move_in_date, l.created_at,
+             l.move_in_date, l.created_at, l.location_lat, l.location_lng,
              u.is_kyc_verified as owner_verified,
              img.image_path as primary_image,
              ROUND(AVG(r.rating)::numeric, 1) as avg_rating, COUNT(r.id) as review_count,
@@ -182,6 +182,15 @@ router.get('/', async (req, res) => {
     // WHERE-only params for the count query (scoring params are ORDER BY-only)
     const whereParams = params.slice(0, whereParamCount);
     const [listings] = await db.query2(sql, [...params, parseInt(limit), parseInt(offset)]);
+    // Coordinates: real ones power distance-to-base calculations in the client;
+    // jittered ones are what map markers show, so exact pins stay private.
+    for (const lst of listings) {
+      if (lst.location_lat != null) {
+        const jittered = applyLocationJitter(parseFloat(lst.location_lat), parseFloat(lst.location_lng));
+        lst.display_lat = jittered.lat;
+        lst.display_lng = jittered.lng;
+      }
+    }
     const countRes = await db.query(`SELECT COUNT(DISTINCT l.id) as total FROM listings l LEFT JOIN amenities a ON a.listing_id = l.id ${whereStr}`, whereParams);
     const total = parseInt(countRes.rows[0].total);
 
