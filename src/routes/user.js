@@ -25,6 +25,9 @@ router.put('/profile', requireAuth, async (req, res) => {
   if (!normEmail) return res.status(400).json({ error: 'A valid email address is required' });
   if (!EMAIL_RE.test(normEmail)) return res.status(400).json({ error: 'Please enter a valid email address' });
   if (normPhone && !PHONE_RE.test(normPhone)) return res.status(400).json({ error: 'Please enter a valid phone number (9–15 digits)' });
+  // Location (workplace/school base) only applies to seekers. For owners/agents
+  // the column is simply left untouched, whatever the client sends.
+  const isSeeker = req.session.user.role === 'seeker';
   try {
     // Reject a clash with any OTHER account before updating.
     const dupe = await db.query('SELECT email, phone FROM users WHERE (email=$1 OR phone=$2) AND id<>$3',
@@ -34,9 +37,11 @@ router.put('/profile', requireAuth, async (req, res) => {
       if (normPhone && row.phone === normPhone) return res.status(409).json({ error: 'That phone number is already used by another account' });
     }
     const result = await db.query(
-      `UPDATE users SET name=$1, email=$2, phone=$3, base_location=$4 WHERE id=$5
+      `UPDATE users SET name=$1, email=$2, phone=$3,
+              base_location = CASE WHEN $6 THEN $4 ELSE base_location END
+       WHERE id=$5
        RETURNING id, uuid, name, email, phone, role, is_verified, is_kyc_verified, wallet_balance, avatar, base_location, base_lat, base_lng, created_at`,
-      [name.trim(), normEmail, normPhone || null, (base_location || '').trim() || null, req.session.user.id]);
+      [name.trim(), normEmail, normPhone || null, (base_location || '').trim() || null, req.session.user.id, isSeeker]);
     res.json({ message: 'Profile updated', user: result.rows[0] });
   } catch (err) {
     if (err.code === '23505') return res.status(409).json({ error: 'That email or phone number is already in use' });
