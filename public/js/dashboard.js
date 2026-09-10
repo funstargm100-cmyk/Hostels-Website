@@ -7,15 +7,48 @@ async function initDashboard() {
   document.getElementById('sidebarName').textContent = currentUser.name;
   document.getElementById('sidebarRole').textContent = currentUser.role.charAt(0).toUpperCase() + currentUser.role.slice(1);
 
-  if (currentUser.role === 'owner' || currentUser.role === 'agent') {
-    document.getElementById('myListingsNav').style.display = '';
-    document.getElementById('myRequestsNav').style.display = 'none';
-  }
+  renderSidebarNav();
 
   const hash = location.hash.replace('#', '') || 'overview';
   const link = document.querySelector(`[href="#${hash}"]`);
   if (link) showTab(hash, link);
   else loadOverview();
+}
+
+// Build the desktop sidebar links (and mobile tab bar) from the user's role.
+function renderSidebarNav() {
+  const isOwner = currentUser.role === 'owner' || currentUser.role === 'agent';
+  const items = [
+    { tab: 'overview', icon: 'layout-dashboard', label: 'Overview' }
+  ];
+  if (isOwner) items.push({ tab: 'listings', icon: 'building-2', label: 'My listings' });
+  else {
+    items.push({ tab: 'requests', icon: 'message-circle', label: 'My requests' });
+    items.push({ tab: 'favorites', icon: 'heart', label: 'Saved rooms' });
+  }
+  items.push({ tab: 'notifications', icon: 'bell', label: 'Notifications' });
+
+  const nav = document.getElementById('sidebarNav');
+  if (nav) {
+    nav.innerHTML =
+      `<a href="/" ><i data-lucide="home"></i> Home</a>` +
+      items.map(it => `<a href="#${it.tab}" data-tab="${it.tab}"><i data-lucide="${it.icon}"></i> ${it.label}</a>`).join('');
+    nav.querySelectorAll('a[data-tab]').forEach(a =>
+      a.addEventListener('click', e => { e.preventDefault(); showTab(a.dataset.tab, a); }));
+  }
+
+  const mobile = document.getElementById('mobileTabs');
+  if (mobile) {
+    mobile.innerHTML = items.map(it =>
+      `<a href="#${it.tab}" data-tab="${it.tab}">${it.label}</a>`).join('');
+    mobile.querySelectorAll('a[data-tab]').forEach(a =>
+      a.addEventListener('click', e => { e.preventDefault(); showTab(a.dataset.tab, document.querySelector(`#sidebarNav [data-tab="${a.dataset.tab}"]`)); }));
+  }
+
+  // Highlight the active tab once links exist
+  const active = document.querySelector(`#sidebarNav [data-tab="${location.hash.replace('#','') || 'overview'}"]`);
+  if (active) active.classList.add('active');
+  if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 function showTab(tab, link) {
