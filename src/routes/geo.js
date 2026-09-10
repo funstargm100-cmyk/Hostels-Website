@@ -1,0 +1,80 @@
+const router = require('express').Router();
+
+// Small in-memory cache so repeat searches don't hammer Nominatim
+const cache = new Map();
+const CACHE_TTL = 1000 * 60 * 60; // 1 hour
+
+// Curated popular places (Ghana) shown as quick-pick chips.
+// Each entry is searched via Nominatim on demand — we only keep labels here.
+const POPULAR_PLACES = [
+  { label: 'KNUST', emoji: '🎓', query: 'KNUST' },
+  { label: 'University of Ghana, Legon', emoji: '🎓', query: 'University of Ghana, Legon, Accra' },
+  { label: 'UENR Sunyani', emoji: '🎓', query: 'UENR Sunyani' },
+  { label: 'UCC Cape Coast', emoji: '🎓', query: 'University of Cape Coast' },
+  { label: 'Ho Technical University', emoji: '🎓', query: 'Ho Technical University, Ho' },
+  { label: 'Takoradi Technical University', emoji: '🎓', query: 'Takoradi Technical University' },
+  { label: 'University for Development Studies', emoji: '🎓', query: 'University for Development Studies, Tamale' },
+  { label: 'GIMPA', emoji: '🎓', query: 'Ghana Institute of Management and Public Administration, Accra' },
+  { label: 'Accra Mall', emoji: '🛍️', query: 'Accra Mall' },
+  { label: 'Kumasi City Mall', emoji: '🛍️', query: 'Kumasi City Mall' },
+  { label: 'Kotoka Int. Airport', emoji: '✈️', query: 'Kotoka International Airport, Accra' },
+  { label: 'Makola Market', emoji: '🧺', query: 'Makola Market, Accra' }
+];
+
+// GET /api/geo/popular — the quick-pick chips
+router.get('/popular', (req, res) => {
+  res.json({ places: POPULAR_PLACES });
+});
+
+// GET /api/geo/search?q=... — proxy to Nominatim (schools, banks, restaurants, anything)
+router.get('/search', async (req, res) => {
+  const q = String(req.query.q || '').trim();
+  if (q.length < 3) return res.json({ results: [] });
+
+  const key = q.toLowerCase();
+  const hit = cache.get(key);
+  if (hit && Date.now() - hit.t < CACHE_TTL) return res.json({ results: hit.results });
+
+  try {
+    const url = new URL('https://nominatim.openstreetmap.org/search');
+    url.searchParams.set('q', q);
+    url.searchParams.set('format', 'json');
+    url.searchParams.set('addressdetails', '1');
+    url.searchParams.set('limit', '6');
+    // Bias to Ghana, but don't hard-restrict (someone may study near a border town)
+    url.searchParams.set('countrycodes', 'gh');
+    url.searchParams.set('accept-language', 'en');
+
+    const r = await fetch(url, {
+      headers: { 'User-Agent': 'Roomy/1.0 (student housing marketplace)' }
+    });
+    if (!r.ok) throw new Error('Upstream error ' + r.status);
+    const data = await r.json();
+
+    const results = data.map(d => {
+      const addr = d.address || {};
+      const primary = addr.amenity || addr.tourism || addr.building || addr.office || addr.shop ||
+        addr.university || addr.school || addr.college || addr.hospital || addr.suburb ||
+        addr.neighbourhood || addr.village || addr.town || addr.city || '';
+      const region = addr.state || addr.county || '';
+      const name = d.name || primary || d.display_name.split(',')[0];
+      return {
+        name,
+        detail: [primary && primary !== name ? primary : null, addr.city || addr.town, region]
+          .filter(Boolean).filter((v, i, a) => a.indexOf(v) === i && v !== name).slice(0, 2).join(', '),
+        display: d.display_name,
+        lat: parseFloat(d.lat),
+        lng: parseFloat(d.lon),
+        type: d.type || d.class || ''
+      };
+    });
+
+    cache.set(key, { t: Date.now(), results });
+    res.json({ results });
+  } catch (err) {
+    console.error('GEO SEARCH ERROR:', err.message);
+    res.status(502).json({ error: 'Location search unavailable right now' });
+  }
+});
+
+module.exports = router;

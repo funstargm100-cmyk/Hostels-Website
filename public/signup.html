@@ -53,7 +53,15 @@
     <!-- SEEKER PATH: step 2 = base location map -->
     <div class="su-step" id="suSeekerMap" style="display:none">
       <p style="font-size:.92rem;margin-top:-.6rem">Where do you spend most of your day — school or work? We'll use this to find rooms nearby.</p>
-      <button type="button" class="btn btn-outline btn-sm mb-2" onclick="suGetMyLocation()"><i data-lucide="locate-fixed"></i> Use my current location</button>
+      <div class="su-search-wrap">
+        <input type="text" id="suPlaceSearch" autocomplete="off" placeholder="Search a school, bank, restaurant, area…" />
+        <div class="su-search-results" id="suSearchResults" style="display:none"></div>
+      </div>
+      <div class="su-chips" id="suPopularChips"></div>
+      <div style="display:flex;gap:.7rem;align-items:center;margin:.4rem 0 .2rem">
+        <button type="button" class="btn btn-outline btn-sm" onclick="suGetMyLocation()"><i data-lucide="locate-fixed"></i> Use my current location</button>
+        <span style="font-size:.78rem" class="text-muted">or tap the map below</span>
+      </div>
       <div id="suMap"></div>
       <p class="text-muted" style="font-size:.8rem" id="suPinStatus">No pin set yet — tap the map to drop a pin.</p>
       <input type="hidden" id="suBaseLat" />

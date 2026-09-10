@@ -125,6 +125,78 @@ function suGetMyLocation() {
   }, () => showToast('Could not get location. Please pin manually.', 'error'));
 }
 
+// ─── PLACE SEARCH (popular chips + autocomplete via /api/geo) ─────────────────
+let suSearchTimer = null;
+
+async function suLoadPopular() {
+  try {
+    const { places } = await api.get('/api/geo/popular');
+    const wrap = document.getElementById('suPopularChips');
+    wrap.innerHTML = places.map((p, i) =>
+      `<button type="button" class="su-chip" data-i="${i}">${p.emoji} ${p.label}</button>`).join('');
+    wrap.querySelectorAll('.su-chip').forEach(btn => {
+      btn.addEventListener('click', () => suSearchAndPin(places[+btn.dataset.i].query));
+    });
+  } catch { /* chips are optional — ignore */ }
+}
+
+async function suSearchAndPin(query) {
+  const status = document.getElementById('suPinStatus');
+  status.textContent = 'Searching "' + query + '"…';
+  try {
+    const { results } = await api.get('/api/geo/search?q=' + encodeURIComponent(query));
+    if (!results.length) { status.textContent = 'No match found — try tapping the map.'; return; }
+    const r = results[0];
+    if (!suMap) suInitMap();
+    suMap.setView([r.lat, r.lng], 16);
+    suPlacePin(r.lat, r.lng, false);
+    document.getElementById('suBaseLocation').value = r.display;
+    document.getElementById('suPinStatus').textContent = r.name + (r.detail ? ' — ' + r.detail : '');
+  } catch {
+    status.textContent = 'Search failed — try tapping the map.';
+  }
+}
+
+document.getElementById('suPlaceSearch').addEventListener('input', (e) => {
+  const q = e.target.value.trim();
+  const box = document.getElementById('suSearchResults');
+  clearTimeout(suSearchTimer);
+  if (q.length < 3) { box.style.display = 'none'; box.innerHTML = ''; return; }
+  suSearchTimer = setTimeout(async () => {
+    box.innerHTML = '<div class="su-search-item muted">Searching…</div>';
+    box.style.display = '';
+    try {
+      const { results } = await api.get('/api/geo/search?q=' + encodeURIComponent(q));
+      if (!results.length) { box.innerHTML = '<div class="su-search-item muted">No matches</div>'; return; }
+      box.innerHTML = results.map((r, i) => `
+        <button type="button" class="su-search-item" data-i="${i}">
+          <strong>${r.name}</strong>${r.detail ? `<span class="muted"> · ${r.detail}</span>` : ''}
+        </button>`).join('');
+      box.querySelectorAll('.su-search-item').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const r = results[+btn.dataset.i];
+          if (!suMap) suInitMap();
+          suMap.setView([r.lat, r.lng], 16);
+          suPlacePin(r.lat, r.lng, false);
+          document.getElementById('suBaseLocation').value = r.display;
+          document.getElementById('suPinStatus').textContent = r.name + (r.detail ? ' — ' + r.detail : '');
+          box.style.display = 'none';
+          e.target.value = r.name;
+        });
+      });
+    } catch {
+      box.innerHTML = '<div class="su-search-item muted">Search unavailable — pin the map instead</div>';
+    }
+  }, 350); // debounce
+});
+
+document.addEventListener('click', (e) => {
+  const box = document.getElementById('suSearchResults');
+  if (box && !e.target.closest('.su-search-wrap')) box.style.display = 'none';
+});
+
+suLoadPopular();
+
 // Continue from map step → details
 document.getElementById('suMapNextBtn').addEventListener('click', () => {
   if (!document.getElementById('suBaseLat').value) {

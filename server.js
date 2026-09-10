@@ -35,6 +35,7 @@ app.use('/api/listings', require('./src/routes/listings'));
 app.use('/api/requests', require('./src/routes/requests'));
 app.use('/api/admin', require('./src/routes/admin'));
 app.use('/api/user', require('./src/routes/user'));
+app.use('/api/geo', require('./src/routes/geo'));
 app.use('/api/payments', require('./src/routes/payments'));
 
 // Serve frontend pages
