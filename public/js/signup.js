@@ -214,9 +214,11 @@ async function suSubmit(btnId, fields) {
   const phone = fields.phone();
   const password = fields.password();
   if (!name) { suErr('Please enter your full name.'); return; }
-  if (!email && !phone) { suErr('Provide an email or phone number.'); return; }
-  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { suErr('Please enter a valid email address.'); return; }
-  if (phone && phone.replace(/\D/g, '').length < 9) { suErr('Please enter a valid phone number.'); return; }
+  if (!email) { suErr('Please enter your email address.'); return; }
+  if (!phone) { suErr('Please enter your phone number.'); return; }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) { suErr('Please enter a valid email address.'); return; }
+  const phoneDigits = phone.replace(/[\s()\-]/g, '');
+  if (!/^\+?[0-9]{9,15}$/.test(phoneDigits)) { suErr('Please enter a valid phone number (9–15 digits).'); return; }
   if (!password) { suErr('Please choose a password.'); return; }
   if (password.length < 6) { suErr('Password must be at least 6 characters.'); return; }
   if (suRole === 'seeker' && !document.getElementById('suBaseLat').value) {
@@ -227,8 +229,8 @@ async function suSubmit(btnId, fields) {
   try {
     const body = {
       name,
-      email: email || undefined,
-      phone: phone || undefined,
+      email,
+      phone: phoneDigits,
       password,
       role: suRole
     };

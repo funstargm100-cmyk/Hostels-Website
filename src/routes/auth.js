@@ -20,8 +20,10 @@ const signToken = (user) => jwt.sign(
 // POST /api/auth/signup
 router.post('/signup', async (req, res) => {
   const { name, email, phone, password, role, base_location, base_lat, base_lng } = req.body;
-  if (!name || !password || (!email && !phone))
-    return res.status(400).json({ error: 'Name, password, and email or phone required' });
+  if (!name || !email || !phone || !password)
+    return res.status(400).json({ error: 'All fields are required: name, email, phone, password' });
+  if (!name.trim())
+    return res.status(400).json({ error: 'Please enter your full name' });
   if (!['seeker', 'owner'].includes(role))
     return res.status(400).json({ error: 'Invalid role' });
 
@@ -32,8 +34,10 @@ router.post('/signup', async (req, res) => {
   const normPhone = normalizePhone(phone);
   if (phone && !PHONE_RE.test(normPhone))
     return res.status(400).json({ error: 'Please enter a valid phone number (9–15 digits)' });
-  if (!email && !normPhone)
-    return res.status(400).json({ error: 'A valid email or phone number is required' });
+  if (!email)
+    return res.status(400).json({ error: 'A valid email address is required' });
+  if (!normPhone)
+    return res.status(400).json({ error: 'A valid phone number is required' });
   if (password.length < 6)
     return res.status(400).json({ error: 'Password must be at least 6 characters' });
   if (name.trim().length < 2)

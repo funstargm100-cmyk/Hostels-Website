@@ -137,17 +137,22 @@ if (params.get('verify') === '1' && params.get('uuid')) {
     parseInt(params.get('t') || '0', 10) || Date.now());
 
   // Automatically send the OTP right away — no need to click "Resend code".
-  (async () => {
-    try {
-      const res = await api.post('/api/auth/resend-otp', { uuid: params.get('uuid') });
-      document.getElementById('verifyBanner').textContent =
-        res.message || 'We sent a verification code to ' + (params.get('email') || 'your email') + '.';
-    } catch (ex) {
-      // The signup request already attempted to send one; fall back to manual resend.
-      document.getElementById('verifyBanner').textContent =
-        'Could not auto-send the code. Click "Resend code" to try again.';
-    }
-  })();
+  // Wait for window load: this inline script runs BEFORE the deferred app.js,
+  // so `api` may not exist yet at parse time.
+  window.addEventListener('load', () => {
+    (async () => {
+      try {
+        const res = await api.post('/api/auth/resend-otp', { uuid: params.get('uuid') });
+        document.getElementById('verifyBanner').textContent =
+          res.message || 'We sent a verification code to ' + (params.get('email') || 'your email') + '.';
+      } catch (ex) {
+        console.error('Auto-send OTP failed:', ex);
+        // The signup request already attempted to send one; fall back to manual resend.
+        document.getElementById('verifyBanner').textContent =
+          'Could not auto-send the code. Click "Resend code" to try again.';
+      }
+    })();
+  });
 }
 
 verifyForm.addEventListener('submit', async (e) => {
