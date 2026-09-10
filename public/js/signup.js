@@ -209,16 +209,27 @@ document.getElementById('suMapNextBtn').addEventListener('click', () => {
 // ─── SUBMIT (both paths) ──────────────────────────────────────────────────────
 async function suSubmit(btnId, fields) {
   const btn = document.getElementById(btnId);
+  const name = fields.name();
   const email = fields.email();
   const phone = fields.phone();
+  const password = fields.password();
+  if (!name) { suErr('Please enter your full name.'); return; }
   if (!email && !phone) { suErr('Provide an email or phone number.'); return; }
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { suErr('Please enter a valid email address.'); return; }
+  if (phone && phone.replace(/\D/g, '').length < 9) { suErr('Please enter a valid phone number.'); return; }
+  if (!password) { suErr('Please choose a password.'); return; }
+  if (password.length < 6) { suErr('Password must be at least 6 characters.'); return; }
+  if (suRole === 'seeker' && !document.getElementById('suBaseLat').value) {
+    suErr('Please pin your school or workplace on the map first.');
+    return;
+  }
   btn.disabled = true; btn.classList.add('btn-loading');
   try {
     const body = {
-      name: fields.name(),
+      name,
       email: email || undefined,
       phone: phone || undefined,
-      password: fields.password(),
+      password,
       role: suRole
     };
     if (suRole === 'seeker') {

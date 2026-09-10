@@ -202,6 +202,32 @@ router.put('/users/:id/verify-kyc', admin, async (req, res) => {
   } catch (err) { res.status(500).json({ error: 'Server error' }); }
 });
 
+// DELETE /api/admin/users/:id  (permanently delete an account)
+router.delete('/users/:id', admin, async (req, res) => {
+  try {
+    const targetId = parseInt(req.params.id, 10);
+    if (!Number.isFinite(targetId)) return res.status(400).json({ error: 'Invalid user id' });
+    if (targetId === req.session.user.id)
+      return res.status(400).json({ error: 'You cannot delete your own admin account' });
+
+    const u = await db.query('SELECT id, name, email, role FROM users WHERE id=$1', [targetId]);
+    if (!u.rows.length) return res.status(404).json({ error: 'User not found' });
+    if (u.rows[0].role === 'admin')
+      return res.status(403).json({ error: 'Admin accounts cannot be deleted from here' });
+
+    // reviews has no ON DELETE rule for reviewer_id — clear those first
+    await db.query('DELETE FROM reviews WHERE reviewer_id=$1', [targetId]);
+    // listings, favorites, notifications, reports cascade; contact_requests set seeker_id NULL
+    await db.query('DELETE FROM users WHERE id=$1', [targetId]);
+    await logAction(req.session.user.id, 'delete_user', 'user', targetId,
+      JSON.stringify({ name: u.rows[0].name, email: u.rows[0].email }));
+    res.json({ message: `Account "${u.rows[0].name}" and all their data deleted` });
+  } catch (err) {
+    console.error('DELETE USER ERROR:', err.message);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // GET /api/admin/reports
 router.get('/reports', admin, async (req, res) => {
   try {

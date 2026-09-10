@@ -123,6 +123,7 @@ async function loadAdminUsers() {
         <td>${u.is_suspended
           ? `<button class="btn btn-ghost btn-sm" onclick="unsuspendUser(${u.id})">Unsuspend</button>`
           : `<button class="btn btn-sm" style="background:#fee2e2;color:#991b1b" onclick="suspendUser(${u.id})">Suspend</button>`}
+          <button class="btn btn-sm" style="background:#7f1d1d;color:#fff" onclick="deleteUser(${u.id}, '${String(u.name).replace(/'/g, "\\'")}')">Delete</button>
         </td>
       </tr>`).join('') + '</tbody></table></div>';
   } catch (e) { el.innerHTML = `<p class="text-muted">${e.message}</p>`; }
@@ -135,6 +136,12 @@ async function suspendUser(id) {
 }
 async function unsuspendUser(id) {
   try { await api.put(`/api/admin/users/${id}/unsuspend`); showToast('User unsuspended', 'success'); loadAdminUsers(); }
+  catch (e) { showToast(e.message, 'error'); }
+}
+async function deleteUser(id, name) {
+  if (!confirm(`Permanently delete "${name}"'s account?\n\nThis removes their listings, favourites and notifications. This cannot be undone.`)) return;
+  if (!confirm('Are you sure? Type OK to confirm.')) return;
+  try { await api.delete(`/api/admin/users/${id}`); showToast('Account deleted', 'success'); loadAdminUsers(); }
   catch (e) { showToast(e.message, 'error'); }
 }
 
