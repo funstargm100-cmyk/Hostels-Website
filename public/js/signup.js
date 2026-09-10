@@ -226,10 +226,14 @@ async function suSubmit(btnId, fields) {
       body.base_lat = document.getElementById('suBaseLat').value;
       body.base_lng = document.getElementById('suBaseLng').value;
     }
-    await api.post('/api/auth/signup', body);
-    // Account created — the API sends an OTP for verification, so go log in.
-    showToast('Account created! Check your email for the verification code.', 'success');
-    setTimeout(() => { location.href = '/login'; }, 1200);
+    const res = await api.post('/api/auth/signup', body);
+    // Account created — send the user straight to the verification step.
+    const emailQ = email || '';
+    showToast('Account created! Enter the verification code we emailed you.', 'success');
+    setTimeout(() => {
+      location.href = '/login?verify=1&uuid=' + encodeURIComponent(res.uuid) +
+        (emailQ ? '&email=' + encodeURIComponent(emailQ) : '');
+    }, 1200);
   } catch (ex) {
     suErr(ex.message);
     btn.disabled = false; btn.classList.remove('btn-loading');

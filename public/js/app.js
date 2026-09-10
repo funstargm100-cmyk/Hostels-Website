@@ -20,7 +20,7 @@ const api = {
     if (body) opts.body = JSON.stringify(body);
     const res = await fetch(url, opts);
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Request failed');
+    if (!res.ok) { const err = new Error(data.error || 'Request failed'); Object.assign(err, data); throw err; }
     return data;
   },
   get: (url) => api.request('GET', url),

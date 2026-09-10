@@ -47,9 +47,34 @@ router.post('/signup', async (req, res) => {
     const uuid = result.rows[0].uuid;
 
     if (email) sendEmail(email, 'Verify your account', templates.otp(otp)).catch(console.error);
-    res.json({ message: 'Account created. Check your email for OTP.', uuid, otp });
+    res.json({ message: 'Account created. Check your email for OTP.', uuid, email: email || null, phone: phone || null });
   } catch (err) {
     console.error('SIGNUP ERROR:', err.message);
+    res.status(500).json({ error: err.message || 'Server error' });
+  }
+});
+
+// POST /api/auth/resend-otp
+router.post('/resend-otp', async (req, res) => {
+  const { uuid } = req.body;
+  if (!uuid) return res.status(400).json({ error: 'Account id required' });
+  try {
+    const result = await db.query('SELECT * FROM users WHERE uuid=$1', [uuid]);
+    const user = result.rows[0];
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    if (user.is_verified) return res.status(400).json({ error: 'Account is already verified. Try logging in.' });
+    if (!user.email) return res.status(400).json({ error: 'This account has no email to send a code to' });
+
+    const otp = generateOTP();
+    const otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
+    await db.query('UPDATE users SET otp_code=$1, otp_expires_at=$2 WHERE id=$3', [otp, otpExpiry, user.id]);
+
+    const sent = await sendEmail(user.email, 'Your verification code', templates.otp(otp));
+    if (!sent)
+      return res.status(500).json({ error: 'Could not send the verification email right now. Please try again later or contact support.' });
+    res.json({ message: 'A new verification code was sent to your email.' });
+  } catch (err) {
+    console.error('RESEND OTP ERROR:', err.message);
     res.status(500).json({ error: err.message || 'Server error' });
   }
 });
@@ -82,7 +107,13 @@ router.post('/login', async (req, res) => {
     const user = result.rows[0];
     if (!user) return res.status(401).json({ error: 'Invalid credentials' });
     if (user.is_suspended) return res.status(403).json({ error: 'Account suspended. Contact support.' });
-    if (!user.is_verified) return res.status(403).json({ error: 'Please verify your account first' });
+    if (!user.is_verified)
+      return res.status(403).json({
+        error: 'Please verify your account first. We sent a code to your email.',
+        needVerification: true,
+        uuid: user.uuid,
+        email: user.email || null
+      });
 
     const valid = await bcrypt.compare(password, user.password_hash);
     if (!valid) return res.status(401).json({ error: 'Invalid credentials' });

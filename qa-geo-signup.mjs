@@ -1,4 +1,4 @@
-yesexport default async function run(page, ui) {
+export default async function run(page, ui) {
   const out = {};
   await page.evaluate(() => document.querySelector('.su-role-card[data-role="seeker"]').click());
   await page.waitForSelector('#suMap', { state: 'visible', timeout: 10000 });

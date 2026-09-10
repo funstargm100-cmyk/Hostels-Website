@@ -33,6 +33,18 @@
 
     <div class="alert alert-danger" id="loginError" style="display:none"></div>
 
+    <div class="alert alert-info" id="verifyBanner" style="display:none"></div>
+
+    <form id="verifyForm" style="display:none">
+      <input type="hidden" id="verifyUuid" />
+      <div class="form-group">
+        <label>Verification code</label>
+        <input type="text" id="verifyOtp" inputmode="numeric" maxlength="6" placeholder="6-digit code" required />
+      </div>
+      <button type="submit" class="btn btn-primary btn-lg" style="width:100%" id="verifySubmitBtn">Verify account</button>
+      <button type="button" class="btn btn-ghost" style="width:100%;margin-top:.5rem" id="resendBtn">Resend code</button>
+    </form>
+
     <form id="loginForm">
       <div class="form-group">
         <label>Email or phone</label>
@@ -45,7 +57,7 @@
       <button type="submit" class="btn btn-primary btn-lg" style="width:100%" id="loginSubmitBtn">Log in</button>
     </form>
 
-    <p class="text-muted mt-3" style="text-align:center;font-size:.88rem">New to Roomy? <a href="/signup" style="color:var(--primary);font-weight:700">Create an account</a></p>
+    <p class="text-muted mt-3" id="loginFootnote" style="text-align:center;font-size:.88rem">New to Roomy? <a href="/signup" style="color:var(--primary);font-weight:700">Create an account</a></p>
   </div>
 </div>
 
@@ -64,6 +76,64 @@
 <script src="/js/animations.js" defer></script>
 <script src="/js/scrolltop.js" defer></script>
 <script defer>
+const errEl0 = document.getElementById('loginError');
+const verifyForm = document.getElementById('verifyForm');
+const loginForm = document.getElementById('loginForm');
+
+function showVerifyPanel(uuid, email, bannerMsg) {
+  document.getElementById('verifyUuid').value = uuid || '';
+  document.getElementById('verifyBanner').textContent = bannerMsg ||
+    'Your account is not verified yet.' + (email ? ' We sent a code to ' + email + '.' : '');
+  document.getElementById('verifyBanner').style.display = 'block';
+  verifyForm.style.display = 'block';
+  loginForm.style.display = 'none';
+  document.getElementById('loginFootnote').style.display = 'none';
+}
+
+// Arrived from signup with a pending verification
+const params = new URLSearchParams(location.search);
+if (params.get('verify') === '1' && params.get('uuid')) {
+  showVerifyPanel(params.get('uuid'), params.get('email') || '',
+    'Account created! Enter the verification code we emailed to ' + (params.get('email') || 'you') + '.');
+}
+
+verifyForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById('verifySubmitBtn');
+  const otp = document.getElementById('verifyOtp').value.trim();
+  const uuid = document.getElementById('verifyUuid').value;
+  btn.disabled = true; btn.classList.add('btn-loading');
+  try {
+    const res = await api.post('/api/auth/verify-otp', { uuid, otp });
+    document.getElementById('verifyBanner').textContent = res.message || 'Account verified successfully! You can now log in.';
+    document.getElementById('verifyBanner').className = 'alert alert-success';
+    verifyForm.style.display = 'none';
+    loginForm.style.display = 'block';
+    document.getElementById('loginFootnote').style.display = 'block';
+  } catch (ex) {
+    errEl0.textContent = ex.message; errEl0.style.display = 'block';
+  } finally {
+    btn.disabled = false; btn.classList.remove('btn-loading');
+  }
+});
+
+document.getElementById('resendBtn').addEventListener('click', async (e) => {
+  const btn = e.currentTarget;
+  const uuid = document.getElementById('verifyUuid').value;
+  if (!uuid) { errEl0.textContent = 'Log in first so we can identify your account.'; errEl0.style.display = 'block'; return; }
+  btn.disabled = true; btn.classList.add('btn-loading');
+  try {
+    const res = await api.post('/api/auth/resend-otp', { uuid });
+    document.getElementById('verifyBanner').textContent = res.message;
+    document.getElementById('verifyBanner').className = 'alert alert-info';
+    errEl0.style.display = 'none';
+  } catch (ex) {
+    errEl0.textContent = ex.message; errEl0.style.display = 'block';
+  } finally {
+    btn.disabled = false; btn.classList.remove('btn-loading');
+  }
+});
+
 document.getElementById('loginForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   const btn = document.getElementById('loginSubmitBtn');
@@ -80,8 +150,14 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
     const params = new URLSearchParams(location.search);
     location.href = params.get('redirect') || (window.goHomeForRole ? goHomeForRole(user.role) : '/dashboard');
   } catch (ex) {
-    errEl.textContent = ex.message;
-    errEl.style.display = 'block';
+    if (ex.needVerification || (ex.data && ex.data.needVerification)) {
+      const info = ex.data || ex;
+      showVerifyPanel(info.uuid, info.email, info.error || ex.message);
+      errEl.style.display = 'none';
+    } else {
+      errEl.textContent = ex.message;
+      errEl.style.display = 'block';
+    }
     btn.disabled = false; btn.classList.remove('btn-loading');
   }
 });

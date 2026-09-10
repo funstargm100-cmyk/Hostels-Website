@@ -125,6 +125,7 @@ textarea{ resize:vertical; min-height:110px; }
 .checkbox-row input{ width:auto; }
 .alert{ padding:.85rem 1rem; border-radius:var(--radius-sm); font-size:.88rem; margin-bottom:1rem; }
 .alert-danger{ background:#FBE3DE; color:var(--brick-deep); border:1px solid var(--brick); }
+.alert-info{ background:var(--primary-light, #EAF2FB); color:var(--primary, #1D4ED8); border:1px solid currentColor; border-radius:8px; padding:.75rem 1rem; margin-bottom:1rem; font-size:.9rem; }
 .alert-success{ background:#DEF0E5; color:var(--teal-deep); border:1px solid var(--teal); }
 :focus-visible{ outline:2px solid var(--primary); outline-offset:2px; }
 

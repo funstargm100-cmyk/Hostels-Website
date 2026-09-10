@@ -1,16 +1,37 @@
 const nodemailer = require('nodemailer');
 
-const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST,
-  port: process.env.EMAIL_PORT,
-  auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
-});
+let transporter = null;
+
+function getTransporter() {
+  if (transporter) return transporter;
+  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS ||
+      process.env.EMAIL_USER === 'your@email.com' || process.env.EMAIL_PASS === 'your_email_app_password') {
+    console.error('EMAIL CONFIG ERROR: EMAIL_USER / EMAIL_PASS are not configured. ' +
+      'Set real SMTP credentials in .env (for Gmail: EMAIL_USER=<gmail address>, EMAIL_PASS=<16-char app password from https://myaccount.google.com/apppasswords>).');
+    return null;
+  }
+  const port = parseInt(process.env.EMAIL_PORT || '587', 10);
+  transporter = nodemailer.createTransport({
+    host: process.env.EMAIL_HOST,
+    port,
+    secure: port === 465,
+    auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
+  });
+  return transporter;
+}
 
 async function sendEmail(to, subject, html) {
+  const tx = getTransporter();
+  if (!tx) return false;
   try {
-    await transporter.sendMail({ from: `"Hostels Platform" <${process.env.EMAIL_USER}>`, to, subject, html });
+    const info = await tx.sendMail({
+      from: `"Hostels Platform" <${process.env.EMAIL_USER}>`, to, subject, html
+    });
+    console.log(`Email sent to ${to} (${subject}) — id ${info.messageId}`);
+    return true;
   } catch (err) {
-    console.error('Email error:', err.message);
+    console.error('EMAIL SEND FAILED:', to, '—', err.code || '', err.response || err.message);
+    return false;
   }
 }
 
