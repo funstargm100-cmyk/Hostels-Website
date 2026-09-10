@@ -135,16 +135,28 @@ function setNavAuth(loggedIn) {
 
 async function initNavAuth() {
   const token = localStorage.getItem('token');
-  if (!token) { localStorage.removeItem('user'); setNavAuth(false); return null; }
+  if (!token) {
+    localStorage.removeItem('user');
+    setNavAuth(false);
+    applyRoleToLogo(null);
+    return null;
+  }
   try {
     const { user } = await api.get('/api/auth/me');
     localStorage.setItem('user', JSON.stringify(user));
     setNavAuth(true);
+    applyRoleToLogo(user?.role);
     return user;
   } catch {
+    // A transient failure (offline, 429 rate-limit, 5xx) must not strand a
+    // signed-in user on the visitor page. Capture the cached role BEFORE clearing
+    // storage, then point the logo at their home. A genuinely dead session (401)
+    // has already been handled by api.request -> signOutAndRedirect.
+    const cached = (() => { try { return JSON.parse(localStorage.getItem('user') || 'null'); } catch { return null; } })();
     localStorage.removeItem('user');
     localStorage.removeItem('token');
     setNavAuth(false);
+    applyRoleToLogo(cached?.role || null);
     return null;
   }
 }
@@ -152,6 +164,7 @@ async function initNavAuth() {
 function handleLogout() {
   localStorage.removeItem('token');
   localStorage.removeItem('user');
+  applyRoleToLogo(null);
   location.href = '/';
 }
 
@@ -164,6 +177,7 @@ function signOutAndRedirect(message) {
   localStorage.removeItem('token');
   localStorage.removeItem('user');
   setNavAuth(false);
+  applyRoleToLogo(null);
   if (window.renderFooterNav) window.renderFooterNav();
   showToast(message, 'warning');
   setTimeout(() => { location.href = '/'; }, 1200);
@@ -180,6 +194,17 @@ function goHomeForRole(role) {
 window.goHomeForRole = goHomeForRole;
 document.getElementById('logoutBtn')?.addEventListener('click', handleLogout);
 document.getElementById('logoutBtnMobile')?.addEventListener('click', handleLogout);
+
+// Point the top-bar logo at the viewer's role-specific home page. Every page's
+// logo is authored as href="/" (the visitor home), so without this a logged-in
+// seeker/owner clicking it from /listings, /about, etc. would be dropped on the
+// visitor page. Called once the role is known (see initNavAuth) so it always
+// reflects the CURRENT user, and reset to "/" on logout.
+function applyRoleToLogo(role) {
+  const target = role ? goHomeForRole(role) : '/';
+  document.querySelectorAll('a.logo').forEach(a => { a.setAttribute('href', target); });
+}
+window.applyRoleToLogo = applyRoleToLogo;
 
 // ─── LISTING CARD RENDERER ────────────────────────────────────────────────────
 function renderListingCard(l) {

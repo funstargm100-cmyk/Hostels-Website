@@ -16,8 +16,9 @@ async function initDashboard() {
   ['sidebarAvatar', 'mobileAvatar'].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = initial; });
 
   // Point the top-bar logo at the user's role-specific home page.
-  const homeLogo = document.getElementById('navHomeLogo');
-  if (homeLogo && window.goHomeForRole) homeLogo.href = window.goHomeForRole(currentUser.role);
+  // (initNavAuth already applied this to every a.logo; kept here so the intent
+  // is explicit and the dashboard works even if that call changes.)
+  if (window.applyRoleToLogo) window.applyRoleToLogo(currentUser.role);
 
   // Greeting header removed — the sidebar is now the single navigation surface.
   renderSidebarNav();
