@@ -52,13 +52,13 @@ async function loadOwnerListingsView() {
     countEl.textContent = `${listings.length} listing${listings.length !== 1 ? 's' : ''}`;
 
     if (!listings.length) {
-      grid.className = 'grid-2';
+      grid.className = 'owner-grid';
       grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="icon"><i data-lucide="building-2" style="width:48px;height:48px"></i></div><h3>No listings yet</h3><p>Post your first room — it's free and takes minutes.</p><a href="/post-ad" class="btn btn-primary btn-sm" style="margin-top:.9rem"><i data-lucide="plus-circle"></i> Post a room</a></div>`;
       if (typeof lucide !== 'undefined') lucide.createIcons();
       document.getElementById('pagination').innerHTML = '';
       return;
     }
-    grid.className = 'grid-2';
+    grid.className = 'owner-grid';
     grid.innerHTML = listings.map(renderOwnerCard).join('');
     if (typeof lucide !== 'undefined') lucide.createIcons();
     document.getElementById('pagination').innerHTML = '';

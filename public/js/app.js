@@ -34,14 +34,18 @@ const api = {
   put: (url, body) => api.request('PUT', url, body),
   delete: (url) => api.request('DELETE', url),
 
-  async upload(url, formData) {
+  async upload(url, formData, method = 'POST') {
     const token = api.getToken();
     const res = await fetch(url, {
-      method: 'POST',
+      method,
       body: formData,
       headers: token ? { Authorization: `Bearer ${token}` } : {}
     });
-    const data = await res.json();
+    let data = {};
+    try { data = await res.json(); } catch { /* non-JSON response */ }
+    if (res.status === 401 && token) {
+      signOutAndRedirect(data.error || 'Your session has ended. Please log in again.');
+    }
     if (!res.ok) throw new Error(data.error || 'Upload failed');
     return data;
   }

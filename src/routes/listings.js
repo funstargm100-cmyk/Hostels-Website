@@ -15,6 +15,55 @@ const upload = multer({
 });
 
 const COMMISSION_RATE = 0; // No transactions — price posted is price shown
+const MAX_LISTING_PHOTOS = 10;
+
+// Multipart form fields arrive as strings ("false" is truthy). Coerce checkbox
+// values properly so an unchecked box really stores false, whichever content
+// type the request used.
+const toBool = (v) => v === true || v === 'true' || v === '1' || v === 'on';
+
+// Apply photo edits to a listing: remove the given listing_images ids, then store
+// and attach any new uploads. Enforces the 10-photo cap on the FINAL total and
+// guarantees a primary image exists. Returns an error string, or null on success.
+async function applyImageChanges(listingId, removeIds, files) {
+  const existing = await db.query(
+    'SELECT id, is_primary FROM listing_images WHERE listing_id=$1 ORDER BY sort_order', [listingId]);
+  const keptCount = existing.rows.filter(r => !removeIds.includes(r.id)).length;
+  const newFiles = files || [];
+
+  if (keptCount + newFiles.length > MAX_LISTING_PHOTOS)
+    return `A listing can have at most ${MAX_LISTING_PHOTOS} photos (you would end up with ${keptCount + newFiles.length}).`;
+  if (keptCount === 0 && newFiles.length === 0)
+    return 'A listing needs at least one photo.';
+
+  // Delete the removed rows (scoped to this listing so a stray id can't touch another listing).
+  if (removeIds.length) {
+    await db.query('DELETE FROM listing_images WHERE listing_id=$1 AND id = ANY($2::int[])', [listingId, removeIds]);
+  }
+
+  // Append new photos after the current maximum sort_order.
+  const maxRow = await db.query('SELECT COALESCE(MAX(sort_order), -1) AS m FROM listing_images WHERE listing_id=$1', [listingId]);
+  let nextOrder = Number(maxRow.rows[0].m) + 1;
+  for (const file of newFiles) {
+    // storeImage throws on an unreadable upload — surface a friendly message.
+    let imagePath;
+    try {
+      imagePath = await storeImage(file.buffer, file.originalname);
+    } catch (imgErr) {
+      return `Could not process image "${file.originalname}". Please use a JPG or PNG photo.`;
+    }
+    await db.query('INSERT INTO listing_images (listing_id, image_path, is_primary, sort_order) VALUES ($1,$2,FALSE,$3)',
+      [listingId, imagePath, nextOrder++]);
+  }
+
+  // Always ensure exactly one primary image exists (e.g. the old primary was removed).
+  const primary = await db.query('SELECT id FROM listing_images WHERE listing_id=$1 AND is_primary=TRUE LIMIT 1', [listingId]);
+  if (!primary.rows.length) {
+    await db.query(`UPDATE listing_images SET is_primary=TRUE WHERE id = (
+      SELECT id FROM listing_images WHERE listing_id=$1 ORDER BY sort_order LIMIT 1)`, [listingId]);
+  }
+  return null;
+}
 
 // GET /api/listings
 router.get('/', async (req, res) => {
@@ -201,7 +250,11 @@ router.post('/', requireAuth, requireRole('owner', 'agent', 'admin'), upload.arr
 });
 
 // PUT /api/listings/:uuid
-router.put('/:uuid', requireAuth, async (req, res) => {
+// Accepts multipart/uploads too, so the owner can delete existing photos and add
+// new ones while editing. `remove_image_ids` (JSON array or CSV) lists
+// listing_images.id values to drop. The 10-photos-per-listing cap is enforced
+// against the FINAL count, not just the newly uploaded files.
+router.put('/:uuid', requireAuth, upload.array('images', 10), async (req, res) => {
   try {
     const result = await db.query('SELECT * FROM listings WHERE uuid=$1 AND owner_id=$2', [req.params.uuid, req.session.user.id]);
     const listing = result.rows[0];
@@ -243,13 +296,30 @@ router.put('/:uuid', requireAuth, async (req, res) => {
       if (security) { aFields.push(`security=$${ap++}`); aVals.push(security); }
       if (furnishing) { aFields.push(`furnishing=$${ap++}`); aVals.push(furnishing); }
       if (bathroom) { aFields.push(`bathroom=$${ap++}`); aVals.push(bathroom); }
-      if (kitchen_access !== undefined) { aFields.push(`kitchen_access=$${ap++}`); aVals.push(!!kitchen_access); }
-      if (wifi !== undefined) { aFields.push(`wifi=$${ap++}`); aVals.push(!!wifi); }
-      if (parking !== undefined) { aFields.push(`parking=$${ap++}`); aVals.push(!!parking); }
-      if (pet_friendly !== undefined) { aFields.push(`pet_friendly=$${ap++}`); aVals.push(!!pet_friendly); }
+      if (kitchen_access !== undefined) { aFields.push(`kitchen_access=$${ap++}`); aVals.push(toBool(kitchen_access)); }
+      if (wifi !== undefined) { aFields.push(`wifi=$${ap++}`); aVals.push(toBool(wifi)); }
+      if (parking !== undefined) { aFields.push(`parking=$${ap++}`); aVals.push(toBool(parking)); }
+      if (pet_friendly !== undefined) { aFields.push(`pet_friendly=$${ap++}`); aVals.push(toBool(pet_friendly)); }
       aVals.push(listing.id);
       await db.query(`UPDATE amenities SET ${aFields.join(', ')} WHERE listing_id=$${ap}`, aVals);
     }
+
+    // ── Photos: delete removed ones, then add new uploads ────────────────────
+    // `remove_image_ids` may arrive as a JSON array (multipart fields are strings)
+    // or a comma-separated list. Only ids that belong to THIS listing are removed.
+    let removeIds = [];
+    if (req.body.remove_image_ids) {
+      try {
+        const parsed = typeof req.body.remove_image_ids === 'string'
+          ? JSON.parse(req.body.remove_image_ids)
+          : req.body.remove_image_ids;
+        removeIds = (Array.isArray(parsed) ? parsed : [parsed]).map(Number).filter(Number.isInteger);
+      } catch { /* ignore malformed input */ }
+    }
+
+    const imageErr = await applyImageChanges(listing.id, removeIds, req.files);
+    if (imageErr) return res.status(400).json({ error: imageErr });
+
     res.json({ message: 'Listing updated and resubmitted for review' });
   } catch (err) {
     res.status(500).json({ error: 'Server error' });
