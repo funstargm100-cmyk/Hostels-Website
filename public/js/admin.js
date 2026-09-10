@@ -4,7 +4,42 @@ let pendingRequestId = null;
 async function initAdmin() {
   const user = await initNavAuth();
   if (!user || user.role !== 'admin') { location.href = '/login'; return; }
+  initAdminSidebar();
   loadAdminOverview();
+}
+
+// ── Collapsible sidebar ──────────────────────
+// Desktop: collapses to icons and expands on hover.
+// Mobile (no hover): the toggle button shows/hides the panel.
+function isMobileSidebar() { return window.matchMedia('(max-width: 900px)').matches; }
+
+function setSidebarCollapsed(collapsed) {
+  const shell = document.getElementById('adminShell');
+  const btn = document.getElementById('sidebarToggle');
+  if (!shell) return;
+  shell.classList.toggle('sidebar-collapsed', collapsed);
+  if (btn) {
+    const icon = collapsed ? 'panel-left-open' : 'panel-left-close';
+    btn.innerHTML = `<i data-lucide="${icon}"></i>`;
+    btn.title = collapsed ? 'Expand sidebar' : 'Collapse sidebar';
+    btn.setAttribute('aria-label', btn.title);
+    if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [btn] });
+  }
+  try { localStorage.setItem('adminSidebarCollapsed', collapsed ? '1' : '0'); } catch {}
+}
+
+function initAdminSidebar() {
+  const btn = document.getElementById('sidebarToggle');
+  const shell = document.getElementById('adminShell');
+  if (!btn || !shell) return;
+  btn.addEventListener('click', () => {
+    setSidebarCollapsed(!shell.classList.contains('sidebar-collapsed'));
+  });
+  // Restore last choice (default: collapsed on desktop, expanded on mobile)
+  let collapsed;
+  try { collapsed = localStorage.getItem('adminSidebarCollapsed'); } catch {}
+  if (collapsed === null) collapsed = isMobileSidebar() ? '0' : '1';
+  setSidebarCollapsed(collapsed === '1');
 }
 
 function showAdminTab(tab, link) {
@@ -13,7 +48,7 @@ function showAdminTab(tab, link) {
   const el = document.getElementById(`admin-tab-${tab}`);
   if (el) el.style.display = 'block';
   if (link) link.classList.add('active');
-  const loaders = { overview: loadAdminOverview, listings: loadAdminListings, requests: loadAdminRequests, users: loadAdminUsers, reports: loadAdminReports, logs: loadAdminLogs };
+  const loaders = { overview: loadAdminOverview, listings: loadAdminListings, userlistings: loadAdminListingsByUser, requests: loadAdminRequests, users: loadAdminUsers, reports: loadAdminReports, logs: loadAdminLogs };
   loaders[tab]?.();
 }
 
@@ -59,7 +94,6 @@ async function approveListing(id) {
 }
 
 function openRejectModal(id) { pendingRejectId = id; openModal('rejectModal'); }
-
 async function confirmReject() {
   const reason = document.getElementById('rejectReason').value;
   if (!reason) return showToast('Enter a reason', 'error');
@@ -180,6 +214,96 @@ async function loadAdminLogs() {
         <td>${new Date(l.created_at).toLocaleString()}</td>
       </tr>`).join('') + '</tbody></table></div>';
   } catch (e) { el.innerHTML = `<p class="text-muted">${e.message}</p>`; }
+}
+
+// ── Listings by user (accordion) ──────────────
+let allGroupedListings = [];
+
+async function loadAdminListingsByUser() {
+  const el = document.getElementById('adminUserListings');
+  if (!el) return;
+  try {
+    const { listings } = await api.get('/api/admin/listings/grouped');
+    allGroupedListings = listings || [];
+    renderUserListings(allGroupedListings);
+  } catch (e) { el.innerHTML = `<p class="text-muted">${e.message}</p>`; }
+}
+
+function filterUserListings() {
+  const q = (document.getElementById('userListingSearch')?.value || '').toLowerCase().trim();
+  const filtered = q
+    ? allGroupedListings.filter(l =>
+        (l.owner_name || '').toLowerCase().includes(q) ||
+        (l.owner_email || '').toLowerCase().includes(q) ||
+        (l.title || '').toLowerCase().includes(q))
+    : allGroupedListings;
+  renderUserListings(filtered);
+}
+
+function renderUserListings(listings) {
+  const el = document.getElementById('adminUserListings');
+  if (!el) return;
+  if (!listings.length) { el.innerHTML = '<p class="text-muted">No listings found.</p>'; return; }
+
+  // Group by owner, preserving the search filter
+  const groups = new Map();
+  for (const l of listings) {
+    if (!groups.has(l.owner_id)) groups.set(l.owner_id, { name: l.owner_name, email: l.owner_email, listings: [] });
+    groups.get(l.owner_id).listings.push(l);
+  }
+
+  const statusLabel = (s) => `<span class="status-badge status-${s}">${s}</span>`;
+  const groupsHtml = [...groups.entries()].map(([ownerId, g]) => {
+    const rows = g.listings.map(l => `
+      <tr>
+        <td><a href="/listing?id=${l.uuid}" target="_blank" style="color:var(--primary)">${l.title}</a></td>
+        <td>${statusLabel(l.status)}</td>
+        <td>GHS ${Number(l.price_per_head).toLocaleString()}</td>
+        <td>${new Date(l.created_at).toLocaleDateString()}</td>
+        <td style="display:flex;gap:0.4rem;flex-wrap:wrap">
+          ${l.status === 'active'
+            ? `<button class="btn btn-ghost btn-sm" onclick="adminDeactivateListing(${l.id})"><i data-lucide="eye-off" style="width:14px;height:14px"></i> Deactivate</button>`
+            : `<button class="btn btn-secondary btn-sm" onclick="adminReactivateListing(${l.id})"><i data-lucide="eye" style="width:14px;height:14px"></i> Reactivate</button>`}
+          <button class="btn btn-sm" style="background:#7f1d1d;color:#fff" onclick="adminDeleteListing(${l.id}, '${String(l.title).replace(/'/g, "\\'")}')"><i data-lucide="trash-2" style="width:14px;height:14px"></i> Delete</button>
+        </td>
+      </tr>`).join('');
+    return `
+      <div class="user-listing-group">
+        <button class="user-listing-head" type="button" onclick="toggleUserGroup(this)">
+          <i data-lucide="chevron-right" class="user-listing-caret"></i>
+          <span class="user-listing-who"><strong>${g.name}</strong> <span class="text-muted" style="font-size:.8rem">${g.email || ''}</span></span>
+          <span class="tag">${g.listings.length} listing${g.listings.length === 1 ? '' : 's'}</span>
+        </button>
+        <div class="user-listing-body">
+          <div class="table-wrap"><table><thead><tr><th>Title</th><th>Status</th><th>Price</th><th>Date</th><th>Actions</th></tr></thead><tbody>${rows}</tbody></table></div>
+        </div>
+      </div>`;
+  }).join('');
+
+  el.innerHTML = groupsHtml;
+  if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [el] });
+}
+
+function toggleUserGroup(btn) {
+  const group = btn.closest('.user-listing-group');
+  if (group) group.classList.toggle('open');
+}
+
+async function adminDeactivateListing(id) {
+  if (!confirm('Deactivate this listing? It will be hidden from the public.')) return;
+  try { await api.put(`/api/admin/listings/${id}/deactivate`); showToast('Listing deactivated', 'success'); loadAdminListingsByUser(); }
+  catch (e) { showToast(e.message, 'error'); }
+}
+
+async function adminReactivateListing(id) {
+  try { await api.put(`/api/admin/listings/${id}/reactivate`); showToast('Listing reactivated', 'success'); loadAdminListingsByUser(); }
+  catch (e) { showToast(e.message, 'error'); }
+}
+
+async function adminDeleteListing(id, title) {
+  if (!confirm(`Permanently delete "${title}"?\n\nThis cannot be undone.`)) return;
+  try { await api.delete(`/api/admin/listings/${id}`); showToast('Listing deleted', 'success'); loadAdminListingsByUser(); }
+  catch (e) { showToast(e.message, 'error'); }
 }
 
 initAdmin();

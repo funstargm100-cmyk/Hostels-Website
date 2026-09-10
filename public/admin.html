@@ -20,19 +20,21 @@
   </div>
 </nav>
 
-<div class="dashboard-shell">
-  <aside class="sidebar">
+<div class="dashboard-shell collapsible" id="adminShell">
+  <aside class="sidebar" id="adminSidebar">
     <div class="sidebar-profile">
       <div class="sidebar-avatar" style="background:var(--teal)">A</div>
-      <div><div style="font-weight:700">Admin panel</div><div class="text-muted" style="font-size:.78rem">Moderation &amp; ops</div></div>
+      <div class="sidebar-profile-text"><div style="font-weight:700">Admin panel</div><div class="text-muted" style="font-size:.78rem">Moderation &amp; ops</div></div>
+      <button class="sidebar-toggle" id="sidebarToggle" type="button" aria-label="Collapse sidebar" title="Collapse sidebar"><i data-lucide="panel-left-close"></i></button>
     </div>
     <ul class="sidebar-nav">
-      <li><a href="#" class="active" onclick="showAdminTab('overview',this);return false"><i data-lucide="layout-dashboard"></i> Overview</a></li>
-      <li><a href="#" onclick="showAdminTab('listings',this);return false"><i data-lucide="building-2"></i> Listings</a></li>
-      <li><a href="#" onclick="showAdminTab('requests',this);return false"><i data-lucide="message-circle"></i> Requests</a></li>
-      <li><a href="#" onclick="showAdminTab('users',this);return false"><i data-lucide="users"></i> Users</a></li>
-      <li><a href="#" onclick="showAdminTab('reports',this);return false"><i data-lucide="flag"></i> Reports</a></li>
-      <li><a href="#" onclick="showAdminTab('logs',this);return false"><i data-lucide="scroll-text"></i> Audit logs</a></li>
+      <li><a href="#" class="active" title="Overview" onclick="showAdminTab('overview',this);return false"><i data-lucide="layout-dashboard"></i> <span class="sidebar-label">Overview</span></a></li>
+      <li><a href="#" title="Listings" onclick="showAdminTab('listings',this);return false"><i data-lucide="building-2"></i> <span class="sidebar-label">Listings</span></a></li>
+      <li><a href="#" title="User listings" onclick="showAdminTab('userlistings',this);return false"><i data-lucide="layers"></i> <span class="sidebar-label">User listings</span></a></li>
+      <li><a href="#" title="Requests" onclick="showAdminTab('requests',this);return false"><i data-lucide="message-circle"></i> <span class="sidebar-label">Requests</span></a></li>
+      <li><a href="#" title="Users" onclick="showAdminTab('users',this);return false"><i data-lucide="users"></i> <span class="sidebar-label">Users</span></a></li>
+      <li><a href="#" title="Reports" onclick="showAdminTab('reports',this);return false"><i data-lucide="flag"></i> <span class="sidebar-label">Reports</span></a></li>
+      <li><a href="#" title="Audit logs" onclick="showAdminTab('logs',this);return false"><i data-lucide="scroll-text"></i> <span class="sidebar-label">Audit logs</span></a></li>
     </ul>
   </aside>
 
@@ -52,6 +54,15 @@
         </select>
       </div>
       <div id="adminListingsTable"></div>
+    </div>
+
+    <div id="admin-tab-userlistings" style="display:none">
+      <div class="section-head">
+        <h2 style="margin:0">Listings by user</h2>
+        <input type="search" id="userListingSearch" placeholder="Search users…" style="width:auto" oninput="filterUserListings()" />
+      </div>
+      <p class="text-muted" style="margin-top:-.4rem">Tap a user to expand their listings. Deactivate, reactivate or delete any room.</p>
+      <div id="adminUserListings"></div>
     </div>
 
     <div id="admin-tab-requests" style="display:none">

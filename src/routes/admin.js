@@ -47,6 +47,19 @@ router.get('/listings', admin, async (req, res) => {
   }
 });
 
+// GET /api/admin/listings/grouped  (every listing with its owner, for the "by user" view)
+router.get('/listings/grouped', admin, async (req, res) => {
+  try {
+    const [listings] = await db.query2(`
+      SELECT l.id, l.uuid, l.title, l.status, l.price_per_head, l.created_at,
+             u.id as owner_id, u.name as owner_name, u.email as owner_email
+      FROM listings l
+      JOIN users u ON l.owner_id = u.id
+      ORDER BY u.name ASC, l.created_at DESC`);
+    res.json({ listings });
+  } catch (err) { res.status(500).json({ error: 'Server error' }); }
+});
+
 // PUT /api/admin/listings/:id/approve
 router.put('/listings/:id/approve', admin, async (req, res) => {
   try {
