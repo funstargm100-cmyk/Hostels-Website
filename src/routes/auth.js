@@ -46,10 +46,27 @@ router.post('/signup', async (req, res) => {
   if (role === 'seeker' && !base_location)
     return res.status(400).json({ error: 'Please pin your workplace or school location' });
 
+  const normEmail = email ? email.trim().toLowerCase() : null;
   try {
-    const existing = await db.query('SELECT id FROM users WHERE email=$1 OR phone=$2', [email || null, normPhone || null]);
-    if (existing.rows.length)
-      return res.status(409).json({ error: 'Account already exists with this email or phone' });
+    // A credential (email/phone) may already exist — but only for a DIFFERENT role.
+    // One credential is allowed to own both a seeker and an agent/owner account,
+    // linked together via account_group. The same role cannot be created twice.
+    const existing = await db.query(
+      'SELECT id, uuid, role, account_group FROM users WHERE LOWER(email)=$1 OR phone=$2',
+      [normEmail, normPhone || null]
+    );
+    const sameRole = existing.rows.find(r => r.role === role);
+    if (sameRole)
+      return res.status(409).json({
+        error: role === 'seeker'
+          ? 'You already have a seeker account with this email or phone. Log in instead.'
+          : 'You already have an agent account with this email or phone. Log in instead.',
+        accountExists: true,
+        existingRole: role
+      });
+
+    // Link to the sibling account's group so login can offer a role choice.
+    const account_group = existing.rows[0]?.account_group || uuidv4();
 
     const hash = await bcrypt.hash(password, 10);
     const otp = generateOTP();
@@ -59,12 +76,13 @@ router.post('/signup', async (req, res) => {
     const lng = base_lng !== undefined && base_lng !== null && base_lng !== '' ? parseFloat(base_lng) : null;
 
     const result = await db.query(
-      `INSERT INTO users (name, email, phone, password_hash, role, otp_code, otp_expires_at, base_location, base_lat, base_lng)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING uuid`,
-      [name.trim(), email ? email.trim().toLowerCase() : null, normPhone || null, hash, role, otp, otpExpiry,
+      `INSERT INTO users (name, email, phone, password_hash, role, otp_code, otp_expires_at, base_location, base_lat, base_lng, account_group)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING uuid`,
+      [name.trim(), normEmail, normPhone || null, hash, role, otp, otpExpiry,
        role === 'seeker' ? base_location : null,
        role === 'seeker' && Number.isFinite(lat) ? lat : null,
-       role === 'seeker' && Number.isFinite(lng) ? lng : null]
+       role === 'seeker' && Number.isFinite(lng) ? lng : null,
+       account_group]
     );
     const uuid = result.rows[0].uuid;
 
@@ -132,13 +150,96 @@ router.post('/verify-otp', async (req, res) => {
 });
 
 // POST /api/auth/login
+// One credential may own BOTH a seeker and an agent/owner account. When that is
+// the case the caller gets `chooseRole: true` plus the list of roles instead of
+// a token, and must call /select-account to finish logging into one of them.
 router.post('/login', async (req, res) => {
   const { identifier, email, phone, password } = req.body;
   const id = identifier || email || phone;
   if (!id || !password) return res.status(400).json({ error: 'Email/phone and password required' });
   try {
-    const result = await db.query('SELECT * FROM users WHERE email=$1 OR phone=$1', [id]);
+    const result = await db.query(
+      'SELECT * FROM users WHERE LOWER(email)=LOWER($1) OR phone=$1 ORDER BY id ASC',
+      [id]
+    );
+    if (!result.rows.length) return res.status(401).json({ error: 'Invalid credentials' });
+
+    // Every row sharing this credential must pass the same password check. They
+    // are linked by account_group; fall back to "all matching rows" when the
+    // column is not yet present on older databases.
+    const group = result.rows[0].account_group;
+    const candidates = group
+      ? result.rows.filter(r => r.account_group === group)
+      : result.rows;
+
+    // If the entered password belongs to only ONE of the linked accounts, narrow
+    // to it — the user clearly means that account (passwords can differ).
+    const matching = [];
+    for (const row of candidates) {
+      if (await bcrypt.compare(password, row.password_hash)) matching.push(row);
+    }
+    if (!matching.length) return res.status(401).json({ error: 'Invalid credentials' });
+
+    // Suspended accounts never take part in the offer.
+    const usable = matching.filter(r => !r.is_suspended);
+    if (!usable.length) return res.status(403).json({ error: 'Account suspended. Contact support.' });
+
+    // Prefer a verified account; if none is verified, ask the user to verify.
+    const verified = usable.filter(r => r.is_verified);
+    if (!verified.length) {
+      const u = usable[0];
+      return res.status(403).json({
+        error: 'Please verify your account first. We sent a code to your email.',
+        needVerification: true,
+        uuid: u.uuid,
+        email: u.email || null
+      });
+    }
+
+    // A single linked account — just log in, no chooser needed.
+    if (verified.length === 1) {
+      const user = verified[0];
+      const token = signToken(user);
+      return res.json({
+        message: 'Login successful',
+        token,
+        user: { id: user.id, uuid: user.uuid, name: user.name, role: user.role }
+      });
+    }
+
+    // Multiple accounts share this credential — let the user pick which to enter.
+    const roles = verified.map(u => u.role);
+    res.json({
+      chooseRole: true,
+      message: 'This login has more than one account. Choose how to continue.',
+      identifier: id,
+      roles,
+      accounts: verified.map(u => ({ uuid: u.uuid, name: u.name, role: u.role, email: u.email || null }))
+    });
+  } catch (err) {
+    console.error('LOGIN ERROR:', err.message);
+    res.status(500).json({ error: err.message || 'Server error' });
+  }
+});
+
+// POST /api/auth/select-account
+// Second step of the "one credential, two accounts" login: the user has already
+// proven the shared password, so we re-check it and issue a token for the
+// account matching the chosen role. The response is deliberately neutral about
+// which roles exist so this cannot be used to enumerate accounts.
+router.post('/select-account', async (req, res) => {
+  const { identifier, password, role } = req.body;
+  if (!identifier || !password || !role)
+    return res.status(400).json({ error: 'Identifier, password and role are required' });
+  if (!['seeker', 'owner', 'agent'].includes(role))
+    return res.status(400).json({ error: 'Invalid role' });
+  try {
+    const result = await db.query(
+      "SELECT * FROM users WHERE (LOWER(email)=LOWER($1) OR phone=$1) AND role=$2 LIMIT 1",
+      [identifier, role]
+    );
     const user = result.rows[0];
+    // Generic error so a wrong role guess reveals nothing about other accounts.
     if (!user) return res.status(401).json({ error: 'Invalid credentials' });
     if (user.is_suspended) return res.status(403).json({ error: 'Account suspended. Contact support.' });
     if (!user.is_verified)
@@ -153,10 +254,13 @@ router.post('/login', async (req, res) => {
     if (!valid) return res.status(401).json({ error: 'Invalid credentials' });
 
     const token = signToken(user);
-    const userData = { id: user.id, uuid: user.uuid, name: user.name, role: user.role };
-    res.json({ message: 'Login successful', token, user: userData });
+    res.json({
+      message: 'Login successful',
+      token,
+      user: { id: user.id, uuid: user.uuid, name: user.name, role: user.role }
+    });
   } catch (err) {
-    console.error('LOGIN ERROR:', err.message);
+    console.error('SELECT ACCOUNT ERROR:', err.message);
     res.status(500).json({ error: err.message || 'Server error' });
   }
 });

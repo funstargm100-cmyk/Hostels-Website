@@ -163,3 +163,21 @@ ALTER TABLE listings ADD COLUMN IF NOT EXISTS full_address TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS base_location TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS base_lat DOUBLE PRECISION;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS base_lng DOUBLE PRECISION;
+
+-- Migration: allow ONE credential (email/phone) to own BOTH a seeker and an
+-- agent/owner account. Rows that share a credential are linked by account_group.
+-- email/phone may repeat across rows, so we drop the old single-column UNIQUE
+-- constraints and enforce uniqueness per (credential, role) instead.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS account_group UUID;
+
+ALTER TABLE users DROP CONSTRAINT IF EXISTS users_email_key;
+ALTER TABLE users DROP CONSTRAINT IF EXISTS users_phone_key;
+
+CREATE UNIQUE INDEX IF NOT EXISTS users_email_role_key ON users (LOWER(email), role) WHERE email IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS users_phone_role_key ON users (phone, role) WHERE phone IS NOT NULL;
+
+-- Backfill: every pre-existing account becomes its own group.
+UPDATE users SET account_group = uuid_generate_v4() WHERE account_group IS NULL;
+
+-- Migration: allow owners to also be agents and vice-versa without re-signup
+ALTER TABLE users ADD COLUMN IF NOT EXISTS wallet_balance NUMERIC(12,2) DEFAULT 0;

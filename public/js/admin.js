@@ -66,6 +66,17 @@ function initAdminSidebar() {
   const backdrop = document.getElementById('sidebarBackdrop');
   if (backdrop) backdrop.addEventListener('click', () => toggleMobileSidebar(false));
 
+  // Click anywhere outside the panel collapses it: the mobile drawer always, and
+  // on desktop the pinned-open sidebar returns to its icon-only state.
+  closeSidebarOnOutsideClick({
+    sidebarId: 'adminSidebar',
+    isOpen: () => shell.classList.contains('mobile-sidebar-open') || !shell.classList.contains('sidebar-collapsed'),
+    onOutside: () => {
+      if (shell.classList.contains('mobile-sidebar-open')) toggleMobileSidebar(false);
+      else setSidebarCollapsed(true);
+    }
+  });
+
   // Esc closes the drawer too
   document.addEventListener('keydown', e => { if (e.key === 'Escape') toggleMobileSidebar(false); });
 

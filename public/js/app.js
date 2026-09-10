@@ -73,6 +73,34 @@ document.addEventListener('click', e => {
   if (e.target.classList.contains('modal-overlay')) closeModal(e.target.id);
 });
 
+// ─── SIDEBAR: CLOSE WHEN CLICKING OUTSIDE ─────────────────────
+// Wires a document-level listener so that a click anywhere outside the side
+// panel collapses it — not only on the dimmed backdrop. The backdrop covers the
+// viewport behind the mobile drawer, but clicks that land on the page content
+// (or on desktop layout) bypass it; this catches those.
+//
+// options:
+//   sidebarId  id of the <aside> panel itself
+//   isOpen     () => boolean — whether the panel is currently open
+//   onOutside  () => void    — collapse it
+function closeSidebarOnOutsideClick({ sidebarId, isOpen, onOutside }) {
+  const sidebar = document.getElementById(sidebarId);
+  if (!sidebar) return;
+  document.addEventListener('click', (e) => {
+    if (!isOpen()) return;                 // nothing to close
+    if (sidebar.contains(e.target)) return; // click landed inside the panel
+    // Ignore the toggle buttons: their own handlers flip the panel, and closing
+    // here too would immediately undo the open they just performed. `closest`
+    // alone misses clicks that land on the inner <svg>/<i> icon, so also test
+    // the button elements directly with contains().
+    const toggles = document.querySelectorAll('#sidebarMobileToggle, #sidebarToggle');
+    for (const t of toggles) {
+      if (t === e.target || t.contains(e.target)) return;
+    }
+    onOutside();
+  });
+}
+
 // ─── THEME ────────────────────────────────────────────────────────────────────
 function initTheme() {
   const saved = localStorage.getItem('theme') || 'light';

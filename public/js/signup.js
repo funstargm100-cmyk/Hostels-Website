@@ -254,7 +254,12 @@ async function suSubmit(btnId, fields) {
         '&t=' + Date.now();
     }, 1200);
   } catch (ex) {
-    suErr(ex.message);
+    // Credential already used for this same role — point them at login instead.
+    if (ex.accountExists || (ex.data && ex.data.accountExists)) {
+      suErr(ex.message + ' You can log in with your existing password to use that account.');
+    } else {
+      suErr(ex.message);
+    }
     btn.disabled = false; btn.classList.remove('btn-loading');
   }
 }

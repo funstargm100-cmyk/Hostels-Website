@@ -60,6 +60,12 @@
       <button type="submit" class="btn btn-primary btn-lg" style="width:100%" id="loginSubmitBtn">Log in</button>
     </form>
 
+    <div id="roleChoicePanel" style="display:none">
+      <p class="text-muted" style="font-size:.92rem;margin-top:-.2rem">This email/phone is linked to more than one account. How do you want to continue?</p>
+      <div id="roleChoiceList" style="display:flex;flex-direction:column;gap:.6rem"></div>
+      <button type="button" class="btn btn-ghost" style="width:100%;margin-top:.9rem" id="roleChoiceBack">Back to log in</button>
+    </div>
+
     <form id="forgotForm" style="display:none">
       <div class="alert alert-info" id="forgotInfo" style="display:none"></div>
       <p class="text-muted" style="font-size:.9rem;margin-top:-.2rem">Enter your account email and we'll send you a link to reset your password.</p>
@@ -256,6 +262,73 @@ if (params.get('reset') === '1') {
   errEl0.style.display = 'block';
 }
 
+// Finish login for a chosen account: store the session and land on its home page.
+function completeLogin({ token, user }) {
+  localStorage.setItem('token', token);
+  localStorage.setItem('user', JSON.stringify(user));
+  const params = new URLSearchParams(location.search);
+  location.href = params.get('redirect') || (window.goHomeForRole ? goHomeForRole(user.role) : '/dashboard');
+}
+
+const ROLE_META = {
+  seeker: { label: 'Seeker', desc: 'Browse rooms, save favourites and send interest', icon: 'search' },
+  owner:  { label: 'Agent', desc: 'List rooms and manage incoming interest', icon: 'home' },
+  agent:  { label: 'Agent', desc: 'List rooms and manage incoming interest', icon: 'home' },
+  admin:  { label: 'Admin', desc: 'Platform administration', icon: 'shield' }
+};
+
+const roleChoicePanel = document.getElementById('roleChoicePanel');
+
+function hideAllAuthPanels() {
+  loginForm.style.display = 'none';
+  verifyForm.style.display = 'none';
+  forgotForm.style.display = 'none';
+  roleChoicePanel.style.display = 'none';
+  loginFootnote.style.display = 'none';
+}
+
+// One credential owns several accounts — let the user pick which to enter.
+function showRoleChoice(identifier, password, accounts) {
+  const list = document.getElementById('roleChoiceList');
+  list.innerHTML = accounts.map(a => {
+    const meta = ROLE_META[a.role] || { label: a.role, desc: '', icon: 'user' };
+    return `<button type="button" class="btn btn-outline" style="justify-content:flex-start;text-align:left;padding:.8rem 1rem;display:flex;gap:.8rem;align-items:center;white-space:normal" data-role="${a.role}">
+        <i data-lucide="${meta.icon}" style="flex-shrink:0"></i>
+        <span style="min-width:0"><strong style="display:block">Continue as ${meta.label}</strong><span class="text-muted" style="font-size:.8rem;display:block;line-height:1.3">${meta.desc}</span></span>
+      </button>`;
+  }).join('');
+  if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [list] });
+
+  list.querySelectorAll('button[data-role]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const role = btn.dataset.role;
+      btn.disabled = true; btn.classList.add('btn-loading');
+      errEl0.style.display = 'none';
+      try {
+        const res = await api.post('/api/auth/select-account', { identifier, password, role });
+        completeLogin(res);
+      } catch (ex) {
+        errEl0.className = 'alert alert-danger';
+        errEl0.textContent = ex.message;
+        errEl0.style.display = 'block';
+        btn.disabled = false; btn.classList.remove('btn-loading');
+      }
+    });
+  });
+
+  hideAllAuthPanels();
+  roleChoicePanel.style.display = 'block';
+  errEl0.style.display = 'none';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+document.getElementById('roleChoiceBack').addEventListener('click', () => {
+  hideAllAuthPanels();
+  loginForm.style.display = 'block';
+  loginFootnote.style.display = 'block';
+  errEl0.style.display = 'none';
+});
+
 document.getElementById('loginForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   const btn = document.getElementById('loginSubmitBtn');
@@ -267,11 +340,16 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
     const identifier = document.getElementById('loginIdentifier').value.trim();
     const password = document.getElementById('loginPassword').value;
     const body = { identifier, password };
-    const { token, user } = await api.post('/api/auth/login', body);
-    localStorage.setItem('token', token);
-    localStorage.setItem('user', JSON.stringify(user));
-    const params = new URLSearchParams(location.search);
-    location.href = params.get('redirect') || (window.goHomeForRole ? goHomeForRole(user.role) : '/dashboard');
+    const res = await api.post('/api/auth/login', body);
+
+    // The credential has both a seeker and an agent account — offer a choice.
+    if (res.chooseRole) {
+      showRoleChoice(identifier, password, res.accounts || []);
+      btn.disabled = false; btn.classList.remove('btn-loading');
+      return;
+    }
+
+    completeLogin(res);
   } catch (ex) {
     if (ex.needVerification || (ex.data && ex.data.needVerification)) {
       const info = ex.data || ex;

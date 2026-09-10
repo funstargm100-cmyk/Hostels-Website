@@ -45,11 +45,19 @@ function toggleMobileSidebar(force) {
 }
 
 function initDashboardSidebar() {
+  const shell = document.getElementById('dashboardShell');
   const btn = document.getElementById('sidebarMobileToggle');
   if (btn) btn.addEventListener('click', () => toggleMobileSidebar());
 
   const backdrop = document.getElementById('sidebarBackdrop');
   if (backdrop) backdrop.addEventListener('click', () => toggleMobileSidebar(false));
+
+  // Click anywhere outside the panel (e.g. on the page content) closes the drawer.
+  closeSidebarOnOutsideClick({
+    sidebarId: 'dashboardSidebar',
+    isOpen: () => !!shell && shell.classList.contains('mobile-sidebar-open'),
+    onOutside: () => toggleMobileSidebar(false)
+  });
 
   document.addEventListener('keydown', e => { if (e.key === 'Escape') toggleMobileSidebar(false); });
 
