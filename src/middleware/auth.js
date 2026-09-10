@@ -2,11 +2,16 @@ const jwt = require('jsonwebtoken');
 const db = require('../utils/db');
 const SECRET = process.env.SESSION_SECRET || 'hostel_secret';
 
-// Checks the DB so suspended users are cut off immediately,
+// Checks the DB so suspended OR DELETED users are cut off immediately,
 // even if their JWT is still valid.
 const checkSuspended = async (req, res) => {
   try {
     const result = await db.query('SELECT is_suspended FROM users WHERE id=$1', [req.user.id]);
+    if (!result.rows.length) {
+      // Account was deleted — invalidate the session client-side
+      res.clearCookie?.('token');
+      return res.status(401).json({ error: 'Account no longer exists. Please log in again.', accountDeleted: true });
+    }
     if (result.rows[0]?.is_suspended) {
       res.clearCookie?.('token');
       return res.status(403).json({ error: 'Account suspended. Contact support.' });

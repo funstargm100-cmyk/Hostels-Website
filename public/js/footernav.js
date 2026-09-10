@@ -48,6 +48,9 @@
   }
 
   function cachedUser() {
+    // Only trust the cached role if a token is still present —
+    // a deleted account clears the token but may leave a stale user behind.
+    if (!localStorage.getItem('token')) return null;
     try { return JSON.parse(localStorage.getItem('user') || 'null'); } catch { return null; }
   }
 

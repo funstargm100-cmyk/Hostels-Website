@@ -19,7 +19,13 @@ const api = {
     };
     if (body) opts.body = JSON.stringify(body);
     const res = await fetch(url, opts);
-    const data = await res.json();
+    let data = {};
+    try { data = await res.json(); } catch { /* non-JSON response */ }
+    if (res.status === 401 && token) {
+      // Session is no longer valid (deleted account, logged out elsewhere, expired token) —
+      // fully sign out client-side and drop the user on the public visitor homepage.
+      signOutAndRedirect(data.error || 'Your session has ended. Please log in again.');
+    }
     if (!res.ok) { const err = new Error(data.error || 'Request failed'); Object.assign(err, data); throw err; }
     return data;
   },
@@ -120,6 +126,21 @@ function handleLogout() {
   localStorage.removeItem('user');
   location.href = '/';
 }
+
+// Force sign-out when the server rejects the session (e.g. the account was
+// deleted by an admin). Clears state, updates the nav, notifies and redirects.
+let signingOut = false;
+function signOutAndRedirect(message) {
+  if (signingOut) return;
+  signingOut = true;
+  localStorage.removeItem('token');
+  localStorage.removeItem('user');
+  setNavAuth(false);
+  if (window.renderFooterNav) window.renderFooterNav();
+  showToast(message, 'warning');
+  setTimeout(() => { location.href = '/'; }, 1200);
+}
+window.signOutAndRedirect = signOutAndRedirect;
 
 // Send each role to its own dedicated home page
 function goHomeForRole(role) {

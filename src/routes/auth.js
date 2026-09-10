@@ -203,11 +203,18 @@ router.post('/reset-password', async (req, res) => {
 });
 
 // GET /api/auth/me
-router.get('/me', (req, res) => {
-  const token = req.headers.authorization?.split(' ')[1];
+router.get('/me', async (req, res) => {
+  const token = req.headers.authorization?.split(' ')[1] || req.cookies?.token;
   if (!token) return res.status(401).json({ error: 'Not authenticated' });
   try {
-    const user = jwt.verify(token, SECRET);
+    const payload = jwt.verify(token, SECRET);
+    // Confirm the account still exists (deleted accounts must appear logged out)
+    const result = await db.query('SELECT id, uuid, name, role, is_suspended FROM users WHERE id=$1', [payload.id]);
+    const user = result.rows[0];
+    if (!user)
+      return res.status(401).json({ error: 'Account no longer exists. Please log in again.', accountDeleted: true });
+    if (user.is_suspended)
+      return res.status(403).json({ error: 'Account suspended. Contact support.' });
     res.json({ user });
   } catch {
     res.status(401).json({ error: 'Invalid or expired token' });
