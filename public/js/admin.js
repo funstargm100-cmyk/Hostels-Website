@@ -34,6 +34,8 @@ function toggleMobileSidebar(force) {
   if (!shell) return;
   const open = typeof force === 'boolean' ? force : !shell.classList.contains('mobile-sidebar-open');
   shell.classList.toggle('mobile-sidebar-open', open);
+  // Lock page scroll behind the drawer
+  document.body.style.overflow = open && isMobileSidebar() ? 'hidden' : '';
   if (btn) {
     btn.innerHTML = `<i data-lucide="${open ? 'x' : 'menu'}"></i>`;
     btn.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
@@ -45,11 +47,27 @@ function initAdminSidebar() {
   const shell = document.getElementById('adminShell');
   if (!shell) return;
 
+  // Keep --navbar-h in sync so the sticky sidebar sits exactly under the navbar
+  const nav = document.getElementById('mainNav');
+  const syncNavHeight = () => {
+    const h = nav ? nav.offsetHeight : 70;
+    if (h > 0) document.documentElement.style.setProperty('--navbar-h', h + 'px');
+  };
+  syncNavHeight();
+  window.addEventListener('resize', syncNavHeight);
+
   const btn = document.getElementById('sidebarToggle');
   if (btn) btn.addEventListener('click', () => setSidebarCollapsed(!shell.classList.contains('sidebar-collapsed')));
 
   const mBtn = document.getElementById('sidebarMobileToggle');
   if (mBtn) mBtn.addEventListener('click', () => toggleMobileSidebar());
+
+  // Tap the dimmed backdrop to close the drawer
+  const backdrop = document.getElementById('sidebarBackdrop');
+  if (backdrop) backdrop.addEventListener('click', () => toggleMobileSidebar(false));
+
+  // Esc closes the drawer too
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') toggleMobileSidebar(false); });
 
   // Desktop collapse preference (default collapsed to icon-only on desktop)
   let collapsed;
@@ -60,6 +78,7 @@ function initAdminSidebar() {
   window.addEventListener('resize', () => {
     if (!isMobileSidebar()) {
       shell.classList.remove('mobile-sidebar-open');
+      document.body.style.overflow = '';
       if (mBtn) { mBtn.innerHTML = '<i data-lucide="menu"></i>'; if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [mBtn] }); }
     }
   });
