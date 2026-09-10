@@ -26,7 +26,6 @@
 
 <div class="auth-shell">
   <div class="auth-card">
-    <button class="back-btn" onclick="goBack('/')"><i data-lucide="arrow-left"></i> Back</button>
     <div class="logo mb-1">roomy<span class="dot">.</span></div>
     <h2 style="font-size:1.4rem">Welcome back</h2>
     <p class="text-muted mb-3" style="margin-top:-.4rem">Log in to manage your listings or requests.</p>
@@ -41,6 +40,7 @@
         <label>Verification code</label>
         <input type="text" id="verifyOtp" inputmode="numeric" maxlength="6" placeholder="6-digit code" required />
       </div>
+      <p class="text-muted" id="otpCountdown" style="font-size:.85rem"></p>
       <button type="submit" class="btn btn-primary btn-lg" style="width:100%" id="verifySubmitBtn">Verify account</button>
       <button type="button" class="btn btn-ghost" style="width:100%;margin-top:.5rem" id="resendBtn">Resend code</button>
     </form>
@@ -79,8 +79,46 @@
 const errEl0 = document.getElementById('loginError');
 const verifyForm = document.getElementById('verifyForm');
 const loginForm = document.getElementById('loginForm');
+const countdownEl = document.getElementById('otpCountdown');
 
-function showVerifyPanel(uuid, email, bannerMsg) {
+const OTP_TTL = 10 * 60 * 1000;     // must match server (10 min)
+const RESEND_COOLDOWN = 30 * 1000;  // wait between resend attempts
+let otpSentAt = 0;
+let countdownTimer = null;
+
+function fmt(ms) {
+  const s = Math.max(0, Math.ceil(ms / 1000));
+  return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+}
+
+function startCountdown(sentAtMs) {
+  otpSentAt = sentAtMs;
+  clearInterval(countdownTimer);
+  const tick = () => {
+    const elapsed = Date.now() - otpSentAt;
+    const left = OTP_TTL - elapsed;
+    const cooldownLeft = RESEND_COOLDOWN - elapsed;
+    const resendBtn = document.getElementById('resendBtn');
+    if (left > 0) {
+      countdownEl.textContent = 'Code expires in ' + fmt(left) + '. Request a new one if it lapses.';
+    } else {
+      countdownEl.textContent = 'Your code has expired. Click "Resend code" to get a fresh one.';
+      clearInterval(countdownTimer);
+      countdownTimer = null;
+    }
+    if (cooldownLeft > 0) {
+      resendBtn.disabled = true;
+      resendBtn.textContent = 'Resend code (' + fmt(cooldownLeft) + ')';
+    } else {
+      resendBtn.disabled = false;
+      resendBtn.textContent = 'Resend code';
+    }
+  };
+  tick();
+  countdownTimer = setInterval(tick, 1000);
+}
+
+function showVerifyPanel(uuid, email, bannerMsg, sentAtMs) {
   document.getElementById('verifyUuid').value = uuid || '';
   document.getElementById('verifyBanner').textContent = bannerMsg ||
     'Your account is not verified yet.' + (email ? ' We sent a code to ' + email + '.' : '');
@@ -88,13 +126,15 @@ function showVerifyPanel(uuid, email, bannerMsg) {
   verifyForm.style.display = 'block';
   loginForm.style.display = 'none';
   document.getElementById('loginFootnote').style.display = 'none';
+  startCountdown(sentAtMs || Date.now());
 }
 
 // Arrived from signup with a pending verification
 const params = new URLSearchParams(location.search);
 if (params.get('verify') === '1' && params.get('uuid')) {
   showVerifyPanel(params.get('uuid'), params.get('email') || '',
-    'Account created! Enter the verification code we emailed to ' + (params.get('email') || 'you') + '.');
+    'Account created! Enter the verification code we emailed to ' + (params.get('email') || 'you') + '.',
+    parseInt(params.get('t') || '0', 10) || Date.now());
 }
 
 verifyForm.addEventListener('submit', async (e) => {
@@ -127,6 +167,7 @@ document.getElementById('resendBtn').addEventListener('click', async (e) => {
     document.getElementById('verifyBanner').textContent = res.message;
     document.getElementById('verifyBanner').className = 'alert alert-info';
     errEl0.style.display = 'none';
+    startCountdown(Date.now());
   } catch (ex) {
     errEl0.textContent = ex.message; errEl0.style.display = 'block';
   } finally {

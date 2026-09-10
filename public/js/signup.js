@@ -229,10 +229,16 @@ async function suSubmit(btnId, fields) {
     const res = await api.post('/api/auth/signup', body);
     // Account created — send the user straight to the verification step.
     const emailQ = email || '';
-    showToast('Account created! Enter the verification code we emailed you.', 'success');
+    showToast(
+      res.emailSent === false
+        ? 'Account created, but the verification email failed — use "Resend code" next.'
+        : 'Account created! Enter the verification code we emailed you.',
+      res.emailSent === false ? 'error' : 'success'
+    );
     setTimeout(() => {
       location.href = '/login?verify=1&uuid=' + encodeURIComponent(res.uuid) +
-        (emailQ ? '&email=' + encodeURIComponent(emailQ) : '');
+        (emailQ ? '&email=' + encodeURIComponent(emailQ) : '') +
+        '&t=' + Date.now();
     }, 1200);
   } catch (ex) {
     suErr(ex.message);

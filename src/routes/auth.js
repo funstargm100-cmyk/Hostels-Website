@@ -46,8 +46,20 @@ router.post('/signup', async (req, res) => {
     );
     const uuid = result.rows[0].uuid;
 
-    if (email) sendEmail(email, 'Verify your account', templates.otp(otp)).catch(console.error);
-    res.json({ message: 'Account created. Check your email for OTP.', uuid, email: email || null, phone: phone || null });
+    // Await the send so serverless (Vercel) doesn't kill it after the response.
+    let emailSent = true;
+    if (email) {
+      emailSent = await sendEmail(email, 'Verify your account', templates.otp(otp));
+      if (!emailSent)
+        console.error('Signup OTP email failed for', email, '— user can use resend on the login page.');
+    }
+    res.json({
+      message: emailSent ? 'Account created. Check your email for OTP.' : 'Account created, but the verification email could not be sent. Use "Resend code" on the verification page.',
+      uuid,
+      email: email || null,
+      phone: phone || null,
+      emailSent
+    });
   } catch (err) {
     console.error('SIGNUP ERROR:', err.message);
     res.status(500).json({ error: err.message || 'Server error' });
