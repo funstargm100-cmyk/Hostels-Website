@@ -3,11 +3,14 @@
 const editUUID = new URLSearchParams(location.search).get('id');
 const MAX_PHOTOS = 10;
 
-// Photos removed from the listing (listing_images.id) and files staged for upload.
-let removedImageIds = [];
-let newPhotoFiles = [];
-let existingPhotoCount = 0;
-let lastImages = []; // the listing's photos as loaded, for re-rendering on toggle
+// A single ordered photo list drives both display and the saved order.
+// Each entry is either:
+//   { key: 'i:<listing_images.id>', type: 'existing', id, path }
+//   { key: 'n:<index>',            type: 'new',      file, url }
+// The FIRST entry is the cover photo. Reordering happens by moving entries here.
+let photoItems = [];
+let newPhotoFiles = []; // staged uploads, in the order they were chosen
+let removedImageIds = []; // existing ids the owner removed (undone by re-adding from the grid)
 
 async function initEdit() {
   const user = await initNavAuth();
@@ -36,9 +39,9 @@ async function initEdit() {
     document.getElementById('edParking').checked = !!amenities.parking;
     document.getElementById('edPets').checked = !!amenities.pet_friendly;
 
-    existingPhotoCount = images.length;
-    lastImages = images;
-    renderExistingPhotos(images);
+    // images arrive ordered by sort_order; the first is the current cover.
+    photoItems = images.map(img => ({ key: 'i:' + img.id, type: 'existing', id: img.id, path: img.image_path }));
+    renderPhotoGrid();
     updatePhotoCount();
 
     if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -48,9 +51,11 @@ async function initEdit() {
 }
 
 // ─── PHOTOS ───────────────────
-// Owners can remove existing photos and add new ones, capped at 10 in total.
+// Owners can remove, add and REORDER photos (capped at 10). The first photo in
+// the list is the cover. Reordering is drag-and-drop, with click-to-swap on
+// touch screens where HTML5 drag events aren't available.
 function totalPhotoCount() {
-  return (existingPhotoCount - removedImageIds.length) + newPhotoFiles.length;
+  return photoItems.length;
 }
 
 function updatePhotoCount() {
@@ -76,51 +81,106 @@ function showPhotoError(msg) {
   el.style.display = msg ? 'block' : 'none';
 }
 
-function renderExistingPhotos(images) {
-  const wrap = document.getElementById('currentPhotos');
-  if (!images.length) {
+function renderPhotoGrid() {
+  const wrap = document.getElementById('photoGrid');
+  if (!wrap) return;
+  if (!photoItems.length) {
     wrap.innerHTML = '<p class="text-muted" style="grid-column:1/-1;font-size:.85rem">No photos yet — add one below.</p>';
     return;
   }
-  wrap.innerHTML = images.map(img => {
-    const removed = removedImageIds.includes(img.id);
-    return `<div class="photo-tile ${removed ? 'removing' : ''}" data-id="${img.id}">
-      <img src="${img.image_path}" alt="Listing photo" loading="lazy" />
-      ${img.is_primary ? '<span class="photo-primary-tag">Main</span>' : ''}
-      <button type="button" class="photo-remove" title="${removed ? 'Undo remove' : 'Remove photo'}"
-        onclick="toggleRemovePhoto(${img.id})">${removed ? '&#8635;' : '&#10005;'}</button>
+  wrap.innerHTML = photoItems.map((item, i) => {
+    const src = item.type === 'existing' ? item.path : item.url;
+    return `<div class="photo-tile" draggable="true" data-key="${item.key}" data-index="${i}" title="Drag to reorder">
+      <img src="${src}" alt="Listing photo ${i + 1}" loading="lazy" draggable="false" />
+      <span class="photo-drag-handle"><i data-lucide="grip-vertical"></i></span>
+      ${i === 0 ? '<span class="photo-primary-tag">Cover photo</span>' : `<span class="photo-order-tag">${i + 1}</span>`}
+      <button type="button" class="photo-remove" title="Remove photo" onclick="removePhotoAt(${i})">&#10005;</button>
     </div>`;
   }).join('');
+  if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [wrap] });
+  initPhotoDrag();
 }
 
-function toggleRemovePhoto(id) {
-  if (removedImageIds.includes(id)) removedImageIds = removedImageIds.filter(x => x !== id);
-  else removedImageIds.push(id);
+function removePhotoAt(index) {
+  const [item] = photoItems.splice(index, 1);
+  if (item && item.type === 'existing') {
+    removedImageIds.push(item.id);
+  } else if (item && item.type === 'new') {
+    newPhotoFiles = newPhotoFiles.filter(f => f !== item.file);
+  }
   showPhotoError('');
-  renderExistingPhotos(lastImages);
+  renderPhotoGrid();
   updatePhotoCount();
 }
-window.toggleRemovePhoto = toggleRemovePhoto;
+window.removePhotoAt = removePhotoAt;
 
-function renderNewPhotos() {
-  const wrap = document.getElementById('newPhotos');
-  wrap.innerHTML = newPhotoFiles.map((f, i) => {
-    const url = URL.createObjectURL(f);
-    return `<div class="photo-tile">
-      <img src="${url}" alt="New photo" />
-      <button type="button" class="photo-remove" title="Remove" onclick="removeNewPhoto(${i})">&#10005;</button>
-    </div>`;
-  }).join('');
+// ── Drag & drop reordering ─────────────────────────────
+let dragFromIndex = null;
+
+function initPhotoDrag() {
+  const wrap = document.getElementById('photoGrid');
+  if (!wrap) return;
+  const tiles = [...wrap.querySelectorAll('.photo-tile')];
+
+  tiles.forEach((tile) => {
+    tile.addEventListener('dragstart', (e) => {
+      dragFromIndex = Number(tile.dataset.index);
+      tile.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      // Firefox needs some data set for a drag to start.
+      try { e.dataTransfer.setData('text/plain', tile.dataset.key); } catch { /* ignore */ }
+    });
+    tile.addEventListener('dragend', () => {
+      tile.classList.remove('dragging');
+      wrap.querySelectorAll('.photo-tile').forEach(t => t.classList.remove('drag-over'));
+      dragFromIndex = null;
+    });
+    tile.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      tile.classList.add('drag-over');
+    });
+    tile.addEventListener('dragleave', () => tile.classList.remove('drag-over'));
+    tile.addEventListener('drop', (e) => {
+      e.preventDefault();
+      tile.classList.remove('drag-over');
+      const toIndex = Number(tile.dataset.index);
+      movePhoto(dragFromIndex, toIndex);
+    });
+
+    // Touch fallback: tap a photo to select it, tap another to place it there.
+    tile.addEventListener('click', (e) => {
+      if (e.target.closest('.photo-remove')) return;
+      handlePhotoTap(Number(tile.dataset.index));
+    });
+  });
 }
 
-function removeNewPhoto(i) {
-  newPhotoFiles.splice(i, 1);
+let selectedPhotoIndex = null;
+function handlePhotoTap(index) {
+  const wrap = document.getElementById('photoGrid');
+  if (selectedPhotoIndex === null) {
+    selectedPhotoIndex = index;
+    wrap.querySelectorAll('.photo-tile').forEach(t =>
+      t.classList.toggle('selected', Number(t.dataset.index) === index));
+    return;
+  }
+  if (selectedPhotoIndex !== index) movePhoto(selectedPhotoIndex, index);
+  selectedPhotoIndex = null;
+  wrap.querySelectorAll('.photo-tile').forEach(t => t.classList.remove('selected'));
+}
+
+function movePhoto(from, to) {
+  if (from === null || to === null || Number.isNaN(from) || Number.isNaN(to) || from === to) return;
+  if (from < 0 || to < 0 || from >= photoItems.length || to >= photoItems.length) return;
+  const [item] = photoItems.splice(from, 1);
+  photoItems.splice(to, 0, item);
   showPhotoError('');
-  renderNewPhotos();
+  renderPhotoGrid();
   updatePhotoCount();
 }
-window.removeNewPhoto = removeNewPhoto;
 
+window.movePhoto = movePhoto; // exposed so the drag/tap logic is testable
 function handleNewPhotoSelect(files) {
   const incoming = Array.from(files);
   const room = MAX_PHOTOS - totalPhotoCount();
@@ -129,8 +189,12 @@ function handleNewPhotoSelect(files) {
   } else {
     showPhotoError('');
   }
-  newPhotoFiles.push(...incoming.slice(0, Math.max(room, 0)));
-  renderNewPhotos();
+  const accepted = incoming.slice(0, Math.max(room, 0));
+  accepted.forEach(f => {
+    newPhotoFiles.push(f);
+    photoItems.push({ key: 'n:' + (newPhotoFiles.length - 1), type: 'new', file: f, url: URL.createObjectURL(f) });
+  });
+  renderPhotoGrid();
   updatePhotoCount();
 }
 
@@ -170,7 +234,18 @@ document.getElementById('editForm')?.addEventListener('submit', async (e) => {
     fd.append('parking', document.getElementById('edParking').checked);
     fd.append('pet_friendly', document.getElementById('edPets').checked);
     fd.append('remove_image_ids', JSON.stringify(removedImageIds));
-    newPhotoFiles.forEach(f => fd.append('images', f));
+    // Upload files in the exact order they appear in the grid, and send the
+    // matching ordering so the server can persist sort_order + cover photo.
+    const orderedNewFiles = [];
+    const photoOrder = photoItems.map(item => {
+      if (item.type === 'new') {
+        orderedNewFiles.push(item.file);
+        return 'new:' + (orderedNewFiles.length - 1);
+      }
+      return item.id;
+    });
+    orderedNewFiles.forEach(f => fd.append('images', f));
+    fd.append('photo_order', JSON.stringify(photoOrder));
 
     await api.upload(`/api/listings/${editUUID}`, fd, 'PUT');
     showToast('Changes saved! Resubmitted for review.', 'success');

@@ -76,13 +76,14 @@ function renderGallery(images) {
   gallery.innerHTML = `
     <div class="gallery-main" id="galleryMain">
       <img src="${galleryImages[0].image_path}" alt="Photo 1" id="mainPhoto" />
+      <span class="gallery-cover-badge" id="coverBadge"><i data-lucide="star"></i> Cover photo</span>
       ${many ? `
         <button class="gallery-nav prev" id="galPrev" aria-label="Previous photo">&#8249;</button>
         <button class="gallery-nav next" id="galNext" aria-label="Next photo">&#8250;</button>
         <span class="gallery-counter" id="galCounter">1 / ${galleryImages.length}</span>` : ''}
     </div>
     ${many ? `<div class="gallery-thumbs" id="galleryThumbs">${galleryImages.map((t, i) =>
-      `<img src="${t.image_path}" alt="Photo ${i + 1}" data-index="${i}" class="${i === 0 ? 'active' : ''}" />`).join('')}</div>` : ''}
+      `<img src="${t.image_path}" alt="Photo ${i + 1}" data-index="${i}" class="${i === 0 ? 'active' : ''}" title="${i === 0 ? 'Cover photo' : 'Photo ' + (i + 1)}" />`).join('')}</div>` : ''}
     <div class="lightbox" id="galleryLightbox">
       <button class="lightbox-close" id="lbClose" aria-label="Close">&#10005;</button>
       ${many ? `<button class="lightbox-nav prev" id="lbPrev" aria-label="Previous">&#8249;</button>
@@ -101,6 +102,9 @@ function renderGallery(images) {
     const src = galleryImages[galleryIndex].image_path;
     document.getElementById('mainPhoto').src = src;
     document.getElementById('galCounter').textContent = `${galleryIndex + 1} / ${galleryImages.length}`;
+    // The cover badge belongs to the primary photo only.
+    const badge = document.getElementById('coverBadge');
+    if (badge) badge.style.display = galleryIndex === 0 ? '' : 'none';
     document.querySelectorAll('#galleryThumbs img').forEach(t => t.classList.toggle('active', +t.dataset.index === galleryIndex));
     const activeThumb = document.querySelector('#galleryThumbs img.active');
     activeThumb?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });

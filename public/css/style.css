@@ -423,6 +423,12 @@ textarea{ resize:vertical; min-height:110px; }
   .gallery-thumbs img{ width:64px; height:52px; }
 }
 .gallery-counter{ position:absolute; bottom:.7rem; right:.9rem; background:rgba(0,0,0,.5); color:#fff; font-size:.75rem; padding:.2rem .55rem; border-radius:999px; }
+.gallery-cover-badge{
+  position:absolute; top:.7rem; left:.7rem; display:inline-flex; align-items:center; gap:.3rem;
+  background:rgba(0,0,0,.62); color:#fff; font-size:.72rem; font-weight:600;
+  padding:.25rem .6rem; border-radius:999px; backdrop-filter:blur(2px);
+}
+.gallery-cover-badge svg{ width:12px; height:12px; fill:#f5c518; color:#f5c518; }
 .gallery-dots{ display:flex; justify-content:center; gap:.4rem; margin-top:.7rem; }
 .gallery-dots button{ width:7px; height:7px; border-radius:50%; border:none; background:var(--border); cursor:pointer; }
 .gallery-dots button.active{ background:var(--primary); width:18px; border-radius:4px; }
@@ -483,6 +489,21 @@ textarea{ resize:vertical; min-height:110px; }
 .photo-tile .photo-primary-tag{
   position:absolute; bottom:.3rem; left:.3rem; background:rgba(0,0,0,.6); color:#fff;
   font-size:.6rem; padding:.15rem .4rem; border-radius:var(--radius-sm); letter-spacing:.02em;
+}
+.photo-tile{ cursor:grab; }
+.photo-tile.dragging{ opacity:.35; }
+.photo-tile.drag-over{ outline:2px dashed var(--primary); outline-offset:-2px; }
+.photo-tile.selected{ outline:2px solid var(--primary); outline-offset:-2px; }
+.photo-drag-handle{
+  position:absolute; top:.3rem; left:.3rem; width:22px; height:22px; border-radius:50%;
+  background:rgba(0,0,0,.5); color:#fff; display:flex; align-items:center; justify-content:center;
+  pointer-events:none;
+}
+.photo-drag-handle svg{ width:14px; height:14px; }
+.photo-order-tag{
+  position:absolute; bottom:.3rem; right:.3rem; background:rgba(0,0,0,.6); color:#fff;
+  font-size:.65rem; min-width:18px; height:18px; padding:0 .25rem; border-radius:9px;
+  display:flex; align-items:center; justify-content:center;
 }
 .photo-tile.removing{ opacity:.4; }
 .photo-tile.removing img{ filter:grayscale(1); }

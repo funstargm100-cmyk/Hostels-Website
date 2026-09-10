@@ -22,18 +22,25 @@ const MAX_LISTING_PHOTOS = 10;
 // type the request used.
 const toBool = (v) => v === true || v === 'true' || v === '1' || v === 'on';
 
-// Apply photo edits to a listing: remove the given listing_images ids, then store
-// and attach any new uploads. Enforces the 10-photo cap on the FINAL total and
-// guarantees a primary image exists. Returns an error string, or null on success.
-async function applyImageChanges(listingId, removeIds, files) {
+// Apply photo edits to a listing: remove the given listing_images ids, store any
+// new uploads, then re-order everything. Enforces the 10-photo cap on the FINAL
+// total and guarantees exactly one primary (cover) image — the first in order.
+// Returns an error string, or null on success.
+//
+// `photoOrder` is the desired sequence as identifiers:
+//   number  -> an existing listing_images.id
+//   'new:N' -> the Nth file in `files` (staged uploads)
+// When it is absent the existing order is kept and new photos append at the end.
+async function applyImageChanges(listingId, removeIds, files, photoOrder) {
   const existing = await db.query(
-    'SELECT id, is_primary FROM listing_images WHERE listing_id=$1 ORDER BY sort_order', [listingId]);
-  const keptCount = existing.rows.filter(r => !removeIds.includes(r.id)).length;
+    'SELECT id FROM listing_images WHERE listing_id=$1 ORDER BY sort_order', [listingId]);
+  const existingIds = existing.rows.map(r => r.id);
+  const keptIds = existingIds.filter(id => !removeIds.includes(id));
   const newFiles = files || [];
 
-  if (keptCount + newFiles.length > MAX_LISTING_PHOTOS)
-    return `A listing can have at most ${MAX_LISTING_PHOTOS} photos (you would end up with ${keptCount + newFiles.length}).`;
-  if (keptCount === 0 && newFiles.length === 0)
+  if (keptIds.length + newFiles.length > MAX_LISTING_PHOTOS)
+    return `A listing can have at most ${MAX_LISTING_PHOTOS} photos (you would end up with ${keptIds.length + newFiles.length}).`;
+  if (keptIds.length === 0 && newFiles.length === 0)
     return 'A listing needs at least one photo.';
 
   // Delete the removed rows (scoped to this listing so a stray id can't touch another listing).
@@ -41,9 +48,9 @@ async function applyImageChanges(listingId, removeIds, files) {
     await db.query('DELETE FROM listing_images WHERE listing_id=$1 AND id = ANY($2::int[])', [listingId, removeIds]);
   }
 
-  // Append new photos after the current maximum sort_order.
-  const maxRow = await db.query('SELECT COALESCE(MAX(sort_order), -1) AS m FROM listing_images WHERE listing_id=$1', [listingId]);
-  let nextOrder = Number(maxRow.rows[0].m) + 1;
+  // Store each new upload up-front so we have a real id to order against.
+  // newIds[n] corresponds to files[n] (i.e. the 'new:N' identifier).
+  const newIds = [];
   for (const file of newFiles) {
     // storeImage throws on an unreadable upload — surface a friendly message.
     let imagePath;
@@ -52,15 +59,38 @@ async function applyImageChanges(listingId, removeIds, files) {
     } catch (imgErr) {
       return `Could not process image "${file.originalname}". Please use a JPG or PNG photo.`;
     }
-    await db.query('INSERT INTO listing_images (listing_id, image_path, is_primary, sort_order) VALUES ($1,$2,FALSE,$3)',
-      [listingId, imagePath, nextOrder++]);
+    const ins = await db.query(
+      'INSERT INTO listing_images (listing_id, image_path, is_primary, sort_order) VALUES ($1,$2,FALSE,0) RETURNING id',
+      [listingId, imagePath]);
+    newIds.push(ins.rows[0].id);
   }
 
-  // Always ensure exactly one primary image exists (e.g. the old primary was removed).
-  const primary = await db.query('SELECT id FROM listing_images WHERE listing_id=$1 AND is_primary=TRUE LIMIT 1', [listingId]);
-  if (!primary.rows.length) {
-    await db.query(`UPDATE listing_images SET is_primary=TRUE WHERE id = (
-      SELECT id FROM listing_images WHERE listing_id=$1 ORDER BY sort_order LIMIT 1)`, [listingId]);
+  // Build the final sequence of ids. Only identifiers that genuinely belong to
+  // this listing survive, so a tampered payload can't reorder someone else's row.
+  let order = [];
+  if (Array.isArray(photoOrder) && photoOrder.length) {
+    const keptSet = new Set(keptIds);
+    for (const token of photoOrder) {
+      if (typeof token === 'string' && token.startsWith('new:')) {
+        const idx = Number(token.slice(4));
+        if (Number.isInteger(idx) && newIds[idx] !== undefined) order.push(newIds[idx]);
+      } else {
+        const id = Number(token);
+        if (keptSet.has(id)) { order.push(id); keptSet.delete(id); }
+      }
+    }
+    // Anything the client omitted (kept photos it didn't list, or new files it
+    // forgot) is appended so no photo is ever silently lost.
+    for (const id of keptIds) if (keptSet.has(id)) order.push(id);
+    for (const id of newIds) if (!order.includes(id)) order.push(id);
+  } else {
+    order = [...keptIds, ...newIds];
+  }
+
+  // Persist order, and make the FIRST photo the single primary / cover image.
+  for (let i = 0; i < order.length; i++) {
+    await db.query('UPDATE listing_images SET sort_order=$1, is_primary=$2 WHERE id=$3 AND listing_id=$4',
+      [i, i === 0, order[i], listingId]);
   }
   return null;
 }
@@ -317,7 +347,19 @@ router.put('/:uuid', requireAuth, upload.array('images', 10), async (req, res) =
       } catch { /* ignore malformed input */ }
     }
 
-    const imageErr = await applyImageChanges(listing.id, removeIds, req.files);
+    // `photo_order` is the desired sequence: existing ids as numbers, staged
+    // uploads as 'new:N'. Optional — when absent the current order is kept.
+    let photoOrder = null;
+    if (req.body.photo_order) {
+      try {
+        const parsed = typeof req.body.photo_order === 'string'
+          ? JSON.parse(req.body.photo_order)
+          : req.body.photo_order;
+        if (Array.isArray(parsed)) photoOrder = parsed;
+      } catch { /* ignore malformed input */ }
+    }
+
+    const imageErr = await applyImageChanges(listing.id, removeIds, req.files, photoOrder);
     if (imageErr) return res.status(400).json({ error: imageErr });
 
     res.json({ message: 'Listing updated and resubmitted for review' });
