@@ -44,7 +44,8 @@ const templates = {
   adDeleted: (title) => `<p>Your listing "<strong>${title}</strong>" has been permanently removed from the platform by our moderation team. Contact support if you believe this was done in error.</p>`,
   interestReceived: (listing) => `<p>Someone is interested in your listing "<strong>${listing}</strong>". We'll be in touch.</p>`,
   requestUpdate: (status) => `<p>Your contact request status has been updated to: <strong>${status}</strong>.</p>`,
-  payoutConfirmed: (amount) => `<p>Your payout of <strong>GHS ${amount}</strong> has been processed.</p>`
+  payoutConfirmed: (amount) => `<p>Your payout of <strong>GHS ${amount}</strong> has been processed.</p>`,
+  resetPassword: (link) => `<p>We received a request to reset your Roomy password.</p><p><a href="${link}">Click here to choose a new password</a>. This link expires in 1 hour.</p><p>If you didn't request this, you can safely ignore this email — your password won't change.</p>`
 };
 
 module.exports = { sendEmail, templates };

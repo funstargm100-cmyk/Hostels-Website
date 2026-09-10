@@ -39,7 +39,7 @@ app.use('/api/geo', require('./src/routes/geo'));
 app.use('/api/payments', require('./src/routes/payments'));
 
 // Serve frontend pages
-const pages = ['', 'listings', 'listing', 'post-ad', 'edit-listing', 'login', 'signup', 'dashboard', 'admin', 'about', 'contact', 'seekers', 'agents'];
+const pages = ['', 'listings', 'listing', 'post-ad', 'edit-listing', 'login', 'signup', 'reset-password', 'dashboard', 'admin', 'about', 'contact', 'seekers', 'agents'];
 pages.forEach(page => {
   const route = page ? `/${page}` : '/';
   const file = page ? `${page}.html` : 'index.html';

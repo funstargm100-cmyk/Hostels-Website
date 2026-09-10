@@ -170,18 +170,34 @@ router.post('/logout', (req, res) => {
 // POST /api/auth/forgot-password
 router.post('/forgot-password', async (req, res) => {
   const { email } = req.body;
+  // Same generic reply whether or not the account exists (prevents user enumeration).
+  const genericMsg = "If that account exists, we've sent a password reset link to its email.";
+  if (!email || !EMAIL_RE.test(String(email).trim()))
+    return res.status(400).json({ error: 'Please enter a valid email address' });
+  const normEmail = String(email).trim().toLowerCase();
   try {
-    const result = await db.query('SELECT id FROM users WHERE email=$1', [email]);
-    if (!result.rows.length) return res.json({ message: 'If that email exists, a reset link was sent.' });
+    const result = await db.query('SELECT id, email FROM users WHERE email=$1', [normEmail]);
+    const user = result.rows[0];
+    if (!user) return res.json({ message: genericMsg });
 
     const token = uuidv4();
     const expiry = new Date(Date.now() + 60 * 60 * 1000);
-    await db.query('UPDATE users SET reset_token=$1, reset_expires_at=$2 WHERE email=$3', [token, expiry, email]);
+    await db.query('UPDATE users SET reset_token=$1, reset_expires_at=$2 WHERE id=$3', [token, expiry, user.id]);
 
-    const link = `${process.env.BASE_URL}/reset-password?token=${token}`;
-    sendEmail(email, 'Reset your password', `<p>Click <a href="${link}">here</a> to reset your password. Expires in 1 hour.</p>`).catch(console.error);
-    res.json({ message: 'If that email exists, a reset link was sent.' });
+    // Build the link from the request origin so it works locally and on serverless,
+    // falling back to BASE_URL when configured.
+    const base = (process.env.BASE_URL || `${req.protocol}://${req.get('host')}`).replace(/\/$/, '');
+    const link = `${base}/reset-password?token=${token}`;
+
+    // Await the send so serverless (Vercel) doesn't kill it after the response.
+    const emailSent = user.email
+      ? await sendEmail(user.email, 'Reset your password', templates.resetPassword(link))
+      : false;
+    if (!emailSent) console.error('FORGOT PASSWORD: reset email not sent for', normEmail);
+
+    res.json({ message: genericMsg });
   } catch (err) {
+    console.error('FORGOT PASSWORD ERROR:', err.message);
     res.status(500).json({ error: err.message || 'Server error' });
   }
 });
@@ -189,15 +205,20 @@ router.post('/forgot-password', async (req, res) => {
 // POST /api/auth/reset-password
 router.post('/reset-password', async (req, res) => {
   const { token, password } = req.body;
+  if (!token) return res.status(400).json({ error: 'Reset link is invalid or missing. Please request a new one.' });
+  if (!password || String(password).length < 6)
+    return res.status(400).json({ error: 'Password must be at least 6 characters' });
   try {
     const result = await db.query('SELECT * FROM users WHERE reset_token=$1 AND reset_expires_at > NOW()', [token]);
     const user = result.rows[0];
-    if (!user) return res.status(400).json({ error: 'Invalid or expired reset token' });
+    if (!user) return res.status(400).json({ error: 'This reset link is invalid or has expired. Please request a new one.' });
 
     const hash = await bcrypt.hash(password, 10);
+    // Clear the token so it is single-use.
     await db.query('UPDATE users SET password_hash=$1, reset_token=NULL, reset_expires_at=NULL WHERE id=$2', [hash, user.id]);
-    res.json({ message: 'Password reset successful' });
+    res.json({ message: 'Password reset successful. You can now log in.' });
   } catch (err) {
+    console.error('RESET PASSWORD ERROR:', err.message);
     res.status(500).json({ error: err.message || 'Server error' });
   }
 });

@@ -54,7 +54,21 @@
         <label>Password</label>
         <input type="password" id="loginPassword" required autocomplete="current-password" />
       </div>
+      <div style="text-align:right;margin:-.4rem 0 .9rem">
+        <a href="#" id="forgotLink" style="color:var(--primary);font-weight:600;font-size:.85rem">Forgot password?</a>
+      </div>
       <button type="submit" class="btn btn-primary btn-lg" style="width:100%" id="loginSubmitBtn">Log in</button>
+    </form>
+
+    <form id="forgotForm" style="display:none">
+      <div class="alert alert-info" id="forgotInfo" style="display:none"></div>
+      <p class="text-muted" style="font-size:.9rem;margin-top:-.2rem">Enter your account email and we'll send you a link to reset your password.</p>
+      <div class="form-group">
+        <label>Email address</label>
+        <input type="email" id="forgotEmail" required autocomplete="email" placeholder="you@example.com" />
+      </div>
+      <button type="submit" class="btn btn-primary btn-lg" style="width:100%" id="forgotSubmitBtn">Send reset link</button>
+      <button type="button" class="btn btn-ghost" style="width:100%;margin-top:.5rem" id="forgotBackBtn">Back to log in</button>
     </form>
 
     <p class="text-muted mt-3" id="loginFootnote" style="text-align:center;font-size:.88rem">New to Roomy? <a href="/signup" style="color:var(--primary);font-weight:700">Create an account</a></p>
@@ -193,10 +207,60 @@ document.getElementById('resendBtn').addEventListener('click', async (e) => {
   }
 });
 
+// ── Forgot / reset password ────────────────────────────────
+const forgotForm = document.getElementById('forgotForm');
+const forgotInfo = document.getElementById('forgotInfo');
+const loginFootnote = document.getElementById('loginFootnote');
+
+function showForgotPanel(show) {
+  forgotForm.style.display = show ? 'block' : 'none';
+  loginForm.style.display = show ? 'none' : 'block';
+  loginFootnote.style.display = show ? 'none' : 'block';
+  errEl0.style.display = 'none';
+}
+
+document.getElementById('forgotLink').addEventListener('click', (e) => {
+  e.preventDefault();
+  // Prefill with whatever they typed as the identifier, if it looks like an email
+  const id = document.getElementById('loginIdentifier').value.trim();
+  if (id.includes('@')) document.getElementById('forgotEmail').value = id;
+  forgotInfo.style.display = 'none';
+  showForgotPanel(true);
+});
+
+document.getElementById('forgotBackBtn').addEventListener('click', () => showForgotPanel(false));
+
+forgotForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById('forgotSubmitBtn');
+  const email = document.getElementById('forgotEmail').value.trim();
+  btn.disabled = true; btn.classList.add('btn-loading');
+  forgotInfo.style.display = 'none';
+  errEl0.style.display = 'none';
+  try {
+    const res = await api.post('/api/auth/forgot-password', { email });
+    forgotInfo.textContent = res.message || "If that account exists, we've sent a password reset link to its email.";
+    forgotInfo.style.display = 'block';
+    forgotForm.querySelector('input').value = '';
+  } catch (ex) {
+    errEl0.textContent = ex.message; errEl0.style.display = 'block';
+  } finally {
+    btn.disabled = false; btn.classList.remove('btn-loading');
+  }
+});
+
+// If a reset link sent the user here, surface a note when they fail to log in
+if (params.get('reset') === '1') {
+  errEl0.textContent = 'Your password was reset. Log in with your new password.';
+  errEl0.className = 'alert alert-success';
+  errEl0.style.display = 'block';
+}
+
 document.getElementById('loginForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   const btn = document.getElementById('loginSubmitBtn');
   const errEl = document.getElementById('loginError');
+  errEl.className = 'alert alert-danger';
   errEl.style.display = 'none';
   btn.disabled = true; btn.classList.add('btn-loading');
   try {
