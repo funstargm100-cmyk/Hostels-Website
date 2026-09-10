@@ -470,8 +470,27 @@ textarea{ resize:vertical; min-height:110px; }
 /* ── dashboard / admin shell ─────────────────────────────────────────── */
 .dashboard-shell{ display:grid; grid-template-columns:250px 1fr; min-height:calc(100vh - 70px); }
 @media (max-width:900px){ .dashboard-shell{ grid-template-columns:1fr; } }
-.sidebar{ background:var(--card-bg); border-right:1px solid var(--border); padding:1.8rem 1.2rem; }
-@media (max-width:900px){ .sidebar{ display:none; } }
+/* Sidebar is STATIC on desktop: sticky under the navbar, so it never scrolls
+   away with the page. Its nav scrolls internally only if it truly overflows. */
+.sidebar{
+  background:var(--card-bg); border-right:1px solid var(--border); padding:1.8rem 1.2rem;
+  position:sticky; top:var(--navbar-h, 70px); align-self:start;
+  height:calc(100vh - var(--navbar-h, 70px));
+  display:flex; flex-direction:column;
+  overflow-x:hidden; overflow-y:auto;
+}
+.sidebar-nav{ margin:0; padding:0; list-style:none; flex:0 0 auto; }
+/* the logout sits at the bottom of the panel */
+.sidebar-logout{
+  margin-top:auto; width:100%; flex-shrink:0; margin-bottom:.4rem;
+  display:flex; align-items:center; gap:.7rem;
+  padding:.7rem .8rem; border-radius:var(--radius-sm);
+  border:1px solid var(--border); background:transparent; cursor:pointer;
+  font:inherit; font-weight:600; font-size:.9rem; color:var(--text-muted);
+  transition:background .18s ease, color .18s ease, border-color .18s ease;
+}
+.sidebar-logout:hover{ background:var(--primary-light); color:var(--primary); border-color:var(--primary); }
+.sidebar-logout i,.sidebar-logout svg{ width:17px; height:17px; }
 .sidebar-profile{ display:flex; align-items:center; gap:.7rem; margin-bottom:1.6rem; }
 .sidebar-avatar{ width:42px; height:42px; border-radius:50%; background:var(--primary); color:#fff; display:flex; align-items:center; justify-content:center; font-family:var(--font-display); font-weight:600; }
 .sidebar-nav a{ display:flex; align-items:center; gap:.7rem; padding:.7rem .8rem; border-radius:var(--radius-sm); font-weight:600; font-size:.9rem; color:var(--text-muted); margin-bottom:.2rem; }
@@ -479,14 +498,15 @@ textarea{ resize:vertical; min-height:110px; }
 .sidebar-nav a:hover{ background:var(--primary-light); color:var(--primary); }
 .sidebar-nav a.active{ background:var(--primary); color:#fff; }
 .dashboard-main{ padding:2rem; }
-.dashboard-topbar{ display:none; align-items:center; justify-content:space-between; padding:1rem 1.2rem; border-bottom:1px solid var(--border); background:var(--card-bg); }
+.dashboard-topbar{ display:none; align-items:center; justify-content:space-between; gap:.8rem; padding:1rem 1.2rem; border-bottom:1px solid var(--border); background:var(--card-bg); position:sticky; top:0; z-index:45; }
+#sidebarMobileToggle{ background:none; border:1px solid var(--border); border-radius:var(--radius-sm); width:38px; height:38px; display:flex; align-items:center; justify-content:center; color:var(--text); cursor:pointer; flex-shrink:0; transition:background .18s ease, transform .18s ease; }
+#sidebarMobileToggle:hover{ background:var(--primary-light); color:var(--primary); }
+#sidebarMobileToggle:active{ transform:scale(.92); }
+#sidebarMobileToggle i,#sidebarMobileToggle svg{ width:20px; height:20px; }
 .mobile-tabs{ display:none; }
 @media (max-width:900px){
   .dashboard-topbar{ display:flex; }
-  .mobile-tabs{ display:flex; overflow-x:auto; gap:.4rem; padding:.8rem 1.2rem; background:var(--card-bg); border-bottom:1px solid var(--border); }
-  .mobile-tabs button{ display:flex; align-items:center; gap:.35rem; white-space:nowrap; padding:.5rem .9rem; border-radius:999px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-muted); font-weight:700; font-size:.8rem; }
-  .mobile-tabs button.active{ background:var(--primary); color:#fff; border-color:var(--primary); }
-  .mobile-tabs i,.mobile-tabs svg{ width:14px; height:14px; }
+  .mobile-tabs{ display:none; }
   .dashboard-main{ padding:1.2rem; }
 }
 .tab-panel{ animation:fadeUp .3s ease; }
@@ -551,6 +571,8 @@ td{ padding:.8rem 1rem; border-top:1px solid var(--border); vertical-align:top; 
 .account-card h3{ margin-bottom:1rem; }
 .account-meta{ display:flex; flex-direction:column; gap:.7rem; }
 .account-meta > div{ display:flex; justify-content:space-between; gap:1rem; font-size:.88rem; }
+.account-meta strong{ text-align:right; }
+.field-hint{ display:block; font-size:.75rem; color:var(--text-muted); margin-top:.35rem; font-weight:400; }
 @media (max-width:760px){ .account-grid{ grid-template-columns:1fr; } }
 
 /* auth pages */
@@ -649,6 +671,26 @@ td{ padding:.8rem 1rem; border-top:1px solid var(--border); vertical-align:top; 
 #scrollTopBtn:active{ transform: scale(.92); }
 @media (max-width:640px){
   #scrollTopBtn{ right: .9rem; bottom: calc(4.6rem + env(safe-area-inset-bottom, 0px)); width: 42px; height: 42px; }
+}
+
+/* ── mobile: hamburger opens the sidebar as an off-canvas drawer ───────── */
+@media (max-width:900px){
+  .dashboard-shell .sidebar{
+    /* above the mobile footer nav (z-index 1100) so the panel is never occluded */
+    position:fixed; top:0; left:0; bottom:0; z-index:1200;
+    width:min(82vw, 300px); height:100vh; max-height:100vh;
+    padding:1.2rem 1.2rem calc(1.2rem + env(safe-area-inset-bottom, 0px));
+    border-right:1px solid var(--border);
+    overflow-y:auto; transform:translateX(-100%);
+    transition:transform .3s cubic-bezier(.4,0,.2,1), box-shadow .3s ease;
+    box-shadow:none;
+  }
+  .dashboard-shell.mobile-sidebar-open .sidebar{
+    transform:translateX(0); box-shadow:0 10px 40px rgba(0,0,0,.35);
+  }
+  /* backdrop also covers the footer nav, and must sit under the drawer */
+  .dashboard-shell .sidebar-backdrop{ z-index:1150; }
+  .dashboard-shell.mobile-sidebar-open .sidebar-backdrop{ opacity:1; visibility:visible; }
 }
 
 /* ── collapsible sidebar (admin) ─────────────────────── */

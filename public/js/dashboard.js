@@ -15,21 +15,51 @@ async function initDashboard() {
   const initial = (currentUser.name || 'R').trim().charAt(0).toUpperCase();
   ['sidebarAvatar', 'mobileAvatar'].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = initial; });
 
-  // Greeting header — greeting is shared, the subline is tailored to the role.
-  const owner = isOwnerRole(currentUser.role);
-  document.getElementById('greetingTitle').textContent = `Welcome back, ${currentUser.name.split(' ')[0]} 👋`;
-  document.getElementById('greetingSub').textContent = owner
-    ? 'Manage your listings and keep an eye on who’s interested.'
-    : 'Find your next room — and keep track of everywhere you’ve reached out to.';
-  document.getElementById('heroPostBtn').style.display = owner ? '' : 'none';
-
-  const seekerActions = document.getElementById('seekerActions');
-  if (seekerActions) seekerActions.style.display = owner ? 'none' : '';
-
+  // Greeting header removed — the sidebar is now the single navigation surface.
   renderSidebarNav();
+  initDashboardSidebar();
 
   const hash = location.hash.replace('#', '') || 'overview';
   showTab(hash);
+}
+
+// ─── SIDEBAR (static on desktop, off-canvas drawer on mobile) ──────
+const isMobileSidebar = () => window.matchMedia('(max-width:900px)').matches;
+
+function toggleMobileSidebar(force) {
+  const shell = document.getElementById('dashboardShell');
+  const btn = document.getElementById('sidebarMobileToggle');
+  if (!shell) return;
+  const open = typeof force === 'boolean' ? force : !shell.classList.contains('mobile-sidebar-open');
+  shell.classList.toggle('mobile-sidebar-open', open);
+  document.body.style.overflow = open && isMobileSidebar() ? 'hidden' : '';
+  if (btn) {
+    btn.setAttribute('aria-expanded', String(open));
+    btn.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
+  }
+}
+
+function initDashboardSidebar() {
+  const btn = document.getElementById('sidebarMobileToggle');
+  if (btn) btn.addEventListener('click', () => toggleMobileSidebar());
+
+  const backdrop = document.getElementById('sidebarBackdrop');
+  if (backdrop) backdrop.addEventListener('click', () => toggleMobileSidebar(false));
+
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') toggleMobileSidebar(false); });
+
+  // Leaving mobile width: drop the drawer state and unlock scrolling.
+  window.addEventListener('resize', () => {
+    if (!isMobileSidebar()) toggleMobileSidebar(false);
+  });
+
+  const logout = document.getElementById('sidebarLogout');
+  if (logout) logout.addEventListener('click', confirmLogout);
+}
+
+function confirmLogout() {
+  if (!confirm('Log out of Roomy?\n\nYou\'ll need to sign in again to see your dashboard.')) return;
+  handleLogout();
 }
 
 // Build the desktop sidebar links (and mobile tab bar) from the user's role.
@@ -58,7 +88,7 @@ function renderSidebarNav() {
   const mobile = document.getElementById('mobileTabs');
   if (mobile) {
     mobile.innerHTML = items.map(it =>
-      `<a href="#${it.tab}" data-tab="${it.tab}">${it.label}</a>`).join('');
+      `<a href="#${it.tab}" data-tab="${it.tab}"><i data-lucide="${it.icon}"></i> ${it.label}</a>`).join('');
     mobile.querySelectorAll('a[data-tab]').forEach(a =>
       a.addEventListener('click', e => { e.preventDefault(); showTab(a.dataset.tab, document.querySelector(`#sidebarNav [data-tab="${a.dataset.tab}"]`)); }));
   }
@@ -79,6 +109,8 @@ function showTab(tab, link) {
   history.replaceState(null, '', `#${tab}`);
   const loaders = { overview: loadOverview, requests: loadRequests, listings: loadOwnerListings, favorites: loadFavorites, notifications: loadNotifications, account: loadAccount };
   loaders[tab]?.();
+  // On mobile, close the drawer after choosing a tab.
+  if (isMobileSidebar()) toggleMobileSidebar(false);
 }
 window.showTab = showTab;
 window.dashboardShowTab = (tab) => showTab(tab);
@@ -280,6 +312,7 @@ async function loadAccount() {
             <div class="form-group"><label for="acctName">Full name</label><input id="acctName" value="${escAttr(user.name)}" required /></div>
             <div class="form-group"><label for="acctEmail">Email</label><input id="acctEmail" type="email" value="${escAttr(user.email || '')}" required /></div>
             <div class="form-group"><label for="acctPhone">Phone</label><input id="acctPhone" type="tel" value="${escAttr(user.phone || '')}" /></div>
+            <div class="form-group"><label for="acctLocation">Location</label><input id="acctLocation" value="${escAttr(user.base_location || '')}" placeholder="e.g. Kumasi, Ashanti" /><span class="field-hint">The address you gave at signup — helps us show rooms near you.</span></div>
             <button class="btn btn-primary" type="submit">Save changes</button>
           </form>
         </div>
@@ -297,6 +330,7 @@ async function loadAccount() {
           <div class="account-meta">
             <div><span class="text-muted">Role</span><strong>${ROLE_LABEL[user.role] || user.role}</strong></div>
             <div><span class="text-muted">Member since</span><strong>${memberSince}</strong></div>
+            <div><span class="text-muted">Location</span><strong>${escAttr(user.base_location || 'Not set')}</strong></div>
             <div><span class="text-muted">Email verified</span><strong>${user.is_verified ? 'Yes' : 'No'}</strong></div>
             <div><span class="text-muted">ID verified</span><strong>${user.is_kyc_verified ? 'Yes' : 'No'}</strong></div>
           </div>
@@ -316,8 +350,6 @@ function applyAccountName(name) {
   } catch {}
   const sidebar = document.getElementById('sidebarName'); if (sidebar) sidebar.textContent = name;
   const mobile = document.getElementById('mobileName'); if (mobile) mobile.textContent = name;
-  const title = document.getElementById('greetingTitle');
-  if (title) title.textContent = `Welcome back, ${name.split(' ')[0]} 👋`;
   const initial = (name || 'R').trim().charAt(0).toUpperCase();
   ['sidebarAvatar', 'mobileAvatar'].forEach(id => { const e = document.getElementById(id); if (e) e.textContent = initial; });
 }
@@ -328,7 +360,8 @@ async function onAccountSave(ev) {
   const payload = {
     name: document.getElementById('acctName').value.trim(),
     email: document.getElementById('acctEmail').value.trim(),
-    phone: document.getElementById('acctPhone').value.trim()
+    phone: document.getElementById('acctPhone').value.trim(),
+    base_location: document.getElementById('acctLocation').value.trim()
   };
   btn.disabled = true;
   try {

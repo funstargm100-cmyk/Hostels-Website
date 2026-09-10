@@ -29,37 +29,25 @@
 </nav>
 
 <div class="dashboard-topbar">
-  <div style="display:flex;align-items:center;gap:.6rem">
+  <button id="sidebarMobileToggle" type="button" aria-label="Open menu" aria-expanded="false"><i data-lucide="menu"></i></button>
+  <div style="display:flex;align-items:center;gap:.6rem;flex:1;min-width:0">
     <div class="sidebar-avatar" id="mobileAvatar">R</div>
-    <div><div style="font-weight:700;font-size:.9rem" id="mobileName"></div><div class="text-muted" style="font-size:.75rem" id="mobileRole"></div></div>
+    <div style="min-width:0"><div style="font-weight:700;font-size:.9rem" id="mobileName"></div><div class="text-muted" style="font-size:.75rem" id="mobileRole"></div></div>
   </div>
 </div>
-<div class="mobile-tabs" id="mobileTabs"></div>
 
-<div class="dashboard-shell">
-  <aside class="sidebar">
+<div class="dashboard-shell" id="dashboardShell">
+  <div class="sidebar-backdrop" id="sidebarBackdrop" aria-hidden="true"></div>
+  <aside class="sidebar" id="dashboardSidebar">
     <div class="sidebar-profile">
       <div class="sidebar-avatar" id="sidebarAvatar">R</div>
-      <div><div style="font-weight:700" id="sidebarName"></div><div class="text-muted" style="font-size:.78rem" id="sidebarRole"></div></div>
+      <div class="sidebar-profile-text"><div style="font-weight:700" id="sidebarName"></div><div class="text-muted" style="font-size:.78rem" id="sidebarRole"></div></div>
     </div>
     <ul class="sidebar-nav" id="sidebarNav"></ul>
+    <button class="sidebar-logout" id="sidebarLogout" type="button"><i data-lucide="log-out"></i> <span class="sidebar-label">Log out</span></button>
   </aside>
 
   <main class="dashboard-main">
-    <div class="dash-hero">
-      <div>
-        <h1 class="dash-hero-title" id="greetingTitle">Welcome back 👋</h1>
-        <p class="dash-hero-sub" id="greetingSub"></p>
-      </div>
-      <a href="/post-ad" class="btn btn-primary" id="heroPostBtn" style="display:none">+ Post a room</a>
-    </div>
-
-    <div id="seekerActions" style="display:none" class="grid-3 mb-3">
-      <a href="/listings" class="card" style="padding:1.3rem;display:flex;align-items:center;gap:.8rem"><i data-lucide="search" style="color:var(--primary)"></i><div><strong>Browse rooms</strong><div class="text-muted" style="font-size:.78rem">Find your next place</div></div></a>
-      <a href="#favorites" class="card" style="padding:1.3rem;display:flex;align-items:center;gap:.8rem" onclick="dashboardShowTab('favorites')"><i data-lucide="heart" style="color:var(--primary)"></i><div><strong>Saved rooms</strong><div class="text-muted" style="font-size:.78rem">Your shortlist</div></div></a>
-      <a href="#requests" class="card" style="padding:1.3rem;display:flex;align-items:center;gap:.8rem" onclick="dashboardShowTab('requests')"><i data-lucide="message-circle" style="color:var(--primary)"></i><div><strong>My requests</strong><div class="text-muted" style="font-size:.78rem">Track your enquiries</div></div></a>
-    </div>
-
     <!-- OVERVIEW -->
     <div id="tab-overview">
       <h2 id="overviewTitle">Overview</h2>

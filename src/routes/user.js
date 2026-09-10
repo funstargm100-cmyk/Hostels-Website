@@ -10,14 +10,14 @@ const normalizePhone = (p) => (p || '').replace(/[\s()\-]/g, '');
 // GET /api/user/profile
 router.get('/profile', requireAuth, async (req, res) => {
   try {
-    const result = await db.query('SELECT id, uuid, name, email, phone, role, is_verified, is_kyc_verified, wallet_balance, avatar, created_at FROM users WHERE id=$1', [req.session.user.id]);
+    const result = await db.query('SELECT id, uuid, name, email, phone, role, is_verified, is_kyc_verified, wallet_balance, avatar, base_location, base_lat, base_lng, created_at FROM users WHERE id=$1', [req.session.user.id]);
     res.json({ user: result.rows[0] });
   } catch (err) { res.status(500).json({ error: 'Server error' }); }
 });
 
-// PUT /api/user/profile  — edit name / email / phone
+// PUT /api/user/profile  — edit name / email / phone / base location
 router.put('/profile', requireAuth, async (req, res) => {
-  const { name, email, phone } = req.body;
+  const { name, email, phone, base_location } = req.body;
   if (!name || !name.trim() || name.trim().length < 2)
     return res.status(400).json({ error: 'Please enter your full name' });
   const normEmail = (email || '').trim().toLowerCase();
@@ -34,9 +34,9 @@ router.put('/profile', requireAuth, async (req, res) => {
       if (normPhone && row.phone === normPhone) return res.status(409).json({ error: 'That phone number is already used by another account' });
     }
     const result = await db.query(
-      `UPDATE users SET name=$1, email=$2, phone=$3 WHERE id=$4
-       RETURNING id, uuid, name, email, phone, role, is_verified, is_kyc_verified, wallet_balance, avatar, created_at`,
-      [name.trim(), normEmail, normPhone || null, req.session.user.id]);
+      `UPDATE users SET name=$1, email=$2, phone=$3, base_location=$4 WHERE id=$5
+       RETURNING id, uuid, name, email, phone, role, is_verified, is_kyc_verified, wallet_balance, avatar, base_location, base_lat, base_lng, created_at`,
+      [name.trim(), normEmail, normPhone || null, (base_location || '').trim() || null, req.session.user.id]);
     res.json({ message: 'Profile updated', user: result.rows[0] });
   } catch (err) {
     if (err.code === '23505') return res.status(409).json({ error: 'That email or phone number is already in use' });
