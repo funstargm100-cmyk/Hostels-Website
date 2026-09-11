@@ -796,6 +796,10 @@ function clearTraceLine() {
 }
 
 // Draw the polylines + end anchors for a given set of [lat,lng] points.
+// Directional arrowheads are added along the path so the travel direction (base
+// → room) is explicit — without them a bare line reads as "which way am I going
+// again?", and on a two-way road the eye picks the wrong direction half the time.
+// Arrows are nudged to the RIGHT of the line to match Ghana's right-hand traffic.
 function drawTracePath(points, isRoad) {
   L.polyline(points, {
     color: '#ffffff', weight: isRoad ? 7 : 5, opacity: isRoad ? 0.85 : 0.7, lineCap: 'round'
@@ -804,6 +808,47 @@ function drawTracePath(points, isRoad) {
     color: '#0e7490', weight: isRoad ? 4 : 2.5, opacity: 1,
     dashArray: isRoad ? null : '8 8', lineCap: 'round'
   }).addTo(mapTraceLayer);
+  addTraceArrows(points);
+}
+
+// Place chevron arrowheads every ~10% of the path length, rotated to the local
+// heading, and offset perpendicular to the RIGHT of travel (Ghana drives on the
+// right, so the offset side also hints at the correct lane).
+function addTraceArrows(points) {
+  if (!Array.isArray(points) || points.length < 2) return;
+  // Walk the polyline and keep segment bearings so each arrow points along the
+  // road it sits on, not the straight base→room chord.
+  const total = points.reduce((sum, p, i) =>
+    i ? sum + L.latLng(points[i - 1]).distanceTo(L.latLng(p)) : 0, 0);
+  if (total < 300) return; // too short for arrows to be readable
+  const spacing = total / Math.min(6, Math.max(2, Math.round(total / 4000)));
+  let placed = 0, next = spacing * 0.6;
+  for (let i = 1; i < points.length && placed < 8; i++) {
+    const a = L.latLng(points[i - 1]), b = L.latLng(points[i]);
+    const segLen = a.distanceTo(b);
+    while (next <= segLen && placed < 8) {
+      const frac = next / segLen;
+      const mid = L.latLng(a.lat + (b.lat - a.lat) * frac, a.lng + (b.lng - a.lng) * frac);
+      // Bearing of the segment (direction of travel). Perpendicular offset of
+      // ~8 px-equivalent (~6 m at city zoom) to the right: rotate bearing +90°.
+      const bearing = Math.atan2(b.lng - a.lng, b.lat - a.lat) * 180 / Math.PI;
+      const right = (bearing + 90) * Math.PI / 180;
+      const offs = 0.00008;
+      const pos = L.latLng(mid.lat + Math.cos(right) * offs, mid.lng + Math.sin(right) * offs);
+      L.marker(pos, {
+        icon: L.divIcon({
+          className: 'trace-arrow',
+          html: '<svg width="16" height="16" viewBox="0 0 16 16" style="transform:rotate(' + bearing + 'deg)">' +
+                '<path d="M8 2 L13 11 L8 8.5 L3 11 Z" fill="#0e7490" stroke="#ffffff" stroke-width="1"/></svg>',
+          iconSize: [16, 16], iconAnchor: [8, 8], interactive: false
+        }),
+        keyboard: false, zIndexOffset: -200
+      }).addTo(mapTraceLayer);
+      placed++;
+      next += spacing;
+    }
+    next -= segLen;
+  }
 }
 
 async function drawTraceToBase(marker) {

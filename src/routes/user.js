@@ -3,6 +3,35 @@ const bcrypt = require('bcryptjs');
 const db = require('../utils/db');
 const { requireAuth } = require('../middleware/auth');
 
+// Geocode a free-text base address (Ghana-biased, like /api/geo/search). Returns
+// {lat,lng} or null — never throws, so a Nominatim outage can't fail the profile
+// save. Uses the same 1-hour pattern as the search proxy; simple per-call cache.
+const baseGeoCache = new Map();
+async function geocodeBase(text) {
+  const q = String(text || '').trim();
+  if (!q) return null;
+  const key = q.toLowerCase();
+  const hit = baseGeoCache.get(key);
+  if (hit !== undefined) return hit;
+  try {
+    const url = new URL('https://nominatim.openstreetmap.org/search');
+    url.searchParams.set('q', q);
+    url.searchParams.set('format', 'json');
+    url.searchParams.set('limit', '1');
+    url.searchParams.set('countrycodes', 'gh');
+    const r = await fetch(url, { headers: { 'User-Agent': 'Roomy/1.0 (student housing marketplace)' } });
+    if (!r.ok) throw new Error('upstream ' + r.status);
+    const data = await r.json();
+    const out = data && data[0] && Number.isFinite(parseFloat(data[0].lat))
+      ? { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) }
+      : null;
+    baseGeoCache.set(key, out);
+    return out;
+  } catch {
+    return null;
+  }
+}
+
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const PHONE_RE = /^\+?[0-9]{9,15}$/;
 const normalizePhone = (p) => (p || '').replace(/[\s()\-]/g, '');
@@ -37,11 +66,17 @@ router.put('/profile', requireAuth, async (req, res) => {
       if (normPhone && row.phone === normPhone) return res.status(409).json({ error: 'That phone number is already used by another account' });
     }
     // Keep stored coordinates in sync when the seeker edits their base location:
-    // if coordinates are provided use them, otherwise drop them when the address changes
-    // (they would no longer match the new address).
-    const lat = base_lat !== undefined && base_lat !== null && base_lat !== '' ? parseFloat(base_lat) : null;
-    const lng = base_lng !== undefined && base_lng !== null && base_lng !== '' ? parseFloat(base_lng) : null;
+    // if coordinates are provided use them; otherwise GEOCODE the new address so
+    // the base keeps working. (Previously a text-only save nulled the coords,
+    // which silently killed the distance line and the map's base↔room trace on
+    // every profile edit.) If geocoding fails the coords are cleared, as before.
+    let lat = base_lat !== undefined && base_lat !== null && base_lat !== '' ? parseFloat(base_lat) : null;
+    let lng = base_lng !== undefined && base_lng !== null && base_lng !== '' ? parseFloat(base_lng) : null;
     const addressChanged = (base_location || '').trim() !== '';
+    if (isSeeker && addressChanged && (lat === null || lng === null)) {
+      const geo = await geocodeBase(base_location);
+      if (geo) { lat = geo.lat; lng = geo.lng; }
+    }
     const coordClause = isSeeker && addressChanged
         ? 'base_lat=$7, base_lng=$8'
         : 'base_lat = CASE WHEN $6 AND $4 IS DISTINCT FROM base_location THEN NULL ELSE base_lat END, base_lng = CASE WHEN $6 AND $4 IS DISTINCT FROM base_location THEN NULL ELSE base_lng END';
