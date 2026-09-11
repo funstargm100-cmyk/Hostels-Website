@@ -247,7 +247,16 @@ function renderMapListings() {
     // Popups reuse the same card renderer as the grid view, so the thumbnail,
     // badges, amenities and distance line all match. Clicking opens the room.
     const marker = L.marker([lat, lng]).addTo(mapMarkersLayer);
-    marker.bindPopup(() => renderListingCard(l), { maxWidth: 280, minWidth: 240 });
+    marker.bindPopup(() => renderListingCard(l), { maxWidth: 260, minWidth: 220, autoPanPadding: [12, 12] });
+  });
+  // Popup content is injected lazily by Leaflet, so icons rendered inside it
+  // (the distance "route" icon, map-pin, etc.) never got lucide.createIcons()
+  // applied. Initialize them the moment a popup opens — previously they only
+  // appeared after another action (e.g. tapping the like button) re-ran
+  // createIcons across the page.
+  map.off('popupopen').on('popupopen', (e) => {
+    const el = e.popup.getElement();
+    if (el && typeof lucide !== 'undefined') lucide.createIcons({ nodes: [el] });
   });
   if (pts.length) {
     map.fitBounds(L.latLngBounds(pts).pad(0.25), { maxZoom: 15 });
