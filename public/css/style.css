@@ -476,7 +476,7 @@ textarea{ resize:vertical; min-height:110px; }
   #mapWrap .map-hint{ display:none; }
   .map-pill{ font-size:.75rem; padding:.4rem .75rem; }
   .map-recenter{ bottom:20px; }
-} }
+}
 #mapSearch .map-price-pin.price-low{ background:var(--teal, #0e7490); }
 #mapSearch .map-price-pin.price-high{ background:var(--brick, #C1633A); }
 /* Keep map popup cards compact, modern, and perfectly aligned */

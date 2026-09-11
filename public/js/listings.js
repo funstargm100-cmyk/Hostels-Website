@@ -228,6 +228,9 @@ let lastFetchedListings = [];
 // True while WE move the camera (fitBounds/flyTo), so the moveend/zoomend
 // handlers can tell our programmatic moves apart from a genuine user pan/zoom.
 let suppressMoveEvent = false;
+// True between movestart/zoomstart and their end events — a marker click during
+// that window is deferred rather than lost.
+let mapBusy = false;
 function setSuppress(v) { suppressMoveEvent = v; }
 // Debounce so a continuous drag only reveals the pill once the user settles.
 let searchAreaPillTimer = null;
@@ -285,6 +288,18 @@ function ensureMap() {
     // guard that every camera helper we call sets for the duration of its move.
     mapInstance.on('moveend', () => { if (!suppressMoveEvent) showSearchAreaPill(); });
     mapInstance.on('zoomend', () => { if (!suppressMoveEvent) showSearchAreaPill(); });
+    // Keep an OPEN popup glued to its marker when the map is rotated or panned.
+    // The rotate plugin only repositions popups during zoom-animated moves, so
+    // without this the bubble drifts away from its pin (and can end up
+    // off-screen) after a rotate or a drag. Calling update() re-runs Leaflet's
+    // own anchor maths, which the plugin has already corrected for bearing.
+    mapInstance.on('rotate', deferPopupUpdate);
+    mapInstance.on('moveend zoomend', deferPopupUpdate);
+    // Track whether a move is in flight, so a marker click that lands mid-gesture
+    // can be deferred instead of silently swallowed (the "click does nothing"
+    // symptom on a rotating/animating map).
+    mapInstance.on('movestart zoomstart', () => { mapBusy = true; window.__mapBusy = true; });
+    mapInstance.on('moveend zoomend', () => { mapBusy = false; window.__mapBusy = false; });
     // Exposed for QA/troubleshooting (theme checks, view assertions, driving the
     // map from tools). Harmless in production and far easier than reverse-
     // engineering internal Leaflet state from the DOM.
@@ -328,7 +343,29 @@ function renderMapListings(fitToResults = true) {
     // in lat/lng), matching what the marker itself renders.
     marker.__listingLatLng = L.latLng(lat, lng);
     marker.__listingTitle = l.title;
-    marker.bindPopup(() => renderListingCard(l, { isPopup: true }), { maxWidth: 280, minWidth: 240, autoPanPadding: [16, 16] });
+    // autoPan is OFF on purpose. On a map that can be rotated, Leaflet's autoPan
+    // computes padding in UNROTATED pixel space and pans the map to compensate,
+    // which fights the rotate plugin on every frame: that is the source of the
+    // jitter/lag and of popups landing off-screen. We bring the pin into view
+    // ourselves (see openPopupSafely) using bounds that account for rotation.
+    marker.bindPopup(() => renderListingCard(l, { isPopup: true }), {
+      maxWidth: 280, minWidth: 240, autoPan: false, keepInView: false
+    });
+    // Replace Leaflet's default open-on-click with our rotation-aware, toggle-safe
+    // version. bindPopup() wires `click -> _openPopup`; unbind that one handler
+    // (keeping the popup itself bound) and drive the open ourselves so a click
+    // that lands mid-rotate/mid-pan is deferred instead of being lost.
+    if (marker._openPopup) marker.off('click', marker._openPopup, marker);
+    marker.on('click', () => {
+      if (marker.isPopupOpen()) { marker.closePopup(); return; }
+      if (mapBusy) {
+        // A gesture is still in flight; wait for it to settle so the popup is
+        // anchored against the FINAL view rather than a moving target.
+        mapInstance.once('moveend zoomend', () => openPopupSafely(marker));
+      } else {
+        openPopupSafely(marker);
+      }
+    });
     // Bind the trace to the MARKER itself rather than reading popup._source from
     // a map-level event: that property is not reliably the marker across Leaflet
     // versions, and a wrong source silently traces the wrong room. Here the
@@ -336,6 +373,13 @@ function renderMapListings(fitToResults = true) {
     marker.on('popupopen', (e) => {
       const el = e.popup.getElement();
       if (el && typeof lucide !== 'undefined') lucide.createIcons({ nodes: [el] });
+      // The plugin only re-anchors popups during zoom-animated moves; nudge once
+      // now so the very first frame is already in the right place.
+      requestAnimationFrame(() => { if (marker.isPopupOpen()) marker.getPopup().update(); });
+      // The photo inside the card grows once it loads, which can push a popup
+      // near an edge out of view. Re-fit whenever that happens.
+      const img = el && el.querySelector('img');
+      if (img) img.addEventListener('load', ensurePopupVisible, { once: true });
       drawTraceToBase(marker);
     });
     marker.on('popupclose', clearTraceLine);
@@ -347,6 +391,91 @@ function renderMapListings(fitToResults = true) {
     // standalone base marker is added here. Once the trace is cleared the base
     // disappears with it, which keeps the default map focused on the rooms.
   }
+}
+
+// ─── POPUP PLACEMENT ON A ROTATABLE MAP ───────
+// A popup's DOM node lives in the non-rotating `norotatePane`, and the rotate
+// plugin only re-anchors it during zoom-animated moves. Rotating or panning an
+// OPEN popup therefore leaves it stranded, so we explicitly re-run Leaflet's
+// anchor maths (update()) once the gesture settles. Coalesced into a rAF so a
+// continuous drag stays smooth instead of updating every frame.
+let popupUpdateRaf = null;
+function deferPopupUpdate() {
+  if (popupUpdateRaf !== null) return;
+  popupUpdateRaf = requestAnimationFrame(() => {
+    popupUpdateRaf = null;
+    if (!mapInstance) return;
+    const popup = mapInstance._popup;
+    if (popup && popup.isOpen()) {
+      popup.update();
+      // Rotating or panning can swing a tall popup past an edge even though it fit
+      // when opened, so re-run the same fit that openPopupSafely uses. Skipped
+      // while WE are the ones moving, so our own corrective pan cannot recurse.
+      if (!suppressMoveEvent) ensurePopupVisible();
+    }
+  });
+}
+
+// Open a marker's popup and make sure the WHOLE bubble fits in the container.
+//
+// Leaflet's own autoPan is disabled on these popups because, on a rotated map,
+// it computes padding in unrotated pixel space and fights the rotate plugin
+// (jitter + popups shoved off-screen). So we do the panning ourselves, in terms
+// of the popup's real rendered size:
+//   • Open first so the popup can be measured (Leaflet sizes it to its content).
+//   • Measure how far it overflows each edge of the map container.
+//   • If it overflows, nudge the map by exactly that overflow so the pin ends up
+//     with its popup fully on screen.
+// Because it pans the MAP (not the popup), it works identically at any bearing
+// and the popup stays anchored to its marker.
+function openPopupSafely(marker) {
+  if (!mapInstance || !marker) return;
+  marker.openPopup();
+  ensurePopupVisible();
+}
+
+// Nudge the map so the currently-open popup sits fully inside the container.
+//
+// IMPORTANT: measure and pan exactly ONCE, after the popup has settled. An
+// earlier version retried on a timer and re-measured mid-animation, so it kept
+// re-panning against a stale rect and the map ran away. A single post-open pass
+// is both stable and sufficient.
+let popupFitTimer = null;
+function ensurePopupVisible() {
+  clearTimeout(popupFitTimer);
+  // Small delay lets Leaflet append + size the popup, and a first image render.
+  popupFitTimer = setTimeout(() => {
+    if (!mapInstance) return;
+    const popup = mapInstance._popup;
+    if (!popup || !popup.isOpen()) return;
+    const el = popup.getElement();
+    if (!el || !el.offsetHeight) return;
+    const mr = mapInstance.getContainer().getBoundingClientRect();
+    const pr = el.getBoundingClientRect();
+    const pad = 12;
+    // How far the popup spills past each edge (positive = overflow).
+    const overflowTop = mr.top + pad - pr.top;
+    const overflowBottom = pr.bottom - (mr.bottom - pad);
+    const overflowLeft = mr.left + pad - pr.left;
+    const overflowRight = pr.right - (mr.right - pad);
+    // We need to move the POPUP by the opposite of each overflow. panBy() moves
+    // the map CONTENT in the OPPOSITE sense to its argument (verified: a positive
+    // y argument slides content up), so shifting the popup down = negative y.
+    //   popup spills above  -> move it down   -> panBy y = -overflowTop
+    //   popup spills below  -> move it up     -> panBy y = +overflowBottom
+    //   popup spills left   -> move it right  -> panBy x = -overflowLeft
+    //   popup spills right  -> move it left   -> panBy x = +overflowRight
+    let panX = 0, panY = 0;
+    if (overflowLeft > 0) panX = -overflowLeft;
+    else if (overflowRight > 0) panX = overflowRight;
+    if (overflowTop > 0) panY = -overflowTop;
+    else if (overflowBottom > 0) panY = overflowBottom;
+    if (!panX && !panY) return; // already fully visible
+    // Suppressed so this is not mistaken for a user pan (no "Search this area").
+    suppressMoveEvent = true;
+    mapInstance.panBy([panX, panY], { animate: true, duration: 0.3 });
+    clearSuppressSoon(600);
+  }, 120);
 }
 
 // ─── GOOGLE-STYLE CAMERA HELPERS ──────────────
@@ -476,15 +605,12 @@ async function drawTraceToBase(marker) {
   if (!b || !b.lat || !b.lng) return;
   const base = L.latLng(b.lat, b.lng);
   if (room.distanceTo(base) > 100000) return; // >100 km: base unrelated to area
-  // Ensure both ends of the trace are on screen, otherwise the line runs off
-  // the edge and looks like nothing happened. Done BEFORE drawing so geometry
-  // is computed against the final view.
-  const bounds = L.latLngBounds([base, room]);
-  if (!mapInstance.getBounds().contains(bounds)) {
-    // Guarded: expanding the view to fit the trace is OUR move, not a user pan,
-    // so it must not pop the "Search this area" pill.
-    fitBoundsGuarded(bounds.pad(0.3), { maxZoom: 15 });
-  }
+  // NOTE: we deliberately do NOT reframe the map to fit the whole trace any
+  // more. The popup is open on a pin the user just chose, and easing the camera
+  // away to show the base as well moved that pin (and its popup) under them —
+  // the "opens then jumps off-screen" complaint. Like Google Maps, opening a
+  // place keeps the camera exactly where it is; the trace simply draws, and the
+  // user can hit Re-center if they want the wider view.
 
   // Anchor each end so the line reads as a connection between two places.
   L.circleMarker(base, {
