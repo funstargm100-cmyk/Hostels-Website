@@ -149,6 +149,12 @@
           <i data-lucide="crosshair"></i>
         </button>
 
+        <!-- Fullscreen toggle: expand the map to fill the screen, and back. -->
+        <button type="button" id="mapFullscreenBtn" class="map-fullscreen" onclick="toggleMapFullscreen()"
+                title="Toggle fullscreen map" aria-label="Toggle fullscreen map" aria-pressed="false">
+          <i data-lucide="maximize-2"></i>
+        </button>
+
         <!-- Discoverability: panning now works (and is safe — results reframe only
              on request); zoom and rotation are the other supported gestures. -->
         <div class="map-hint">Drag to pan · scroll to zoom · compass or ← → to rotate</div>

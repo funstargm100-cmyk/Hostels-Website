@@ -470,6 +470,33 @@ textarea{ resize:vertical; min-height:110px; }
 .map-recenter:active{ transform:scale(.94); }
 .map-recenter svg, .map-recenter i{ width:19px; height:19px; }
 [data-theme="dark"] .map-recenter{ background:rgba(31,27,44,.96); border-color:rgba(255,255,255,.14); }
+/* Fullscreen toggle: sits just above the re-center button. */
+.map-fullscreen{
+  position:absolute; right:12px; bottom:72px; z-index:30;
+  width:40px; height:40px; display:inline-flex; align-items:center; justify-content:center;
+  background:var(--card-bg); color:var(--text-muted);
+  border:1px solid var(--border); border-radius:50%; cursor:pointer;
+  box-shadow:0 2px 8px rgba(0,0,0,.18); transition:color .15s, border-color .15s, transform .15s;
+}
+.map-fullscreen:hover{ color:var(--primary); border-color:var(--primary); }
+.map-fullscreen:active{ transform:scale(.94); }
+.map-fullscreen svg, .map-fullscreen i{ width:18px; height:18px; }
+[data-theme="dark"] .map-fullscreen{ background:rgba(31,27,44,.96); border-color:rgba(255,255,255,.14); }
+
+/* Fullscreen mode: #mapWrap escapes its column and covers the viewport. Using
+   position:fixed keeps Google Maps' feel — the page behind is untouched and the
+   map simply grows to fill the screen. */
+#mapWrap.map-fullscreen-on{
+  position:fixed; inset:0; z-index:1200; background:var(--card-bg);
+  display:block; padding:0; margin:0;
+}
+/* The map element must fill its expanded container. */
+#mapWrap.map-fullscreen-on #mapSearch{ height:100% !important; width:100% !important; border-radius:0; }
+/* Hide the page's own chrome while fullscreen so nothing competes with the map. */
+body.map-fullscreen-active{ overflow:hidden; }
+body.map-fullscreen-active .site-footer,
+body.map-fullscreen-active .footer-nav,
+body.map-fullscreen-active .results-toolbar{ display:none !important; }
 /* Tuck the hint to the bottom-left so it never fights the top-center pill. */
 #mapWrap .map-hint{ top:auto; bottom:12px; left:12px; transform:none; }
 @media (max-width:640px){

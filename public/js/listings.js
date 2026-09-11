@@ -8,6 +8,12 @@ let nearMeKm = null;
 // Set when the current fetch was triggered by "Search this area", so the map
 // renders the new pins WITHOUT reframing the camera the user just positioned.
 let pendingMapAreaSearch = false;
+// True once the user has manually moved the map (pan/zoom/rotate). While set, a
+// plain re-render (pagination, a filter tweak) must NOT reframe the camera —
+// doing so yanked the view (and every pin with it) back to the fitted bounds,
+// which is what made markers look like they "jumped far" from where the user had
+// left them. Only an explicit fresh search clears it.
+let userHasMovedMap = false;
 
 // ─── OWNER / AGENT VIEW ──────────────────────
 // Owners don't browse other people's rooms — /listings becomes their own
@@ -145,10 +151,13 @@ async function loadListings() {
     grid.className = currentView === 'list' ? '' : 'grid-2';
     grid.innerHTML = data.listings.map(renderListingCard).join('');
     if (typeof lucide !== 'undefined') lucide.createIcons();
-    // "Search this area" keeps the user's chosen viewport; every other fetch
-    // (fresh search, filter, pagination) frames the camera on the results.
+    // Frame the camera on the results ONLY when the user has not positioned the
+    // map themselves. Once they have panned/rotated/zoomed, a re-render (page 2,
+    // a filter tweak) must leave the view exactly where they put it — refitting
+    // here is what flung the pins back across the screen and read as "markers
+    // moved far from their original location".
     if (currentView === 'map') {
-      renderMapListings(!pendingMapAreaSearch);
+      renderMapListings(!pendingMapAreaSearch && !userHasMovedMap);
       pendingMapAreaSearch = false;
     }
     renderPagination(data.page, data.pages);
@@ -171,7 +180,11 @@ function renderPagination(current, total) {
 }
 
 function goPage(p) { currentPage = p; loadListings(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
-function applyFilters() { currentPage = 1; loadListings(); closeFilters(); }
+// A fresh search is the ONE case that should frame the camera on the new results,
+// so it clears the "user has positioned the map" latch. Pagination deliberately
+// does not call this: paging keeps the view the user chose.
+function beginFreshSearch() { userHasMovedMap = false; pendingMapAreaSearch = false; }
+function applyFilters() { currentPage = 1; beginFreshSearch(); loadListings(); closeFilters(); }
 function clearFilters() {
   document.getElementById('searchLocation').value = '';
   const toolbarInput = document.getElementById('toolbarSearch');
@@ -300,8 +313,12 @@ function ensureMap() {
     // zoom), reveal the pill. Programmatic moves (fitBounds/flyTo) must NOT
     // trigger it, or it would flash on every render — hence the `suppressMoveEvent`
     // guard that every camera helper we call sets for the duration of its move.
-    mapInstance.on('moveend', () => { if (!suppressMoveEvent) showSearchAreaPill(); });
-    mapInstance.on('zoomend', () => { if (!suppressMoveEvent) showSearchAreaPill(); });
+    // The same guard tells a real user move apart from our own reframing, which is
+    // what lets later renders leave the camera alone. Each handler wraps in braces
+    // so `userHasMovedMap` is set ONLY for genuine user gestures.
+    mapInstance.on('moveend', () => { if (!suppressMoveEvent) { userHasMovedMap = true; showSearchAreaPill(); } });
+    mapInstance.on('zoomend', () => { if (!suppressMoveEvent) { userHasMovedMap = true; showSearchAreaPill(); } });
+    mapInstance.on('rotate', () => { if (!suppressMoveEvent) { userHasMovedMap = true; } });
     // Keep an OPEN popup glued to its marker when the map is rotated or panned.
     // The rotate plugin only repositions popups during zoom-animated moves, so
     // without this the bubble drifts away from its pin (and can end up
@@ -670,6 +687,9 @@ function searchThisArea() {
 function recenterMap() {
   if (!mapInstance) return;
   hideSearchAreaPill();
+  // The user explicitly asked to re-frame on the results, so this is now "our"
+  // camera position, not theirs — a later re-render may re-fit again.
+  userHasMovedMap = false;
   const pts = lastFetchedListings
     .map(l => [parseFloat(l.display_lat), parseFloat(l.display_lng)])
     .filter(([a, b]) => Number.isFinite(a) && Number.isFinite(b));
@@ -680,10 +700,51 @@ function recenterMap() {
   }
 }
 
+// ─── FULLSCREEN MAP ───────────────────────────
+// Expand the map to fill the whole viewport and back. Implemented as a CSS class
+// on #mapWrap rather than the Fullscreen API on purpose: the Fullscreen API is
+// blocked in iframes (and some embedded browsers), and it would also hide the
+// app's own map controls. A class is reliable everywhere and keeps our zoom /
+// rotation / search-area controls usable while expanded.
+//
+// Leaflet renders against the container's CURRENT size, so once the wrap has
+// grown we MUST tell it to re-measure, or the tiles stay cropped at the old size.
+// Swap the fullscreen button's glyph between "expand" and "collapse".
+// lucide REPLACES the <i data-lucide> we write with an <svg>, so on the second
+// call there is no <i> left to re-scan via nodes:[btn] — we replace the whole
+// button content and re-run createIcons for the button each time.
+function updateFullscreenIcon(btn, on) {
+  btn.innerHTML = `<i data-lucide="${on ? 'minimize-2' : 'maximize-2'}"></i>`;
+  if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [btn] });
+}
+
+function toggleMapFullscreen() {
+  const wrap = document.getElementById('mapWrap');
+  const btn = document.getElementById('mapFullscreenBtn');
+  if (!wrap) return;
+  const on = !wrap.classList.contains('map-fullscreen-on');
+  wrap.classList.toggle('map-fullscreen-on', on);
+  document.body.classList.toggle('map-fullscreen-active', on);
+  if (btn) {
+    btn.setAttribute('aria-pressed', String(on));
+    btn.title = on ? 'Exit fullscreen map' : 'Toggle fullscreen map';
+    updateFullscreenIcon(btn, on);
+  }
+  // Re-measure after the browser has applied the new layout, then once more on a
+  // tick in case the transition/repaint lands later (same pattern as ensureMap).
+  const remeasure = () => mapInstance && mapInstance.invalidateSize({ animate: false });
+  requestAnimationFrame(remeasure);
+  setTimeout(remeasure, 120);
+  setTimeout(remeasure, 320);
+  // Opening fullscreen should not leave a stale "Search this area" offer showing.
+  hideSearchAreaPill();
+}
+
 // Exposed for the inline onclick handlers in listings.html (the file is a classic
 // script, so these are already global — made explicit here for clarity/robustness).
 window.searchThisArea = searchThisArea;
 window.recenterMap = recenterMap;
+window.toggleMapFullscreen = toggleMapFullscreen;
 
 // ─── BASE ↔ ROOM TRACE LINE ───────────────────
 // When a popup opens, draw a line from the pinned room to the seeker's daily
@@ -762,6 +823,9 @@ function setView(v) {
   if (v === 'map') {
     // Entering map view always frames the results and clears any stale pill.
     hideSearchAreaPill();
+    // Clicking "Map" is an explicit "show me the results on the map", so it
+    // reframes even if the map had been panned before.
+    beginFreshSearch();
     // If data hasn't arrived yet (user clicked Map immediately), load it —
     // loadListings() renders the map once the rooms come back.
     if (lastFetchedListings.length) renderMapListings(true);
@@ -770,9 +834,20 @@ function setView(v) {
     // Leaving the map drops any area search so the grid shows the full result
     // set again, the way Google Maps keeps list and map scopes independent.
     if (nearMeKm) { nearMeLat = null; nearMeLng = null; nearMeKm = null; }
+    // Never leave the page stuck in fullscreen map mode when the map itself is
+    // being switched away — the grid must be reachable.
+    const fsWrap = document.getElementById('mapWrap');
+    if (fsWrap && fsWrap.classList.contains('map-fullscreen-on')) toggleMapFullscreen();
     loadListings();
   }
 }
+
+// Escape exits fullscreen map mode (standard expectation for a fullscreen view).
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  const wrap = document.getElementById('mapWrap');
+  if (wrap && wrap.classList.contains('map-fullscreen-on')) toggleMapFullscreen();
+});
 
 // Pre-fill from URL params
 const urlParams = new URLSearchParams(location.search);

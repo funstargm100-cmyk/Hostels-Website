@@ -186,7 +186,9 @@ router.get('/', async (req, res) => {
     // jittered ones are what map markers show, so exact pins stay private.
     for (const lst of listings) {
       if (lst.location_lat != null) {
-        const jittered = applyLocationJitter(parseFloat(lst.location_lat), parseFloat(lst.location_lng));
+        // Seed with the uuid so a room always plots at the SAME private point
+        // (no teleporting between requests) — see applyLocationJitter.
+        const jittered = applyLocationJitter(parseFloat(lst.location_lat), parseFloat(lst.location_lng), lst.uuid);
         lst.display_lat = jittered.lat;
         lst.display_lng = jittered.lng;
       }
@@ -227,7 +229,9 @@ router.get('/:uuid', optionalAuth, async (req, res) => {
       FROM reviews r JOIN users u ON r.reviewer_id = u.id
       WHERE r.listing_id=$1 ORDER BY r.created_at DESC LIMIT 10`, [listing.id]);
 
-    const jittered = applyLocationJitter(parseFloat(listing.location_lat), parseFloat(listing.location_lng));
+    // Same uuid seed as the list endpoint, so the detail page shows the room at
+    // the exact spot the map pin used.
+    const jittered = applyLocationJitter(parseFloat(listing.location_lat), parseFloat(listing.location_lng), listing.uuid);
     listing.display_lat = jittered.lat;
     listing.display_lng = jittered.lng;
     delete listing.location_lat;
@@ -495,7 +499,9 @@ router.get('/:uuid/distance', async (req, res) => {
     const result = await db.query("SELECT location_lat, location_lng FROM listings WHERE uuid=$1 AND status='active'", [req.params.uuid]);
     const listing = result.rows[0];
     if (!listing || !listing.location_lat) return res.status(404).json({ error: 'Location not available' });
-    const jittered = applyLocationJitter(parseFloat(listing.location_lat), parseFloat(listing.location_lng));
+    // Seeded with the same uuid so the distance is measured to the SAME private
+    // point the map pin shows (and stays stable between calls).
+    const jittered = applyLocationJitter(parseFloat(listing.location_lat), parseFloat(listing.location_lng), req.params.uuid);
     const dist = calculateDistance(parseFloat(from_lat), parseFloat(from_lng), jittered.lat, jittered.lng);
     res.json({ distance_km: dist.toFixed(2), estimated_travel_minutes: Math.round(dist / 40 * 60) });
   } catch (err) {
