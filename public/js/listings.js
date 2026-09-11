@@ -434,6 +434,14 @@ function ensureMap() {
   return mapInstance;
 }
 
+// Escape a listing title before it goes into a marker's HTML label. Titles are
+// user-supplied, so a stray < or & must not become markup.
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
 // fitToResults:
 //   true  — a fresh search / first map open: frame the camera on the results and
 //           remember that area as "the searched area".
@@ -455,9 +463,23 @@ function renderMapListings(fitToResults = true) {
     const lat = parseFloat(l.display_lat), lng = parseFloat(l.display_lng);
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
     pts.push([lat, lng]);
+    // Each pin carries the room NAME as a label, so the map can be read at a
+    // glance instead of having to open every popup to find out which room a pin
+    // is. It is a PERMANENT tooltip rather than a custom divIcon on purpose: the
+    // default marker keeps Leaflet's exact anchor maths (the teardrop tip on the
+    // coordinate, which we have already fought hard to get right on a rotated
+    // map), while Leaflet positions the little label box for us.
+    const marker = L.marker([lat, lng]);
+    const roomName = (l.title && String(l.title).trim()) || 'Room';
+    marker.bindTooltip(escapeHtml(roomName), {
+      permanent: true,
+      direction: 'bottom',
+      className: 'map-pin-label',
+      // Nudge the label clear of the teardrop so it does not sit on the glyph.
+      offset: [0, 6]
+    });
     // Popups reuse the card renderer but exclude amenities to keep the popup
     // tidy and focused, with details & icons neatly aligned.
-    const marker = L.marker([lat, lng]);
     // Remember which listing this pin is for so the trace can be drawn back to
     // the seeker's daily base. Coordinates shown are the jittered ones (already
     // in lat/lng), matching what the marker itself renders.
@@ -779,12 +801,12 @@ async function drawTraceToBase(marker) {
   if (!b || !b.lat || !b.lng) return;
   const base = L.latLng(b.lat, b.lng);
   if (room.distanceTo(base) > 100000) return; // >100 km: base unrelated to area
-  // NOTE: we deliberately do NOT reframe the map to fit the whole trace any
-  // more. The popup is open on a pin the user just chose, and easing the camera
-  // away to show the base as well moved that pin (and its popup) under them —
-  // the "opens then jumps off-screen" complaint. Like Google Maps, opening a
-  // place keeps the camera exactly where it is; the trace simply draws, and the
-  // user can hit Re-center if they want the wider view.
+  // The camera is NOT reframed just because a popup opened — moving it under the
+  // user is the "opens then jumps off-screen" bug. BUT the base is often outside
+  // the view (especially on a phone, where the map is only ~55vh tall): the trace
+  // is then drawn entirely off-screen and the user sees nothing at all, which
+  // reads as "the line was never drawn". So: draw first, then bring the WHOLE
+  // trace into view only when an end is actually off-screen.
 
   // Anchor each end so the line reads as a connection between two places.
   L.circleMarker(base, {
@@ -807,11 +829,28 @@ async function drawTraceToBase(marker) {
     if (token !== traceRequestToken) return; // superseded while we awaited
     if (Array.isArray(coords) && coords.length > 1) {
       drawTracePath(coords, true);
+      revealTraceIfOffscreen(base, room);
       return;
     }
   } catch { /* fall through to the straight line */ }
   if (token !== traceRequestToken) return;
   drawTracePath([base, room], false);
+  revealTraceIfOffscreen(base, room);
+}
+
+// If either end of the trace sits outside the current viewport, ease the camera
+// out just far enough to show the whole line — then re-fit the open popup, so
+// bringing the base into view cannot push the popup off-screen. When both ends
+// are already visible (the usual desktop case) this does nothing at all, so the
+// camera is never moved needlessly.
+function revealTraceIfOffscreen(base, room) {
+  if (!mapInstance) return;
+  const view = mapInstance.getBounds();
+  const offscreen = !view.contains(base) || !view.contains(room);
+  if (!offscreen) return;
+  fitBoundsGuarded(L.latLngBounds([base, room]).pad(0.25), { maxZoom: 15 });
+  // fitBounds moves the map, which can slide the open popup past an edge.
+  ensurePopupVisible();
 }
 
 function setView(v) {
