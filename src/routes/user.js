@@ -17,7 +17,7 @@ router.get('/profile', requireAuth, async (req, res) => {
 
 // PUT /api/user/profile  — edit name / email / phone / base location
 router.put('/profile', requireAuth, async (req, res) => {
-  const { name, email, phone, base_location } = req.body;
+  const { name, email, phone, base_location, base_lat, base_lng } = req.body;
   if (!name || !name.trim() || name.trim().length < 2)
     return res.status(400).json({ error: 'Please enter your full name' });
   const normEmail = (email || '').trim().toLowerCase();
@@ -36,12 +36,22 @@ router.put('/profile', requireAuth, async (req, res) => {
       if (row.email === normEmail) return res.status(409).json({ error: 'That email is already used by another account' });
       if (normPhone && row.phone === normPhone) return res.status(409).json({ error: 'That phone number is already used by another account' });
     }
+    // Keep stored coordinates in sync when the seeker edits their base location:
+    // if coordinates are provided use them, otherwise drop them when the address changes
+    // (they would no longer match the new address).
+    const lat = base_lat !== undefined && base_lat !== null && base_lat !== '' ? parseFloat(base_lat) : null;
+    const lng = base_lng !== undefined && base_lng !== null && base_lng !== '' ? parseFloat(base_lng) : null;
+    const addressChanged = (base_location || '').trim() !== '';
+    const coordClause = isSeeker && addressChanged
+        ? 'base_lat=$7, base_lng=$8'
+        : 'base_lat = CASE WHEN $6 AND $4 IS DISTINCT FROM base_location THEN NULL ELSE base_lat END, base_lng = CASE WHEN $6 AND $4 IS DISTINCT FROM base_location THEN NULL ELSE base_lng END';
     const result = await db.query(
       `UPDATE users SET name=$1, email=$2, phone=$3,
-              base_location = CASE WHEN $6 THEN $4 ELSE base_location END
+              base_location = CASE WHEN $6 THEN $4 ELSE base_location END,
+              ${coordClause}
        WHERE id=$5
        RETURNING id, uuid, name, email, phone, role, is_verified, is_kyc_verified, wallet_balance, avatar, base_location, base_lat, base_lng, created_at`,
-      [name.trim(), normEmail, normPhone || null, (base_location || '').trim() || null, req.session.user.id, isSeeker]);
+      [name.trim(), normEmail, normPhone || null, (base_location || '').trim() || null, req.session.user.id, isSeeker, lat, lng]);
     res.json({ message: 'Profile updated', user: result.rows[0] });
   } catch (err) {
     if (err.code === '23505') return res.status(409).json({ error: 'That email or phone number is already in use' });

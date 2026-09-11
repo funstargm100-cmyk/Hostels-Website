@@ -231,6 +231,7 @@ function ensureMap() {
 }
 
 function renderMapListings() {
+  const b = window.__userBaseLoc;
   const map = ensureMap();
   if (!map) return;
   mapMarkersLayer.clearLayers();
@@ -238,22 +239,15 @@ function renderMapListings() {
     map.setView([5.6037, -0.1870], 12);
     return;
   }
-  const b = window.__userBaseLoc;
   const pts = [];
   lastFetchedListings.forEach(l => {
     const lat = parseFloat(l.display_lat), lng = parseFloat(l.display_lng);
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
     pts.push([lat, lng]);
-    let distHtml = '';
-    if (b?.lat && b?.lng && l.location_lat && l.location_lng) {
-      const km = haversineKm(b.lat, b.lng, l.location_lat, l.location_lng);
-      if (km <= 100) {
-        const t = estimateTravel(km);
-        distHtml = `<div style="margin-top:.35rem;color:#555">${t.dist} from your base · ~${t.walk} walk · ~${t.drive} drive</div>`;
-      }
-    }
-    L.marker([lat, lng]).addTo(mapMarkersLayer)
-      .bindPopup(`<a href="/listing?id=${l.uuid}" style="font-weight:700">${l.title}</a><br/>GHS ${Number(l.price_per_head).toLocaleString()}/mo · ${l.location_area || ''}${distHtml}`);
+    // Popups reuse the same card renderer as the grid view, so the thumbnail,
+    // badges, amenities and distance line all match. Clicking opens the room.
+    const marker = L.marker([lat, lng]).addTo(mapMarkersLayer);
+    marker.bindPopup(() => renderListingCard(l), { maxWidth: 280, minWidth: 240 });
   });
   if (pts.length) {
     map.fitBounds(L.latLngBounds(pts).pad(0.25), { maxZoom: 15 });
