@@ -218,15 +218,20 @@ function ensureMap() {
   if (!el) return null;
   if (!mapInstance) {
     // Pan is on by default (drag, touch-drag, wheel, pinch-zoom). Rotation needs
-    // the leaflet-rotate plugin: `rotate` turns it on, `touchRotate` allows a
-    // two-finger twist, and `shiftKeyRotate` (plugin default) allows Shift+drag.
-    // `rotateControl` renders the compass button that resets/snaps the bearing.
+    // the leaflet-rotate plugin: `rotate` turns it on and `rotateControl` renders
+    // the compass. We deliberately leave `touchRotate` (two-finger twist) and
+    // `shiftKeyRotate` (Shift+drag) OFF: both compete with the plain pan gesture,
+    // and on a trackpad or phone a normal swipe gets swallowed as a rotation,
+    // which reads as "panning is broken". Rotation is still available two ways
+    // that cannot be confused with a pan — drag the compass control, or turn the
+    // map with the ← / → keys while it is focused.
     mapInstance = L.map(el, {
       scrollWheelZoom: true,
+      dragging: true,
       rotate: true,
       bearing: 0,
-      touchRotate: true,
-      shiftKeyRotate: true,
+      touchRotate: false,
+      shiftKeyRotate: false,
       rotateControl: { closeOnZeroBearing: false }
     }).setView([5.6037, -0.1870], 12); // Accra default
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -235,6 +240,19 @@ function ensureMap() {
     mapMarkersLayer = L.layerGroup().addTo(mapInstance);
     // A single reusable layer for the base↔room trace line, drawn on popup open.
     mapTraceLayer = L.layerGroup().addTo(mapInstance);
+    // Rotate with the ← / → keys once the map has focus. This is an explicit
+    // gesture that can never be mistaken for a pan, unlike Shift+drag or a
+    // two-finger twist, which is why those two are disabled above.
+    if (typeof mapInstance.setBearing === 'function') {
+      mapInstance.getContainer().setAttribute('tabindex', '0');
+      mapInstance.getContainer().addEventListener('keydown', (e) => {
+        if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+        e.preventDefault();
+        const step = e.key === 'ArrowLeft' ? -15 : 15;
+        const next = (((mapInstance.getBearing?.() || 0) + step) % 360 + 360) % 360;
+        mapInstance.setBearing(next);
+      });
+    }
     // Exposed for QA/troubleshooting (theme checks, view assertions, driving the
     // map from tools). Harmless in production and far easier than reverse-
     // engineering internal Leaflet state from the DOM.
