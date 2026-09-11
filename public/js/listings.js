@@ -524,10 +524,17 @@ function renderMapListings(fitToResults = true) {
     // closure guarantees we always trace the pin that was actually clicked.
     marker.on('popupopen', (e) => {
       const el = e.popup.getElement();
-      if (el && typeof lucide !== 'undefined') lucide.createIcons({ nodes: [el] });
+      if (el && typeof lucide !== 'undefined') lucide.createIcons();
       // The plugin only re-anchors popups during zoom-animated moves; nudge once
       // now so the very first frame is already in the right place.
-      requestAnimationFrame(() => { if (marker.isPopupOpen()) marker.getPopup().update(); });
+      requestAnimationFrame(() => {
+        if (marker.isPopupOpen()) {
+          marker.getPopup().update();
+          // update() rebuilds the popup DOM (see renderPopupIcons above) — re-render
+          // the icons it just wiped, or the card opens with dead <i> placeholders.
+          renderPopupIcons();
+        }
+      });
       // The photo inside the card grows once it loads, which can push a popup
       // near an edge out of view. Re-fit whenever that happens.
       const img = el && el.querySelector('img');
@@ -552,6 +559,16 @@ function renderMapListings(fitToResults = true) {
 // anchor maths (update()) once the gesture settles. Coalesced into a rAF so a
 // continuous drag stays smooth instead of updating every frame.
 let popupUpdateRaf = null;
+// Leaflet's popup.update() re-runs the bound content FUNCTION and REPLACES the
+// popup DOM. Any lucide icons that had been rendered are destroyed and come back
+// as raw <i data-lucide> tags — which looked like "icons missing until you toggle
+// the theme" (the toggle just re-runs createIcons over the whole document).
+// Every update() call must therefore be followed by a re-render.
+function renderPopupIcons() {
+  const popup = mapInstance && mapInstance._popup;
+  const el = popup && popup.getElement();
+  if (el && typeof lucide !== 'undefined') lucide.createIcons();
+}
 function deferPopupUpdate() {
   if (popupUpdateRaf !== null) return;
   popupUpdateRaf = requestAnimationFrame(() => {
@@ -560,6 +577,7 @@ function deferPopupUpdate() {
     const popup = mapInstance._popup;
     if (popup && popup.isOpen()) {
       popup.update();
+      renderPopupIcons();
       // Rotating or panning can swing a tall popup past an edge even though it fit
       // when opened, so re-run the same fit that openPopupSafely uses. Skipped
       // while WE are the ones moving, so our own corrective pan cannot recurse.
@@ -920,8 +938,9 @@ if (urlParams.get('occupancy')) {
 // one) so a stale cache can't expose the browse view.
 (async function initListingsPage() {
   let role = ownerUser?.role;
+  let verified = null;
   try {
-    const verified = await initNavAuth();
+    verified = await initNavAuth();
     if (verified?.role) role = verified.role;
   } catch { /* fall back to the cached role */ }
 
@@ -930,15 +949,22 @@ if (urlParams.get('occupancy')) {
     loadOwnerListingsView();
     if (window.renderFooterNav) window.renderFooterNav();
   } else {
-    // Fetch the seeker's daily base location once — used for distance/time lines.
-    if (localStorage.getItem('token')) {
-      try {
-        const me = await api.get('/api/auth/me');
-        if (me?.user?.base_lat && me?.user?.base_lng) {
-          window.__userBaseLoc = { lat: me.user.base_lat, lng: me.user.base_lng };
-        }
-      } catch { /* distances just won't show */ }
-    }
+    // Fetch the seeker's daily base location once — used for distance/time lines
+    // and the base↔room trace. REUSE the fresh user initNavAuth() already fetched
+    // instead of calling /api/auth/me a second time: the auth rate limiter counts
+    // both, and the double call was burning the 20-requests-per-15-minutes budget
+    // in half on every page load. When a phone hits that limit (or is briefly
+    // offline), fall back to the cached user so the trace still has a base —
+    // better a slightly stale base than no trace line at all.
+    const base = (verified && verified.base_lat && verified.base_lng)
+      ? { lat: verified.base_lat, lng: verified.base_lng }
+      : (() => {
+          try {
+            const c = JSON.parse(localStorage.getItem('user') || 'null');
+            return (c && c.base_lat && c.base_lng) ? { lat: c.base_lat, lng: c.base_lng } : null;
+          } catch { return null; }
+        })();
+    if (base) window.__userBaseLoc = base;
     loadListings();
   }
 })();

@@ -24,7 +24,7 @@ app.use((req, res, next) => {
 });
 
 // Rate limiting
-const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, message: { error: 'Too many attempts, try again later.' } });
+const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 100, message: { error: 'Too many attempts, try again later.' } });
 const generalLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 300 });
 app.use('/api/auth', authLimiter);
 app.use('/api', generalLimiter);

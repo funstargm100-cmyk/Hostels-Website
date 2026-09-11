@@ -152,16 +152,16 @@ async function initNavAuth() {
     applyRoleToLogo(user?.role);
     return user;
   } catch {
-    // A transient failure (offline, 429 rate-limit, 5xx) must not strand a
-    // signed-in user on the visitor page. Capture the cached role BEFORE clearing
-    // storage, then point the logo at their home. A genuinely dead session (401)
-    // has already been handled by api.request -> signOutAndRedirect.
+    // A transient failure (offline, 429 rate-limit, 5xx) must NOT log the user
+    // out — only a real auth rejection may do that, and a 401 has already been
+    // handled by api.request -> signOutAndRedirect before we ever get here.
+    // Previously this cleared the token, so hitting the auth rate limit (or a
+    // flaky mobile connection) silently signed people out; anything that reads
+    // the user afterwards (e.g. the map's base-location trace) lost their data.
     const cached = (() => { try { return JSON.parse(localStorage.getItem('user') || 'null'); } catch { return null; } })();
-    localStorage.removeItem('user');
-    localStorage.removeItem('token');
-    setNavAuth(false);
+    setNavAuth(!!(cached && localStorage.getItem('token')));
     applyRoleToLogo(cached?.role || null);
-    return null;
+    return cached;
   }
 }
 
