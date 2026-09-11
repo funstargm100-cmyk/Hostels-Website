@@ -33,7 +33,7 @@ const cx = box.x + box.width / 2, cy = box.y + box.height / 2;
 
 const before = await page.evaluate(() => { const c = window.__mapInstance.getCenter(); return { lat: +c.lat.toFixed(6), lng: +c.lng.toFixed(6) }; });
 
-// ONE-FINGER touch pan — the gesture a phone user makes
+// ONE-FINGER touch drag — panning is now EXCLUDED, so the center must NOT move.
 await page.touchscreen.tap(cx, cy).catch(() => { });
 await page.waitForTimeout(300);
 
@@ -58,7 +58,9 @@ const after = await page.evaluate(async ([cx, cy]) => {
 
 const touchOut = {
   before, after,
-  touchPanMoved: before.lat !== after.lat || before.lng !== after.lng
+  // Pan is intentionally disabled: a one-finger drag must leave the map put.
+  touchPanMoved: before.lat !== after.lat || before.lng !== after.lng,
+  touchPanExcluded: before.lat === after.lat && before.lng === after.lng
 };
 
 // Does the container carry the touch classes Leaflet needs?
@@ -68,11 +70,15 @@ touchOut.containerTouchClasses = await page.evaluate(() => document.querySelecto
 touchOut.handlers = await page.evaluate(() => {
   const m = window.__mapInstance;
   return {
+    // Expect FALSE — map-surface panning is turned off.
     draggingEnabled: m.dragging?.enabled(),
     touchRotate: m.options.touchRotate,
     rotate: m.options.rotate,
-    // plugin gestures
+    scrollWheelZoom: m.options.scrollWheelZoom,
+    touchZoom: m.options.touchZoom,
+    // rotation gestures must still be wired up, pan removed or not
     hasRotateHandler: !!m._rotate,
+    canRotate: typeof m.setBearing === 'function',
     dragHandlerTypes: Object.values(m._handlers || {}).map(h => h?.constructor?.name)
   };
 });

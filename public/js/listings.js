@@ -217,17 +217,24 @@ function ensureMap() {
   const el = document.getElementById('mapSearch');
   if (!el) return null;
   if (!mapInstance) {
-    // Pan is on by default (drag, touch-drag, wheel, pinch-zoom). Rotation needs
-    // the leaflet-rotate plugin: `rotate` turns it on and `rotateControl` renders
-    // the compass. We deliberately leave `touchRotate` (two-finger twist) and
-    // `shiftKeyRotate` (Shift+drag) OFF: both compete with the plain pan gesture,
-    // and on a trackpad or phone a normal swipe gets swallowed as a rotation,
-    // which reads as "panning is broken". Rotation is still available two ways
-    // that cannot be confused with a pan — drag the compass control, or turn the
-    // map with the ← / → keys while it is focused.
+    // Pan is intentionally EXCLUDED: `dragging: false` (and the touch equivalent
+    // below) stops the map surface from being dragged around, so the view stays
+    // where the listings are plotted instead of sliding away under a stray swipe.
+    // What we DO keep:
+    //   • zoom            — scrollWheelZoom + pinch, plus the +/- control
+    //   • marker drag     — pins remain draggable (their own `draggable` option,
+    //                       unaffected by disabling map panning)
+    //   • rotation        — the leaflet-rotate plugin: `rotate` turns it on and
+    //                       `rotateControl` renders the compass. We leave
+    //                       `touchRotate` (two-finger twist) and `shiftKeyRotate`
+    //                       (Shift+drag) OFF so a rotation can never be mistaken
+    //                       for a pan. Rotation is available by dragging the
+    //                       compass control, or with the ← / → keys on focus.
     mapInstance = L.map(el, {
       scrollWheelZoom: true,
-      dragging: true,
+      dragging: false,
+      touchZoom: true,
+      tap: false,
       rotate: true,
       bearing: 0,
       touchRotate: false,
@@ -242,7 +249,8 @@ function ensureMap() {
     mapTraceLayer = L.layerGroup().addTo(mapInstance);
     // Rotate with the ← / → keys once the map has focus. This is an explicit
     // gesture that can never be mistaken for a pan, unlike Shift+drag or a
-    // two-finger twist, which is why those two are disabled above.
+    // two-finger twist, which is why those two are disabled above. Rotation is
+    // independent of panning, so it still works now that `dragging` is off.
     if (typeof mapInstance.setBearing === 'function') {
       mapInstance.getContainer().setAttribute('tabindex', '0');
       mapInstance.getContainer().addEventListener('keydown', (e) => {
