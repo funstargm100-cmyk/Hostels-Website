@@ -217,7 +217,18 @@ function ensureMap() {
   const el = document.getElementById('mapSearch');
   if (!el) return null;
   if (!mapInstance) {
-    mapInstance = L.map(el, { scrollWheelZoom: true }).setView([5.6037, -0.1870], 12); // Accra default
+    // Pan is on by default (drag, touch-drag, wheel, pinch-zoom). Rotation needs
+    // the leaflet-rotate plugin: `rotate` turns it on, `touchRotate` allows a
+    // two-finger twist, and `shiftKeyRotate` (plugin default) allows Shift+drag.
+    // `rotateControl` renders the compass button that resets/snaps the bearing.
+    mapInstance = L.map(el, {
+      scrollWheelZoom: true,
+      rotate: true,
+      bearing: 0,
+      touchRotate: true,
+      shiftKeyRotate: true,
+      rotateControl: { closeOnZeroBearing: false }
+    }).setView([5.6037, -0.1870], 12); // Accra default
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19, attribution: '&copy; OpenStreetMap contributors'
     }).addTo(mapInstance);
