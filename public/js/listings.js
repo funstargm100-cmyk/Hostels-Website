@@ -244,10 +244,10 @@ function renderMapListings() {
     const lat = parseFloat(l.display_lat), lng = parseFloat(l.display_lng);
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
     pts.push([lat, lng]);
-    // Popups reuse the same card renderer as the grid view, so the thumbnail,
-    // badges, amenities and distance line all match. Clicking opens the room.
+    // Popups reuse the card renderer but exclude amenities to keep the popup
+    // tidy and focused, with details & icons neatly aligned.
     const marker = L.marker([lat, lng]).addTo(mapMarkersLayer);
-    marker.bindPopup(() => renderListingCard(l), { maxWidth: 260, minWidth: 220, autoPanPadding: [12, 12] });
+    marker.bindPopup(() => renderListingCard(l, { isPopup: true }), { maxWidth: 280, minWidth: 240, autoPanPadding: [16, 16] });
   });
   // Popup content is injected lazily by Leaflet, so icons rendered inside it
   // (the distance "route" icon, map-pin, etc.) never got lucide.createIcons()

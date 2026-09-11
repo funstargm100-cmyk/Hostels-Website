@@ -241,7 +241,8 @@ function renderDistanceLine(l) {
 }
 
 // ─── LISTING CARD RENDERER ────────────────────────────────────────────────────
-function renderListingCard(l) {
+function renderListingCard(l, options = {}) {
+  const isPopup = options && options.isPopup;
   const img = l.primary_image ? l.primary_image : '/images/placeholder.jpg';
   const verified = l.owner_verified ? '<span class="badge badge-verified"><i data-lucide="badge-check" style="width:11px;height:11px"></i> Verified</span>' : '';
   const featured = l.is_featured ? '<span class="badge badge-featured"><i data-lucide="star" style="width:11px;height:11px"></i> Featured</span>' : '';
@@ -257,6 +258,9 @@ function renderListingCard(l) {
   const locParts = String(l.location_area || '').split(',').map(s => s.trim()).filter(Boolean);
   const locText = locParts.slice(0, 2).join(', ');
 
+  // Amenities are excluded from map popup cards to keep them sleek, focused, and clean
+  const amenitiesHtml = isPopup ? '' : `<div class="amenity-icons">${amenityIcons.map(a => `<span class="amenity-icon">${a}</span>`).join('')}</div>`;
+
   return `
     <div class="card" onclick="location.href='/listing?id=${l.uuid}'" style="cursor:pointer">
       <div style="position:relative">
@@ -269,14 +273,14 @@ function renderListingCard(l) {
         <div class="card-title">${l.title}</div>
         <div class="card-location"><i data-lucide="map-pin"></i> <span>${locText}</span></div>
         ${renderDistanceLine(l)}
-        <div class="amenity-icons">${amenityIcons.map(a => `<span class="amenity-icon">${a}</span>`).join('')}</div>
+        ${amenitiesHtml}
       </div>
       <div class="card-footer">
         <div>
           <div class="card-price">GHS ${Number(l.price_per_head).toLocaleString()}</div>
           ${perHead}
         </div>
-        <span class="tag">${l.occupancy_type}-in-1</span>
+        <span class="tag"><i data-lucide="users" style="width:12px;height:12px;margin-right:2px"></i> ${l.occupancy_type}-in-1</span>
       </div>
     </div>`;
 }
