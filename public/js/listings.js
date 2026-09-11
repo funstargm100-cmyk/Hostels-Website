@@ -883,14 +883,20 @@ async function drawTraceToBase(marker) {
   // (or replaced) cannot draw a stale route over the current one.
   const token = ++traceRequestToken;
   try {
+    // Request the route room → base: OSRM returns geometry in request order,
+    // so the polyline and arrows read room → base (the direction the user asked
+    // for), keeping the right-hand-traffic offset on the correct side.
     const params = new URLSearchParams({
-      from_lat: base.lat, from_lng: base.lng,
-      to_lat: room.lat, to_lng: room.lng
+      from_lat: room.lat, from_lng: room.lng,
+      to_lat: base.lat, to_lng: base.lng
     });
     const data = await api.get('/api/geo/route?' + params.toString());
     const coords = data?.route?.coords;
     if (token !== traceRequestToken) return; // superseded while we awaited
     if (Array.isArray(coords) && coords.length > 1) {
+      // OSRM returned geometry in room → base order (that's how we requested
+      // it), so the polyline and arrowheads read room → base and the
+      // right-hand-traffic offset sits on the correct side of the road.
       drawTracePath(coords, true);
       revealTraceIfOffscreen(base, room);
       return;

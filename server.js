@@ -15,7 +15,10 @@ app.set('trust proxy', 1);
 app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public'), {
+  // Always revalidate JS/CSS so phones pick up new code immediately
+  setHeaders: (res) => res.set('Cache-Control', 'no-cache')
+}));
 
 // Stub req.session so route files that reference req.session.user still work
 app.use((req, res, next) => {
@@ -38,18 +41,24 @@ app.use('/api/user', require('./src/routes/user'));
 app.use('/api/geo', require('./src/routes/geo'));
 app.use('/api/payments', require('./src/routes/payments'));
 
-// Serve frontend pages
+// Serve frontend pages. HTML is marked no-cache so phones always fetch the
+// latest markup (and therefore the latest cache-busted JS URLs) instead of
+// replaying a stale copy from the browser cache.
 const pages = ['', 'listings', 'listing', 'post-ad', 'edit-listing', 'login', 'signup', 'reset-password', 'dashboard', 'admin', 'about', 'contact', 'seekers', 'agents'];
+const sendNoCache = (res, file) => {
+  res.set('Cache-Control', 'no-cache');
+  res.sendFile(path.join(__dirname, 'public', file));
+};
 pages.forEach(page => {
   const route = page ? `/${page}` : '/';
   const file = page ? `${page}.html` : 'index.html';
-  app.get(route, (req, res) => res.sendFile(path.join(__dirname, 'public', file)));
+  app.get(route, (req, res) => sendNoCache(res, file));
 });
 
 // Role-tailored home pages (served as real files — no JS view switching)
-app.get('/home-visitor', (req, res) => res.sendFile(path.join(__dirname, 'public', 'home-visitor.html')));
-app.get('/home-seeker', (req, res) => res.sendFile(path.join(__dirname, 'public', 'home-seeker.html')));
-app.get('/home-agent', (req, res) => res.sendFile(path.join(__dirname, 'public', 'home-agent.html')));
+app.get('/home-visitor', (req, res) => sendNoCache(res, 'home-visitor.html'));
+app.get('/home-seeker', (req, res) => sendNoCache(res, 'home-seeker.html'));
+app.get('/home-agent', (req, res) => sendNoCache(res, 'home-agent.html'));
 
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 
