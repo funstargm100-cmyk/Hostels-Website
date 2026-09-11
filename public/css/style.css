@@ -441,6 +441,42 @@ textarea{ resize:vertical; min-height:110px; }
 }
 [data-theme="dark"] .map-hint{ background:rgba(0,0,0,.72); }
 @media (max-width:640px){ .map-hint{ font-size:.66rem; padding:.25rem .55rem; } }
+
+/* ── Google-Maps-style map controls ─────────────────────── */
+/* "Search this area" pill: top-center, hidden until the user moves the map.
+   Slides down into place, the way Google Maps reveals it after a pan. */
+.map-pill{
+  position:absolute; top:10px; left:50%;
+  transform:translate(-50%,-140%); opacity:0; pointer-events:none;
+  display:inline-flex; align-items:center; gap:.4rem;
+  background:var(--card-bg); color:var(--text); font-size:.8rem; font-weight:600;
+  padding:.45rem .9rem; border:1px solid var(--border); border-radius:999px;
+  box-shadow:0 4px 14px rgba(0,0,0,.18); cursor:pointer; z-index:30;
+  transition:transform .22s ease, opacity .22s ease;
+}
+.map-pill.show{ transform:translate(-50%,0); opacity:1; pointer-events:auto; }
+.map-pill:hover{ border-color:var(--primary); color:var(--primary); }
+.map-pill svg, .map-pill i{ width:15px; height:15px; }
+[data-theme="dark"] .map-pill{ background:rgba(31,27,44,.96); border-color:rgba(255,255,255,.14); }
+/* Re-center crosshair: bottom-right, mirroring Google Maps' location button. */
+.map-recenter{
+  position:absolute; right:12px; bottom:24px; z-index:30;
+  width:40px; height:40px; display:inline-flex; align-items:center; justify-content:center;
+  background:var(--card-bg); color:var(--text-muted);
+  border:1px solid var(--border); border-radius:50%; cursor:pointer;
+  box-shadow:0 2px 8px rgba(0,0,0,.18); transition:color .15s, border-color .15s, transform .15s;
+}
+.map-recenter:hover{ color:var(--primary); border-color:var(--primary); }
+.map-recenter:active{ transform:scale(.94); }
+.map-recenter svg, .map-recenter i{ width:19px; height:19px; }
+[data-theme="dark"] .map-recenter{ background:rgba(31,27,44,.96); border-color:rgba(255,255,255,.14); }
+/* Tuck the hint to the bottom-left so it never fights the top-center pill. */
+#mapWrap .map-hint{ top:auto; bottom:12px; left:12px; transform:none; }
+@media (max-width:640px){
+  #mapWrap .map-hint{ display:none; }
+  .map-pill{ font-size:.75rem; padding:.4rem .75rem; }
+  .map-recenter{ bottom:20px; }
+} }
 #mapSearch .map-price-pin.price-low{ background:var(--teal, #0e7490); }
 #mapSearch .map-price-pin.price-high{ background:var(--brick, #C1633A); }
 /* Keep map popup cards compact, modern, and perfectly aligned */

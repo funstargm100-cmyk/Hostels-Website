@@ -2,6 +2,12 @@ let currentPage = 1;
 let currentView = 'grid';
 let nearMeLat = null;
 let nearMeLng = null;
+// Radius (km) for the proximity filter. "Near Me" leaves it null (backend default
+// 5km); "Search this area" sets it to the radius covering the current viewport.
+let nearMeKm = null;
+// Set when the current fetch was triggered by "Search this area", so the map
+// renders the new pins WITHOUT reframing the camera the user just positioned.
+let pendingMapAreaSearch = false;
 
 // ─── OWNER / AGENT VIEW ──────────────────────
 // Owners don't browse other people's rooms — /listings becomes their own
@@ -110,7 +116,9 @@ function getFilters() {
   if (nearMeLat && nearMeLng) {
     f.near_lat = nearMeLat;
     f.near_lng = nearMeLng;
-    f.near_km = 5; // 5km radius
+    // "Near Me" uses a fixed 5km radius; "Search this area" sets nearMeKm to the
+    // radius that covers the current viewport.
+    f.near_km = nearMeKm || 5;
   }
   return f;
 }
@@ -137,7 +145,12 @@ async function loadListings() {
     grid.className = currentView === 'list' ? '' : 'grid-2';
     grid.innerHTML = data.listings.map(renderListingCard).join('');
     if (typeof lucide !== 'undefined') lucide.createIcons();
-    if (currentView === 'map') renderMapListings();
+    // "Search this area" keeps the user's chosen viewport; every other fetch
+    // (fresh search, filter, pagination) frames the camera on the results.
+    if (currentView === 'map') {
+      renderMapListings(!pendingMapAreaSearch);
+      pendingMapAreaSearch = false;
+    }
     renderPagination(data.page, data.pages);
   } catch (e) {
     document.getElementById('resultsCount').textContent = 'Could not load rooms';
@@ -174,7 +187,7 @@ function clearFilters() {
   document.getElementById('furnishedFilter').value = '';
   document.getElementById('bathroomFilter').value = '';
   document.getElementById('sortSelect').value = '';
-  nearMeLat = null; nearMeLng = null;
+  nearMeLat = null; nearMeLng = null; nearMeKm = null;
   const btn = document.getElementById('nearMeBtn');
   if (btn) { btn.classList.remove('btn-primary'); btn.classList.add('btn-ghost'); btn.innerHTML = '<i data-lucide="navigation"></i> Near Me'; if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [btn] }); }
   applyFilters();
@@ -184,7 +197,7 @@ function filterNearMe() {
   const btn = document.getElementById('nearMeBtn');
   if (nearMeLat && nearMeLng) {
     // Toggle off
-    nearMeLat = null; nearMeLng = null;
+    nearMeLat = null; nearMeLng = null; nearMeKm = null;
     if (btn) { btn.classList.remove('btn-primary'); btn.classList.add('btn-ghost'); btn.innerHTML = '<i data-lucide="navigation"></i> Near Me'; if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [btn] }); }
     applyFilters();
     return;
@@ -212,35 +225,41 @@ let mapMarkersLayer = null;
 let mapTraceLayer = null; // holds the road trace line from a room to the seeker's base
 let traceRequestToken = 0; // bumped per trace so a slow route response can't draw stale
 let lastFetchedListings = [];
+// True while WE move the camera (fitBounds/flyTo), so the moveend/zoomend
+// handlers can tell our programmatic moves apart from a genuine user pan/zoom.
+let suppressMoveEvent = false;
+function setSuppress(v) { suppressMoveEvent = v; }
+// Debounce so a continuous drag only reveals the pill once the user settles.
+let searchAreaPillTimer = null;
 
 function ensureMap() {
   const el = document.getElementById('mapSearch');
   if (!el) return null;
   if (!mapInstance) {
-    // Pan is intentionally EXCLUDED: `dragging: false` (and the touch equivalent
-    // below) stops the map surface from being dragged around, so the view stays
-    // where the listings are plotted instead of sliding away under a stray swipe.
-    // What we DO keep:
-    //   • zoom            — scrollWheelZoom + pinch, plus the +/- control
-    //   • marker drag     — pins remain draggable (their own `draggable` option,
-    //                       unaffected by disabling map panning)
-    //   • rotation        — the leaflet-rotate plugin: `rotate` turns it on and
-    //                       `rotateControl` renders the compass. We leave
-    //                       `touchRotate` (two-finger twist) and `shiftKeyRotate`
-    //                       (Shift+drag) OFF so a rotation can never be mistaken
-    //                       for a pan. Rotation is available by dragging the
-    //                       compass control, or with the ← / → keys on focus.
+    // Modelled on Google Maps' map search:
+    //   • Panning is ALLOWED — it is the primary gesture. Instead of fighting it,
+    //     we make it safe: moving the map never silently drops results, it just
+    //     reveals a "Search this area" pill the user clicks to re-query, exactly
+    //     like Google Maps (and the "Map Search by Area" pattern in enterprise
+    //     GIS UIs).
+    //   • Zoom     — scroll wheel + pinch + the +/- control.
+    //   • Rotation — the leaflet-rotate plugin's compass, plus ← / → keys. We
+    //     keep `touchRotate`/`shiftKeyRotate` OFF so a rotation can never be
+    //     mistaken for a pan.
     mapInstance = L.map(el, {
       scrollWheelZoom: true,
-      dragging: false,
+      dragging: true,
       touchZoom: true,
-      tap: false,
+      // The zoom control is placed top-right, the same corner Google Maps uses
+      // for its secondary map controls (recenter sits bottom-right via CSS).
+      zoomControl: false,
       rotate: true,
       bearing: 0,
       touchRotate: false,
       shiftKeyRotate: false,
       rotateControl: { closeOnZeroBearing: false }
     }).setView([5.6037, -0.1870], 12); // Accra default
+    L.control.zoom({ position: 'topright' }).addTo(mapInstance);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19, attribution: '&copy; OpenStreetMap contributors'
     }).addTo(mapInstance);
@@ -249,8 +268,7 @@ function ensureMap() {
     mapTraceLayer = L.layerGroup().addTo(mapInstance);
     // Rotate with the ← / → keys once the map has focus. This is an explicit
     // gesture that can never be mistaken for a pan, unlike Shift+drag or a
-    // two-finger twist, which is why those two are disabled above. Rotation is
-    // independent of panning, so it still works now that `dragging` is off.
+    // two-finger twist, which is why those two are disabled above.
     if (typeof mapInstance.setBearing === 'function') {
       mapInstance.getContainer().setAttribute('tabindex', '0');
       mapInstance.getContainer().addEventListener('keydown', (e) => {
@@ -261,6 +279,12 @@ function ensureMap() {
         mapInstance.setBearing(next);
       });
     }
+    // Google-style "Search this area": whenever the USER moves the map (pan or
+    // zoom), reveal the pill. Programmatic moves (fitBounds/flyTo) must NOT
+    // trigger it, or it would flash on every render — hence the `suppressMoveEvent`
+    // guard that every camera helper we call sets for the duration of its move.
+    mapInstance.on('moveend', () => { if (!suppressMoveEvent) showSearchAreaPill(); });
+    mapInstance.on('zoomend', () => { if (!suppressMoveEvent) showSearchAreaPill(); });
     // Exposed for QA/troubleshooting (theme checks, view assertions, driving the
     // map from tools). Harmless in production and far easier than reverse-
     // engineering internal Leaflet state from the DOM.
@@ -275,12 +299,20 @@ function ensureMap() {
   return mapInstance;
 }
 
-function renderMapListings() {
+// fitToResults:
+//   true  — a fresh search / first map open: frame the camera on the results and
+//           remember that area as "the searched area".
+//   false — the user already framed an area (e.g. clicked "Search this area"):
+//           plot the new pins but leave the camera where they put it, exactly
+//           like Google Maps which never yanks the view back on you.
+function renderMapListings(fitToResults = true) {
   const map = ensureMap();
   if (!map) return;
   mapMarkersLayer.clearLayers();
   if (!lastFetchedListings.length) {
-    map.setView([5.6037, -0.1870], 12);
+    if (fitToResults) {
+      setMapViewGuarded([5.6037, -0.1870], 12);
+    }
     return;
   }
   const pts = [];
@@ -309,13 +341,107 @@ function renderMapListings() {
     marker.on('popupclose', clearTraceLine);
     marker.addTo(mapMarkersLayer);
   });
-  if (pts.length) {
-    map.fitBounds(L.latLngBounds(pts).pad(0.25), { maxZoom: 15 });
+  if (pts.length && fitToResults) {
+    fitBoundsGuarded(L.latLngBounds(pts).pad(0.25), { maxZoom: 15 });
     // NOTE: the seeker's base is drawn by drawTraceToBase() on popup open, so no
     // standalone base marker is added here. Once the trace is cleared the base
     // disappears with it, which keeps the default map focused on the rooms.
   }
 }
+
+// ─── GOOGLE-STYLE CAMERA HELPERS ──────────────
+// Programmatic camera moves must not be mistaken for a user pan, or the
+// "Search this area" pill would flash on every result render. Each helper sets
+// `suppressMoveEvent` for the duration of its own move.
+// Every programmatic reframe supersedes the user's manual pan, so it also
+// withdraws any pending "Search this area" offer before moving the camera.
+function setMapViewGuarded(latlng, zoom, opts) {
+  if (!mapInstance) return;
+  hideSearchAreaPill();
+  setSuppress(true);
+  mapInstance.setView(latlng, zoom, opts);
+  clearSuppressSoon();
+}
+function fitBoundsGuarded(bounds, opts) {
+  if (!mapInstance) return;
+  hideSearchAreaPill();
+  setSuppress(true);
+  mapInstance.fitBounds(bounds, opts);
+  clearSuppressSoon();
+}
+// Eased pan/zoom ("flyTo"), the animation Google Maps uses when it reframes.
+function flyToGuarded(latlng, zoom) {
+  if (!mapInstance) return;
+  hideSearchAreaPill();
+  setSuppress(true);
+  mapInstance.flyTo(latlng, zoom, { duration: 0.8, easeLinearity: 0.25 });
+  clearSuppressSoon(1200);
+}
+// Moves queue up: hold the suppression a beat past the call so the trailing
+// moveend/zoomend from the animation lands inside the window and is ignored.
+function clearSuppressSoon(delay = 350) {
+  setTimeout(() => setSuppress(false), delay);
+}
+
+// ─── "SEARCH THIS AREA" PILL ──────────────────
+// The signature Google Maps gesture: after the user moves the map, a pill
+// appears inviting them to re-run the search for the new visible area. Results
+// are NOT re-fetched until they click it.
+function showSearchAreaPill() {
+  const pill = document.getElementById('searchAreaPill');
+  if (!pill || !mapInstance) return;
+  // Match Google Maps: the pill appears after ANY user-driven move of the map,
+  // and is hidden only when we re-frame programmatically (a fresh search) or the
+  // user acts on it. It does not try to second-guess whether the view still
+  // overlaps the last search — that produced false negatives and no pill when it
+  // was most useful.
+  clearTimeout(searchAreaPillTimer);
+  // Debounce: a drag fires moveend repeatedly; only offer the pill after rest.
+  searchAreaPillTimer = setTimeout(() => pill.classList.add('show'), 180);
+}
+function hideSearchAreaPill() {
+  const pill = document.getElementById('searchAreaPill');
+  if (pill) pill.classList.remove('show');
+}
+
+// Turn the current viewport into the same near_lat/near_lng/near_km filter the
+// "Near Me" button uses, so the existing backend does the area search with no
+// schema change: centre of the view + a radius that covers its corners.
+function searchThisArea() {
+  if (!mapInstance) return;
+  hideSearchAreaPill();
+  // Remember that this fetch must NOT reframe the camera (see loadListings).
+  pendingMapAreaSearch = true;
+  const b = mapInstance.getBounds();
+  const center = b.getCenter();
+  // Radius = distance to the farthest corner (metres -> km), the smallest circle
+  // that still contains the whole visible rectangle.
+  const radiusKm = Math.max(0.5, center.distanceTo(b.getNorthEast()) / 1000);
+  nearMeLat = center.lat;
+  nearMeLng = center.lng;
+  nearMeKm = radiusKm;
+  applyFilters();
+}
+
+// Re-center on the results (or the seeker's base), the crosshair button every
+// Google-style map has. Animated, so the camera glides rather than jumps.
+function recenterMap() {
+  if (!mapInstance) return;
+  hideSearchAreaPill();
+  const pts = lastFetchedListings
+    .map(l => [parseFloat(l.display_lat), parseFloat(l.display_lng)])
+    .filter(([a, b]) => Number.isFinite(a) && Number.isFinite(b));
+  if (pts.length) {
+    fitBoundsGuarded(L.latLngBounds(pts).pad(0.25), { maxZoom: 15, animate: true });
+  } else {
+    flyToGuarded([5.6037, -0.1870], 12); // Accra default
+  }
+}
+
+// Exposed for the inline onclick handlers in listings.html (the file is a classic
+// script, so these are already global — made explicit here for clarity/robustness).
+window.searchThisArea = searchThisArea;
+window.recenterMap = recenterMap;
 
 // ─── BASE ↔ ROOM TRACE LINE ───────────────────
 // When a popup opens, draw a line from the pinned room to the seeker's daily
@@ -355,7 +481,9 @@ async function drawTraceToBase(marker) {
   // is computed against the final view.
   const bounds = L.latLngBounds([base, room]);
   if (!mapInstance.getBounds().contains(bounds)) {
-    mapInstance.fitBounds(bounds.pad(0.3), { maxZoom: 15 });
+    // Guarded: expanding the view to fit the trace is OUR move, not a user pan,
+    // so it must not pop the "Search this area" pill.
+    fitBoundsGuarded(bounds.pad(0.3), { maxZoom: 15 });
   }
 
   // Anchor each end so the line reads as a connection between two places.
@@ -393,11 +521,16 @@ function setView(v) {
   if (grid) grid.style.display = v === 'map' ? 'none' : '';
   if (mapWrap) mapWrap.style.display = v === 'map' ? 'block' : 'none';
   if (v === 'map') {
+    // Entering map view always frames the results and clears any stale pill.
+    hideSearchAreaPill();
     // If data hasn't arrived yet (user clicked Map immediately), load it —
     // loadListings() renders the map once the rooms come back.
-    if (lastFetchedListings.length) renderMapListings();
+    if (lastFetchedListings.length) renderMapListings(true);
     else loadListings();
   } else {
+    // Leaving the map drops any area search so the grid shows the full result
+    // set again, the way Google Maps keeps list and map scopes independent.
+    if (nearMeKm) { nearMeLat = null; nearMeLng = null; nearMeKm = null; }
     loadListings();
   }
 }

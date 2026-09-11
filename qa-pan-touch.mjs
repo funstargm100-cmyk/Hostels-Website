@@ -33,7 +33,8 @@ const cx = box.x + box.width / 2, cy = box.y + box.height / 2;
 
 const before = await page.evaluate(() => { const c = window.__mapInstance.getCenter(); return { lat: +c.lat.toFixed(6), lng: +c.lng.toFixed(6) }; });
 
-// ONE-FINGER touch drag — panning is now EXCLUDED, so the center must NOT move.
+// ONE-FINGER touch drag — panning is ALLOWED (Google-Maps style), so the center
+// should move, and a "Search this area" pill should appear once the map settles.
 await page.touchscreen.tap(cx, cy).catch(() => { });
 await page.waitForTimeout(300);
 
@@ -58,9 +59,10 @@ const after = await page.evaluate(async ([cx, cy]) => {
 
 const touchOut = {
   before, after,
-  // Pan is intentionally disabled: a one-finger drag must leave the map put.
+  // Pan is enabled: a one-finger drag must move the map.
   touchPanMoved: before.lat !== after.lat || before.lng !== after.lng,
-  touchPanExcluded: before.lat === after.lat && before.lng === after.lng
+  // ...and, per Google Maps, the manual move offers a "Search this area" re-query.
+  searchAreaPillShown: await page.evaluate(() => !!document.getElementById('searchAreaPill')?.classList.contains('show'))
 };
 
 // Does the container carry the touch classes Leaflet needs?
@@ -70,15 +72,17 @@ touchOut.containerTouchClasses = await page.evaluate(() => document.querySelecto
 touchOut.handlers = await page.evaluate(() => {
   const m = window.__mapInstance;
   return {
-    // Expect FALSE — map-surface panning is turned off.
+    // Expect TRUE — map-surface panning is enabled.
     draggingEnabled: m.dragging?.enabled(),
     touchRotate: m.options.touchRotate,
     rotate: m.options.rotate,
     scrollWheelZoom: m.options.scrollWheelZoom,
     touchZoom: m.options.touchZoom,
-    // rotation gestures must still be wired up, pan removed or not
+    // rotation + the Google-style controls must be wired up
     hasRotateHandler: !!m._rotate,
     canRotate: typeof m.setBearing === 'function',
+    hasRecenterBtn: !!document.getElementById('recenterBtn'),
+    hasSearchAreaPill: !!document.getElementById('searchAreaPill'),
     dragHandlerTypes: Object.values(m._handlers || {}).map(h => h?.constructor?.name)
   };
 });
