@@ -209,7 +209,8 @@ function closeFilters() { document.getElementById('filtersPanel').classList.remo
 // coordinates against the seeker's daily base location.
 let mapInstance = null;
 let mapMarkersLayer = null;
-let mapTraceLayer = null; // holds the dashed trace line from a room to the seeker's base
+let mapTraceLayer = null; // holds the road trace line from a room to the seeker's base
+let traceRequestToken = 0; // bumped per trace so a slow route response can't draw stale
 let lastFetchedListings = [];
 
 function ensureMap() {
@@ -223,6 +224,10 @@ function ensureMap() {
     mapMarkersLayer = L.layerGroup().addTo(mapInstance);
     // A single reusable layer for the base↔room trace line, drawn on popup open.
     mapTraceLayer = L.layerGroup().addTo(mapInstance);
+    // Exposed for QA/troubleshooting (theme checks, view assertions, driving the
+    // map from tools). Harmless in production and far easier than reverse-
+    // engineering internal Leaflet state from the DOM.
+    window.__mapInstance = mapInstance;
   }
   // The container may have been hidden (display:none) until now — Leaflet
   // computes bounds against the CURRENT container size, so it MUST be resized
@@ -248,27 +253,25 @@ function renderMapListings() {
     pts.push([lat, lng]);
     // Popups reuse the card renderer but exclude amenities to keep the popup
     // tidy and focused, with details & icons neatly aligned.
-    const marker = L.marker([lat, lng]).addTo(mapMarkersLayer);
-    marker.bindPopup(() => renderListingCard(l, { isPopup: true }), { maxWidth: 280, minWidth: 240, autoPanPadding: [16, 16] });
-    // Remember which listing this pin is for so popupopen can trace the route
-    // back to the seeker's daily base. Coordinates shown are the jittered ones
-    // (already in lat/lng), matching what the marker itself renders.
+    const marker = L.marker([lat, lng]);
+    // Remember which listing this pin is for so the trace can be drawn back to
+    // the seeker's daily base. Coordinates shown are the jittered ones (already
+    // in lat/lng), matching what the marker itself renders.
     marker.__listingLatLng = L.latLng(lat, lng);
     marker.__listingTitle = l.title;
+    marker.bindPopup(() => renderListingCard(l, { isPopup: true }), { maxWidth: 280, minWidth: 240, autoPanPadding: [16, 16] });
+    // Bind the trace to the MARKER itself rather than reading popup._source from
+    // a map-level event: that property is not reliably the marker across Leaflet
+    // versions, and a wrong source silently traces the wrong room. Here the
+    // closure guarantees we always trace the pin that was actually clicked.
+    marker.on('popupopen', (e) => {
+      const el = e.popup.getElement();
+      if (el && typeof lucide !== 'undefined') lucide.createIcons({ nodes: [el] });
+      drawTraceToBase(marker);
+    });
+    marker.on('popupclose', clearTraceLine);
+    marker.addTo(mapMarkersLayer);
   });
-  // Popup content is injected lazily by Leaflet, so icons rendered inside it
-  // (the distance "route" icon, map-pin, etc.) never got lucide.createIcons()
-  // applied. Initialize them the moment a popup opens — previously they only
-  // appeared after another action (e.g. tapping the like button) re-ran
-  // createIcons across the page.
-  map.off('popupopen').on('popupopen', (e) => {
-    const el = e.popup.getElement();
-    if (el && typeof lucide !== 'undefined') lucide.createIcons({ nodes: [el] });
-    drawTraceToBase(e.popup?._source || e.layer);
-  });
-  // Drop the trace as soon as the seeker closes the card — a stale line left on
-  // the map would be misleading when they open a different room.
-  map.off('popupclose').on('popupclose', clearTraceLine);
   if (pts.length) {
     map.fitBounds(L.latLngBounds(pts).pad(0.25), { maxZoom: 15 });
     // NOTE: the seeker's base is drawn by drawTraceToBase() on popup open, so no
@@ -278,14 +281,26 @@ function renderMapListings() {
 }
 
 // ─── BASE ↔ ROOM TRACE LINE ───────────────────
-// When a popup opens, sketch a dashed line from the pinned room to the seeker's
-// daily base so the relationship between the two is obvious at a glance. Uses
-// the same jittered room coordinates as the marker, and the real base location.
+// When a popup opens, draw a line from the pinned room to the seeker's daily
+// base. We ask the server for a road-following route (OSRM) so the trace follows
+// streets rather than cutting across buildings; if routing is unavailable we fall
+// back to a straight dashed line so the relationship is still visible.
 function clearTraceLine() {
   if (mapTraceLayer) mapTraceLayer.clearLayers();
 }
 
-function drawTraceToBase(marker) {
+// Draw the polylines + end anchors for a given set of [lat,lng] points.
+function drawTracePath(points, isRoad) {
+  L.polyline(points, {
+    color: '#ffffff', weight: isRoad ? 7 : 5, opacity: isRoad ? 0.85 : 0.7, lineCap: 'round'
+  }).addTo(mapTraceLayer);
+  L.polyline(points, {
+    color: '#0e7490', weight: isRoad ? 4 : 2.5, opacity: 1,
+    dashArray: isRoad ? null : '8 8', lineCap: 'round'
+  }).addTo(mapTraceLayer);
+}
+
+async function drawTraceToBase(marker) {
   if (!mapTraceLayer || !marker) return;
   // Leaflet normally hands us the marker in popup._source. Guard against any
   // shape where the coordinate is missing rather than drawing a stray line.
@@ -306,22 +321,32 @@ function drawTraceToBase(marker) {
     mapInstance.fitBounds(bounds.pad(0.3), { maxZoom: 15 });
   }
 
-  // Dashed teal line for the route, with a subtle white underlay so it stays
-  // legible over busy map tiles in both light and dark mode.
-  L.polyline([base, room], {
-    color: '#ffffff', weight: 5, opacity: 0.7, lineCap: 'round'
-  }).addTo(mapTraceLayer);
-  L.polyline([base, room], {
-    color: '#0e7490', weight: 2.5, opacity: 1, dashArray: '8 8', lineCap: 'round'
-  }).addTo(mapTraceLayer);
-
-  // Anchor each end of the line so it reads as a connection between two places.
+  // Anchor each end so the line reads as a connection between two places.
   L.circleMarker(base, {
     radius: 6, color: '#fff', weight: 2, fillColor: '#2563eb', fillOpacity: 1
   }).bindTooltip('Your base location').addTo(mapTraceLayer);
   L.circleMarker(room, {
     radius: 5, color: '#fff', weight: 2, fillColor: '#0e7490', fillOpacity: 1
   }).bindTooltip('Room (approximate)').addTo(mapTraceLayer);
+
+  // Stamp the request so a slow response for a popup the seeker already closed
+  // (or replaced) cannot draw a stale route over the current one.
+  const token = ++traceRequestToken;
+  try {
+    const params = new URLSearchParams({
+      from_lat: base.lat, from_lng: base.lng,
+      to_lat: room.lat, to_lng: room.lng
+    });
+    const data = await api.get('/api/geo/route?' + params.toString());
+    const coords = data?.route?.coords;
+    if (token !== traceRequestToken) return; // superseded while we awaited
+    if (Array.isArray(coords) && coords.length > 1) {
+      drawTracePath(coords, true);
+      return;
+    }
+  } catch { /* fall through to the straight line */ }
+  if (token !== traceRequestToken) return;
+  drawTracePath([base, room], false);
 }
 
 function setView(v) {
