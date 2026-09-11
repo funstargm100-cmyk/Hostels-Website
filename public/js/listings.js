@@ -273,7 +273,9 @@ function ensureMap() {
       bearing: 0,
       touchRotate: false,
       shiftKeyRotate: false,
-      rotateControl: { closeOnZeroBearing: false }
+      // The plugin's own compass control is replaced by the custom drag/rotate
+      // knob at the bottom-left (see initMapKnob), so it is turned off here.
+      rotateControl: false
     }).setView([5.6037, -0.1870], 12); // Accra default
     // Leaflet's map-drag handler listens on the whole container and, with the
     // DEFAULT 3px clickTolerance, treats a few pixels of mouse wobble as a pan.
@@ -780,11 +782,146 @@ function toggleMapFullscreen() {
   hideSearchAreaPill();
 }
 
+// ─── ROTATION / PANNING KNOB (bottom-left) ───────
+// A drag inside the dial pans the map; a drag around the RIM (beyond RIM_PX
+// from the knob centre) rotates it by the change in angle around the knob;
+// a click (drag under CLICK_PX) toggles the pan/rotate lock. When locked the
+// map's drag handler is disabled and the knob shows a red "locked" badge.
+// Panning/rotation are UNLOCKED by default, matching the request.
+const KNOB_RIM_PX = 34;   // past this radius a drag rotates instead of pans
+const KNOB_CLICK_PX = 6;  // a drag shorter than this counts as a click
+let mapLocked = false;
+
+function setMapLocked(locked) {
+  mapLocked = locked;
+  const knob = document.getElementById('mapKnob');
+  if (!mapInstance) return;
+  if (mapLocked) {
+    if (mapInstance.dragging) mapInstance.dragging.disable();
+    if (knob) {
+      knob.classList.add('locked');
+      knob.title = 'Locked — click to unlock panning/rotation';
+      knob.setAttribute('aria-pressed', 'true');
+    }
+  } else {
+    if (mapInstance.dragging) mapInstance.dragging.enable();
+    if (knob) {
+      knob.classList.remove('locked');
+      knob.title = 'Drag to pan/rotate · click to lock';
+      knob.setAttribute('aria-pressed', 'false');
+    }
+  }
+}
+
+function toggleMapLock() { setMapLocked(!mapLocked); }
+
+function initMapKnob() {
+  const knob = document.getElementById('mapKnob');
+  if (!knob || knob.dataset.knobInit) return;
+  knob.dataset.knobInit = '1';
+  knob.innerHTML =
+    '<span class="map-knob-needle"></span>' +
+    '<span class="map-knob-center"><i data-lucide="move"></i></span>' +
+    '<span class="map-knob-badge">&#10005;</span>';
+  if (window.lucide) lucide.createIcons({ nameAttr: 'data-lucide' });
+
+  let active = false, moved = 0, lastX = 0, lastY = 0, lastAngle = 0, pointerId = null, rotating = false;
+
+  knob.addEventListener('pointerdown', (e) => {
+    if (e.button && e.button !== 0) return;
+    active = true; moved = 0; pointerId = e.pointerId;
+    lastX = e.clientX; lastY = e.clientY;
+    const r = knob.getBoundingClientRect();
+    lastAngle = Math.atan2(e.clientY - (r.top + r.height / 2), e.clientX - (r.left + r.width / 2));
+    knob.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  });
+
+  knob.addEventListener('pointermove', (e) => {
+    if (!active || e.pointerId !== pointerId) return;
+    const dx = e.clientX - lastX, dy = e.clientY - lastY;
+    lastX = e.clientX; lastY = e.clientY;
+    moved += Math.abs(dx) + Math.abs(dy);
+    if (mapLocked || !mapInstance) return;
+    const r = knob.getBoundingClientRect();
+    const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    const angle = Math.atan2(e.clientY - cy, e.clientX - cx);
+    const dist = Math.hypot(e.clientX - cx, e.clientY - cy);
+    if (dist <= KNOB_RIM_PX && !rotating) return pan(e, dx, dy);
+    // Rim drag: rotate by the change in angle around the knob centre. Rotate mode
+    // is sticky for the whole gesture, and the angle near the knob's centre is
+    // very noisy — so on the FIRST rim-crossing frame we only re-baseline
+    // lastAngle and skip the rotation delta entirely.
+    if (!rotating) { rotating = true; lastAngle = angle; return; }
+    if (dist > KNOB_RIM_PX && typeof mapInstance.setBearing === 'function') {
+      let d = (angle - lastAngle) * 180 / Math.PI;
+      if (d > 180) d -= 360; else if (d < -180) d += 360;
+      lastAngle = angle;
+      const next = ((((mapInstance.getBearing?.() || 0) - d) % 360) + 360) % 360;
+      setSuppress(true);
+      mapInstance.setBearing(next);
+      clearSuppressSoon();
+      userHasMovedMap = true;
+    }
+  });
+
+  const pan = (e, dx, dy) => {
+    if (!mapInstance) return;
+    setSuppress(true);
+    mapInstance.panBy([-dx, -dy], { animate: false });
+    clearSuppressSoon();
+    userHasMovedMap = true;
+    showSearchAreaPill();
+  };
+
+  const endDrag = (e) => {
+    if (!active || (e.pointerId !== undefined && e.pointerId !== pointerId)) return;
+    active = false; rotating = false;
+    if (moved < KNOB_CLICK_PX) toggleMapLock(); // a plain click toggles the lock
+  };
+  knob.addEventListener('pointerup', endDrag);
+  knob.addEventListener('pointercancel', endDrag);
+}
+
+// ─── FULLSCREEN FILTER / SEARCH MENU (hamburger, top-left) ───────
+// In fullscreen the page chrome is hidden, so the filters panel needs its own
+// entry point. The hamburger toggles a body class that lifts the REAL filter
+// panel over the map as a fixed overlay — the same node with the same field
+// IDs, so applyFilters()/clearFilters() work unchanged on desktop and mobile.
+function toggleMapMenu(force) {
+  const wrap = document.getElementById('mapWrap');
+  const btn = document.getElementById('mapMenuBtn');
+  if (!wrap || !wrap.classList.contains('map-fullscreen-on')) return;
+  const open = typeof force === 'boolean' ? force : !document.body.classList.contains('map-filters-open');
+  document.body.classList.toggle('map-filters-open', open);
+  if (btn) {
+    btn.setAttribute('aria-expanded', String(open));
+    btn.classList.toggle('open', open);
+  }
+}
+
+// Close the overlay automatically when leaving fullscreen.
+const _origToggleFullscreen = toggleMapFullscreen;
+toggleMapFullscreen = function () {
+  _origToggleFullscreen();
+  if (!document.getElementById('mapWrap')?.classList.contains('map-fullscreen-on')) toggleMapMenu(false);
+};
+
+// Init both controls once the map exists.
+const _origEnsureMap = ensureMap;
+ensureMap = function () {
+  _origEnsureMap();
+  initMapKnob();
+  setMapLocked(false); // default: panning/rotation unlocked, desktop AND mobile
+};
+
 // Exposed for the inline onclick handlers in listings.html (the file is a classic
 // script, so these are already global — made explicit here for clarity/robustness).
 window.searchThisArea = searchThisArea;
 window.recenterMap = recenterMap;
 window.toggleMapFullscreen = toggleMapFullscreen;
+window.toggleMapMenu = toggleMapMenu;
+window.toggleMapLock = toggleMapLock;
 
 // ─── BASE ↔ ROOM TRACE LINE ───────────────────
 // When a popup opens, draw a line from the pinned room to the seeker's daily
