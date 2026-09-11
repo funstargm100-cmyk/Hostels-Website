@@ -179,6 +179,59 @@
 <nav class="footer-nav" id="footerNav" data-mode="visitor"></nav>
 
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js" defer></script>
+<!--
+  Early touch-tap recorder for the map pins.
+
+  Leaflet rotates its panes via the leaflet-rotate plugin, but keeps hit-testing
+  in UNROTATED pixel space. On a phone it also calls stopImmediatePropagation()
+  on touchstart (it needs that event for pinch-zoom), which blocks every listener
+  registered AFTER Leaflet — so a tap on a pin is never routed to the marker and
+  the popup does not open.
+
+  A capture listener registered BEFORE Leaflet cannot be suppressed this way, so
+  this records where a touch started and ended. js/listings.js reads the result
+  and opens the popup itself when the tap stayed on a pin. Kept tiny and inline
+  so it runs first; it does not touch the DOM until a tap actually happens.
+-->
+<script>
+  (function () {
+    var start = null;
+    var pinFrom = function (t) {
+      if (!t || !t.closest) return null;
+      return t.closest('.leaflet-marker-icon');
+    };
+    // Resolve the pin under the finger. e.target is normally the icon itself, but
+    // some environments dispatch the touch with the document as target, so fall
+    // back to an explicit hit-test at the touch point (what the browser does).
+    var pinAt = function (target, x, y) {
+      var icon = pinFrom(target);
+      if (icon) return icon;
+      var el = document.elementFromPoint(x, y);
+      icon = pinFrom(el);
+      if (icon) return icon;
+      // Element under the point may be inside the icon (e.g. its <img>).
+      return el && el.parentElement ? pinFrom(el.parentElement) : null;
+    };
+    document.addEventListener('touchstart', function (e) {
+      var t = e.touches && e.touches[0];
+      if (!t) return;
+      start = { x: t.clientX, y: t.clientY, at: Date.now(), icon: pinAt(e.target, t.clientX, t.clientY) };
+    }, true);
+    document.addEventListener('touchend', function (e) {
+      if (!start) return;
+      var t = (e.changedTouches && e.changedTouches[0]) || null;
+      var moved = t ? Math.hypot(t.clientX - start.x, t.clientY - start.y) > 14 : true;
+      var icon = start.icon || (t ? pinAt(null, t.clientX, t.clientY) : null);
+      // Only report a stationary tap that began on (and ended on) a pin.
+      if (icon && !moved && Date.now() - start.at < 700) {
+        // A custom event, not a global: js/listings.js subscribes to this, and
+        // custom events are not affected by Leaflet's stopImmediatePropagation.
+        window.dispatchEvent(new CustomEvent('map:pin-tap', { detail: { icon: icon } }) );
+      }
+      start = null;
+    }, true);
+  })();
+</script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
 <!-- Rotation support: Leaflet core cannot rotate its panes; this plugin adds a
      compass control, Shift+drag and two-finger twist. It must load AFTER Leaflet

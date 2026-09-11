@@ -262,6 +262,20 @@ function ensureMap() {
       shiftKeyRotate: false,
       rotateControl: { closeOnZeroBearing: false }
     }).setView([5.6037, -0.1870], 12); // Accra default
+    // Leaflet's map-drag handler listens on the whole container and, with the
+    // DEFAULT 3px clickTolerance, treats a few pixels of mouse wobble as a pan.
+    // A real mouse click almost always moves 2-4px between press and release, so
+    // on this rotatable map a click on a pin was being swallowed as a pan — the
+    // map shifted and the popup never opened (touch was fine: it needs a much
+    // bigger move to count as a drag). Widen the tolerance so a normal click
+    // stays a click. The drag handler creates its Draggable lazily on first use,
+    // so enforce it on both an immediate and a deferred pass.
+    const widenClickTolerance = () => {
+      const d = mapInstance.dragging && mapInstance.dragging._draggable;
+      if (d) d.options.clickTolerance = 12;
+    };
+    widenClickTolerance();
+    setTimeout(widenClickTolerance, 0);
     L.control.zoom({ position: 'topright' }).addTo(mapInstance);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19, attribution: '&copy; OpenStreetMap contributors'
@@ -298,8 +312,97 @@ function ensureMap() {
     // Track whether a move is in flight, so a marker click that lands mid-gesture
     // can be deferred instead of silently swallowed (the "click does nothing"
     // symptom on a rotating/animating map).
-    mapInstance.on('movestart zoomstart', () => { mapBusy = true; window.__mapBusy = true; });
-    mapInstance.on('moveend zoomend', () => { mapBusy = false; window.__mapBusy = false; });
+    mapInstance.on('movestart zoomstart', () => { mapBusy = true; });
+    mapInstance.on('moveend zoomend', () => { mapBusy = false; });
+    // Rotation-correct press handling for marker pins (see the note at
+    // toggleMarkerPopup). Delegated on the container so it survives the icon
+    // nodes Leaflet recreates on every re-render.
+    //
+    // Uses POINTER events, which unify mouse, touch and pen behind one code path
+    // and — unlike Leaflet's own hit-testing — resolve the target in the CURRENT
+    // (rotated) layout. A near-stationary press on a pin opens its popup; a real
+    // drag is left alone so panning still works.
+    let pinDownX = 0, pinDownY = 0, pinDownAt = 0, pinMoved = false, pinPressActive = false;
+    let pressedMarker = null; // the pin under the initial press
+    const containerEl = mapInstance.getContainer();
+    // Timestamp of the last press the pointer path handled, so the touch path can
+    // tell "the mouse already did this" from a genuine tap.
+    let lastPointerPinHandledAt = 0;
+    const pinFromEvent = (target) => {
+      const icon = target && target.closest && target.closest('.leaflet-marker-icon');
+      if (!icon) return null;
+      // Search the markers LAYER, not the map: markers live in mapMarkersLayer, so
+      // map.eachLayer() would never see them and every click would look like a miss.
+      let found = null;
+      if (mapMarkersLayer) {
+        mapMarkersLayer.eachLayer((l) => { if (l.getElement && l.getElement() === icon) found = l; });
+      }
+      return found;
+    };
+    const pinPressStart = (target, x, y, stopEvent) => {
+      pressedMarker = pinFromEvent(target);
+      if (!pressedMarker) return false;
+      pinDownX = x; pinDownY = y; pinDownAt = Date.now(); pinMoved = false;
+      pinPressActive = true;
+      // Capture phase, so this runs BEFORE Leaflet's own handlers on the same
+      // element; stopImmediatePropagation (not stopPropagation) is what actually
+      // cancels a sibling listener — without it Leaflet's Draggable still starts
+      // a pan and the pin slides out from under the pointer.
+      if (stopEvent) stopEvent();
+      return true;
+    };
+    const pinPressMove = (x, y, tol) => {
+      if (!pinPressActive) return;
+      if (Math.abs(x - pinDownX) > tol || Math.abs(y - pinDownY) > tol) pinMoved = true;
+    };
+    const pinPressEnd = () => {
+      if (!pinPressActive) return;
+      pinPressActive = false;
+      // Use the marker captured at PRESS time, not the release target: a small
+      // wobble (or a pan that slipped through) can leave the release over the map
+      // pane, and re-resolving from the target then found nothing — the popup
+      // silently never opened.
+      const marker = pressedMarker;
+      pressedMarker = null;
+      if (pinMoved || Date.now() - pinDownAt > 700) return; // it was a drag/pan
+      lastPointerPinHandledAt = Date.now();
+      if (marker && marker.__togglePopup) marker.__togglePopup();
+    };
+
+    // Mouse + pen via pointer events.
+    containerEl.addEventListener('pointerdown', (e) => {
+      if (e.pointerType === 'touch') return; // handled below (Leaflet can block these)
+      if (e.button !== 0) return;
+      pinPressStart(e.target, e.clientX, e.clientY, () => e.stopImmediatePropagation());
+    }, true);
+    containerEl.addEventListener('pointermove', (e) => {
+      if (e.pointerType === 'touch') return;
+      pinPressMove(e.clientX, e.clientY, 8);
+    }, true);
+    containerEl.addEventListener('pointerup', (e) => {
+      if (e.pointerType === 'touch') return;
+      if (e.button !== 0) return;
+      if (pinPressActive) e.stopImmediatePropagation();
+      pinPressEnd();
+    }, true);
+
+    // The TOUCH path. On a phone Leaflet calls stopImmediatePropagation() on
+    // touchstart (and on the click that follows) at the document level, because it
+    // needs touchstart for pinch-zoom. That blocks every listener registered AFTER
+    // Leaflet — including anything we add here — so a tap on a pin never reaches
+    // the marker and the popup would not open.
+    //
+    // The bootstrap script in listings.html is registered BEFORE Leaflet, so it is
+    // not suppressed; it hit-tests the tap and dispatches a 'map:pin-tap' custom
+    // event when a stationary tap lands on a pin. We subscribe to that and open
+    // the popup ourselves. Touch needs this; the mouse path above does not, and
+    // the lastPointerPinHandledAt guard keeps a mouse click from double-firing.
+    window.addEventListener('map:pin-tap', (e) => {
+      if (Date.now() - lastPointerPinHandledAt < 500) return; // mouse already did it
+      const marker = pinFromEvent(e.detail && e.detail.icon);
+      if (marker && marker.__togglePopup) marker.__togglePopup();
+    });
+
     // Exposed for QA/troubleshooting (theme checks, view assertions, driving the
     // map from tools). Harmless in production and far easier than reverse-
     // engineering internal Leaflet state from the DOM.
@@ -353,10 +456,9 @@ function renderMapListings(fitToResults = true) {
     });
     // Replace Leaflet's default open-on-click with our rotation-aware, toggle-safe
     // version. bindPopup() wires `click -> _openPopup`; unbind that one handler
-    // (keeping the popup itself bound) and drive the open ourselves so a click
-    // that lands mid-rotate/mid-pan is deferred instead of being lost.
+    // (keeping the popup itself bound) and drive the open ourselves.
     if (marker._openPopup) marker.off('click', marker._openPopup, marker);
-    marker.on('click', () => {
+    const toggleMarkerPopup = () => {
       if (marker.isPopupOpen()) { marker.closePopup(); return; }
       if (mapBusy) {
         // A gesture is still in flight; wait for it to settle so the popup is
@@ -365,7 +467,18 @@ function renderMapListings(fitToResults = true) {
       } else {
         openPopupSafely(marker);
       }
-    });
+    };
+    // Leaflet's own click handler is RESTORED as the touch path. On a phone,
+    // Leaflet calls stopImmediatePropagation on touchstart at the document level
+    // (it needs touchstart for pinch-zoom), so a DOM-level touch listener of ours
+    // never sees the tap — but Leaflet's own marker "click" still fires for touch.
+    //
+    // The delegated pointer handler in ensureMap covers the MOUSE case, which is
+    // the one Leaflet gets wrong on a rotated map. To stop a mouse click firing
+    // both paths (a double toggle that opened then instantly closed the popup),
+    // the pointer handler stamps the time it handled a press and this one skips
+    // anything inside that window.
+    marker.__togglePopup = toggleMarkerPopup;
     // Bind the trace to the MARKER itself rather than reading popup._source from
     // a map-level event: that property is not reliably the marker across Leaflet
     // versions, and a wrong source silently traces the wrong room. Here the
