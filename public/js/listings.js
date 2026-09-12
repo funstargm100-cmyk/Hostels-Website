@@ -810,8 +810,9 @@ function renderMapListings(fitToResults = true) {
       markActivePin(null);
     });
     marker.addTo(mapMarkersLayer);
-    // Stagger this pin's drop-in so the pins roll out across the map rather
-    // than all landing on the same frame.
+    // Stagger this pin's drop-in, then (once it exists in the DOM) give the
+    // user the little halo that marks it as freshly placed. The halo fires with
+    // the pin's own landing, so it reads as "this one just arrived".
     const delay = Math.min(pinIndex++ * 45, 900);
     const icon = marker.getElement && marker.getElement();
     if (icon) {
@@ -819,6 +820,15 @@ function renderMapListings(fitToResults = true) {
       // The label reveal is staggered to match, so the map fills in as a
       // sequence — pin, then its name — instead of everything snapping at once.
       icon.style.setProperty('--label-delay', (delay + PIN_DROP_MS) + 'ms');
+      // Radar: a persistent sweep + emitting rings around each pin. Offsetting
+      // each pin's radar by the SAME stagger it dropped with keeps the map from
+      // pulsing in lockstep — a wall of synchronized rings reads as a glitch,
+      // whereas drifting ones read as independent contacts. The delay is kept
+      // small (never more than one ring cycle) so nothing waits visibly long.
+      icon.classList.add('map-pin-radar');
+      icon.style.setProperty('--radar-delay', (delay % 2400) + 'ms');
+      setTimeout(() => icon.classList.add('map-pin-halo'), delay + PIN_DROP_MS);
+      setTimeout(() => icon.classList.remove('map-pin-halo'), delay + PIN_DROP_MS + 900);
     }
   });
   if (pts.length && fitToResults && Date.now() >= introFlyUntil) {
@@ -1111,14 +1121,14 @@ window.recenterMap = recenterMap;
 window.toggleMapFullscreen = toggleMapFullscreen;
 
 // ─── MAP SCREEN EFFECTS ───────────────────────
-// The browse map keeps ONE screen effect: the top-to-bottom radar brush (a
-// scanner bar sweeping down the tiles) over a vintage dim. This little state
-// machine drives the overlay layer in listings.html (see the MAP SCREEN FX
-// block in css/style.css for what each class draws):
+// The browse map should read as a LIVE surface, not a static picture. This
+// little state machine drives the overlay layer in listings.html (see the MAP
+// SCREEN FX block in css/style.css for what each class draws):
 //
-//   mapFxLoading()   — the brush runs + the dim holds while results load.
-//   mapFxSearch(kind)— the same brush/dim, tuned for a fresh search (kind
-//                      'search') or the tighter "Search this area" ('area').
+//   mapFxLoading()   — the radar brush, vintage dim, loader chip and busy
+//                      vignette run while results load.
+//   mapFxSearch(kind)— the brush, dim, blurred wave and CRT bloom on a search;
+//                      the tighter "Search this area" beat for kind 'area'.
 //
 // Everything here is presentation only: it never touches the camera, the
 // markers or the data, so a paused/ignored effect can never break the map.
@@ -1126,13 +1136,24 @@ let fxTimer = null;          // clears the transient one-shot effect
 let fxSearchToken = 0;       // supersedes a running search effect
 function mapFxEl() { return document.getElementById('mapFx'); }
 
+// The tiny status chip on the overlay ("Loading rooms…", "Scanning area…").
+function setMapFxLabel(text) {
+  const el = document.getElementById('mapLabel');
+  if (el) el.textContent = text;
+}
+
 function mapFxLoading(on) {
   const fx = mapFxEl();
+  const wrap = document.getElementById('mapWrap');
   if (fx) fx.classList.toggle('fx-loading', !!on);
+  // The vignette lives on #mapSearch::after (see style.css) so it can never
+  // fight Leaflet's pane stack for a z-index slot inside the map.
+  if (wrap) wrap.classList.toggle('map-busy', !!on);
+  if (on) setMapFxLabel('Loading rooms…');
 }
 
 // Play the one-shot search effect. `kind`:
-//   'search' — a fresh search / filter: the full brush + dim beat.
+//   'search' — a fresh search / filter: the full brush, dim, wave and bloom.
 //   'area'   — "Search this area": the same instrument, tighter and faster,
 //              because the user is already looking at the right place.
 function mapFxSearch(kind = 'search') {
@@ -1143,15 +1164,16 @@ function mapFxSearch(kind = 'search') {
   // Drop any previous one-shot before starting the next, or the classes pile up
   // and the second search looks like it never played.
   fx.classList.remove('fx-searching', 'fx-area-search');
+  setMapFxLabel(kind === 'area' ? 'Scanning this area…' : 'Scanning rooms…');
 
   // Force a reflow so removing and re-adding the class in the same tick still
   // restarts the keyframes (the classic "repeat animation does not replay").
   void fx.offsetWidth;
   const token = ++fxSearchToken;
-  // The CSS animation is built on ONE shared beat: 1.55s for a full search,
+  // The CSS animations are built on ONE shared beat: 1.55s for a full search,
   // 1.05s for an area search. The timer here must match that duration — pull the
-  // class early and the brush visibly cuts off mid-travel. Keep it in sync with
-  // mapfx-veil / mapfx-sweep in css/style.css.
+  // class early and the wave/brush visibly cut off mid-travel. Keep it in sync
+  // with mapfx-veil / mapfx-sweep / mapfx-wave / mapfx-bloom in css/style.css.
   const cls = kind === 'area' ? 'fx-area-search' : 'fx-searching';
   const ms = kind === 'area' ? 1100 : 1600;
   fx.classList.add(cls);
@@ -1165,17 +1187,17 @@ function mapFxSearch(kind = 'search') {
 function mapFxFreshSearch() { mapFxLoading(true); }
 
 // Mark the pin the user is actually acting on. Leaflet keeps a stable DOM node
-// per marker (until the set is re-plotted), so the class survives pans, zooms
-// and rotations — it only vanishes when the pin itself does.
+// per marker (until the set is re-plotted), so the classes survive pans, zooms
+// and rotations — they only vanish when the pin itself does.
 let activePinnedIcon = null;
 function markActivePin(marker) {
   if (activePinnedIcon) {
-    activePinnedIcon.classList.remove('map-pin-active');
+    activePinnedIcon.classList.remove('map-pin-live', 'map-pin-active');
     activePinnedIcon = null;
   }
   const icon = marker && marker.getElement && marker.getElement();
   if (!icon) return;
-  icon.classList.add('map-pin-active');
+  icon.classList.add('map-pin-live', 'map-pin-active');
   activePinnedIcon = icon;
 }
 

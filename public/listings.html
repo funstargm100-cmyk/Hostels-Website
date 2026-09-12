@@ -138,20 +138,32 @@
         <div id="mapSearch"></div>
 
         <!-- ── MAP SCREEN FX ───────────────────────────────
-             A single overlay layer, pointer-events:none. Two effects only,
-             driven by CSS classes added in js/listings.js (see the MAP SCREEN
-             EFFECTS section):
-               · .fx-loading / .fx-searching / .fx-area-search
-                   — the top-to-bottom radar brush (a scanner bar that sweeps
-                     down the map) plus a vintage dim over the tiles.
+             A single overlay layer, pointer-events:none, that gives the map a
+             sense of being alive. Each piece is driven by a CSS class added in
+             js/listings.js (see the MAP SCREEN EFFECTS section):
+               · .fx-loading      — the radar brush + loader chip while rooms load
+               · .fx-searching    — brush, dim, blurred wave and bloom on a search
+               · .fx-area-search  — the tighter "Search this area" beat
              Kept in its own layer so nothing here can ever eat a map gesture. -->
         <div id="mapFx" class="map-fx" aria-hidden="true">
           <!-- Vintage dim: a warm, aged tint that settles over the tiles while
-               the map is busy. Must be FIRST, so the sweep paints on top of it. -->
+               the map is busy. Must be FIRST, so everything else paints on top. -->
           <div class="map-fx__veil"></div>
+          <!-- Blurred energy wave: three offset shockwave fronts rippling out
+               from the centre. -->
+          <div class="map-fx__wave">
+            <span></span><span></span><span></span>
+          </div>
+          <!-- Chromatic bloom: green/magenta ghosts, like a CRT losing focus. -->
+          <div class="map-fx__bloom"></div>
           <!-- Top-to-bottom radar brush: a thin scanner bar that travels down
                the map while results load and land. -->
           <div class="map-fx__sweep"></div>
+          <!-- Loader chip: tells the user the map is fetching, not frozen. -->
+          <div class="map-fx__loader">
+            <span class="map-fx__spinner"></span>
+            <span class="map-fx__label" id="mapLabel">Loading rooms…</span>
+          </div>
         </div>
 
         <div id="mapSidebar" class="card" style="display:none;position:absolute;left:12px;bottom:12px;z-index:900;width:280px;padding:.9rem"></div>
