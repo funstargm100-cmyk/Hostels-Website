@@ -5,6 +5,7 @@ const db = require('../utils/db');
 const { requireAuth, requireRole, optionalAuth } = require('../middleware/auth');
 const { validateAdContent } = require('../utils/contactDetector');
 const { applyLocationJitter, calculateDistance } = require('../utils/location');
+const { notifyFollowers } = require('../utils/notify');
 const { storeImage } = require('../utils/imageStorage');
 
 // Use memory storage — Vercel has no writable filesystem
@@ -406,6 +407,11 @@ router.put('/:uuid/reactivate', requireAuth, async (req, res) => {
     // Bring it back online. Going through 'pending' would demand a re-review, but
     // reactivating a listing its owner paused should be instant.
     await db.query("UPDATE listings SET status='active' WHERE uuid=$1", [req.params.uuid]);
+    const followers = await db.query('SELECT COUNT(*)::int as c FROM follows WHERE poster_id=$1', [req.session.user.id]);
+    if (followers.rows[0].c > 0) {
+      const lRes = await db.query('SELECT title FROM listings WHERE uuid=$1', [req.params.uuid]);
+      await notifyFollowers(req.session.user.id, req.session.user.name, lRes.rows[0]?.title, '/listings');
+    }
     res.json({ message: 'Listing reactivated', status: 'active' });
   } catch (err) {
     console.error('REACTIVATE ERROR:', err.message);

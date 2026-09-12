@@ -181,7 +181,9 @@ function renderPriceBox(l) {
   document.getElementById('priceMain').textContent = `GHS ${Number(l.price_per_head).toLocaleString()}`;
   document.getElementById('pricePerHead').textContent = 'per person';
   document.getElementById('priceBreakdown').textContent = `${l.occupancy_type}-in-1 room`;
-  document.getElementById('ownerName').textContent = l.owner_name || 'Verified Owner';
+  document.getElementById('ownerName').innerHTML = l.owner_id
+    ? `<a href="/poster-profile?id=${l.owner_id}" style="color:inherit;text-decoration:none">${l.owner_name || 'Verified Owner'}</a>`
+    : (l.owner_name || 'Verified Owner');
   document.getElementById('viewCount').textContent = l.views_count || 0;
   document.getElementById('interestCount').textContent = l.interest_count || 0;
   if (l.move_in_date) document.getElementById('moveInDate').innerHTML = `<i data-lucide="calendar" style="width:13px;height:13px"></i> Available from: ${new Date(l.move_in_date).toLocaleDateString()}`;

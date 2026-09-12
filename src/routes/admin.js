@@ -2,7 +2,7 @@ const router = require('express').Router();
 const db = require('../utils/db');
 const { requireRole } = require('../middleware/auth');
 const { sendEmail, templates } = require('../utils/mailer');
-const { notify } = require('../utils/notify');
+const { notify, notifyFollowers } = require('../utils/notify');
 
 const admin = requireRole('admin');
 
@@ -64,12 +64,13 @@ router.get('/listings/grouped', admin, async (req, res) => {
 // PUT /api/admin/listings/:id/approve
 router.put('/listings/:id/approve', admin, async (req, res) => {
   try {
-    const result = await db.query('SELECT l.*, u.email FROM listings l JOIN users u ON l.owner_id=u.id WHERE l.id=$1', [req.params.id]);
+    const result = await db.query('SELECT l.*, u.email, u.name as owner_name FROM listings l JOIN users u ON l.owner_id=u.id WHERE l.id=$1', [req.params.id]);
     const listing = result.rows[0];
     if (!listing) return res.status(404).json({ error: 'Not found' });
     await db.query("UPDATE listings SET status='active' WHERE id=$1", [req.params.id]);
     if (listing.email) await sendEmail(listing.email, 'Listing Approved', templates.adApproved(listing.title));
     await notify(listing.owner_id, 'adApproved', [listing.title], { link: '/dashboard#listings' });
+    await notifyFollowers(listing.owner_id, listing.owner_name || 'A landlord you follow', listing.title, '/listings');
     await logAction(req.session.user.id, 'approve_listing', 'listing', req.params.id);
     res.json({ message: 'Listing approved' });
   } catch (err) {
@@ -126,11 +127,12 @@ router.put('/listings/:id/deactivate', admin, async (req, res) => {
 // PUT /api/admin/listings/:id/reactivate  (restore availability)
 router.put('/listings/:id/reactivate', admin, async (req, res) => {
   try {
-    const existing = await db.query('SELECT l.id, l.title, l.owner_id, u.email as owner_email FROM listings l JOIN users u ON l.owner_id=u.id WHERE l.id=$1', [req.params.id]);
+    const existing = await db.query('SELECT l.id, l.title, l.owner_id, u.name as owner_name, u.email as owner_email FROM listings l JOIN users u ON l.owner_id=u.id WHERE l.id=$1', [req.params.id]);
     if (!existing.rows.length) return res.status(404).json({ error: 'Listing not found' });
     const listing = existing.rows[0];
     if (listing.owner_email) await sendEmail(listing.owner_email, 'Listing Reactivated', templates.adReactivated(listing.title));
     await notify(listing.owner_id, 'adReactivated', [listing.title], { link: '/dashboard#listings' });
+    await notifyFollowers(listing.owner_id, listing.owner_name || 'A landlord you follow', listing.title, '/listings');
     await db.query("UPDATE listings SET status='active' WHERE id=$1", [req.params.id]);
     await logAction(req.session.user.id, 'reactivate_listing', 'listing', req.params.id);
     res.json({ message: 'Listing reactivated' });

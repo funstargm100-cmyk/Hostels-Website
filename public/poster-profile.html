@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Ad poster profile — Roomy</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+
+<body>
+
+  <div id="toastContainer"></div>
+
+  <nav class="navbar" id="mainNav">
+    <div class="nav-inner">
+      <a href="/" class="logo">roomy<span class="dot">.</span></a>
+      <div class="nav-links">
+        <a href="/listings">Browse rooms</a>
+        <a href="/post-ad">Post a room</a>
+        <a href="/about">About</a>
+      </div>
+      <div class="nav-actions">
+        <button id="themeToggle" aria-label="Toggle theme"></button>
+        <a href="/login" id="loginBtn" class="btn btn-ghost btn-sm">Log in</a>
+        <a href="/signup" id="signupBtn" class="btn btn-primary btn-sm">Sign up</a>
+        <a href="/dashboard" id="dashboardBtn" class="btn btn-outline btn-sm" style="display:none">Dashboard</a>
+        <button id="logoutBtn" class="btn btn-ghost btn-sm" style="display:none">Log out</button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container" style="padding-top:2rem">
+
+    <button class="back-btn" onclick="goBack('/listings')"><i data-lucide="arrow-left"></i> Back</button>
+
+    <div id="profileSkeleton">
+      <div class="skeleton skeleton-text w-40" style="height:32px"></div>
+      <div class="skeleton skeleton-text w-60 mt-1"></div>
+    </div>
+
+    <div id="profileContent" style="display:none">
+      <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;margin-bottom:.4rem">
+        <div class="sidebar-avatar" style="width:64px;height:64px;font-size:1.5rem" id="posterAvatar">O</div>
+        <div style="flex:1;min-width:200px">
+          <h1 style="font-size:1.6rem;margin:0" id="posterName"></h1>
+          <div class="text-muted" style="font-size:.85rem" id="posterMeta"></div>
+        </div>
+        <div style="text-align:center">
+          <button class="btn btn-primary" id="followBtn" onclick="toggleFollow()">
+            <i data-lucide="user-plus"></i> <span id="followBtnLabel">Follow</span>
+          </button>
+          <div class="text-muted" style="font-size:.75rem;margin-top:.3rem" id="followerCount"></div>
+        </div>
+      </div>
+      <div class="text-muted" style="margin-bottom:1.5rem" id="memberSince"></div>
+
+      <h2 id="roomsHeading">Rooms by this ad poster</h2>
+      <div class="grid-3" id="posterListings"></div>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-bottom" style="border-top:none;padding-top:0">
+        <span>© 2026 Roomy. Built for renters and hosts across Ghana.</span>
+        <a href="/about">About &amp; safety</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js" defer></script>
+  <script src="/js/app.js" defer></script>
+  <script src="/js/poster-profile.js" defer></script>
+  <script src="/js/footernav.js" defer></script>
+</body>
+
+</html>

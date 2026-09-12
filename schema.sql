@@ -181,3 +181,14 @@ UPDATE users SET account_group = uuid_generate_v4() WHERE account_group IS NULL;
 
 -- Migration: allow owners to also be agents and vice-versa without re-signup
 ALTER TABLE users ADD COLUMN IF NOT EXISTS wallet_balance NUMERIC(12,2) DEFAULT 0;
+
+-- Migration: poster follows — seekers follow owners/agents to get notified
+-- when the poster publishes a new room.
+CREATE TABLE IF NOT EXISTS follows (
+  id SERIAL PRIMARY KEY,
+  follower_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  poster_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE (follower_id, poster_id)
+);
+CREATE INDEX IF NOT EXISTS follows_poster_idx ON follows (poster_id);

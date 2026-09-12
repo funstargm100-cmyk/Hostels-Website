@@ -38,13 +38,14 @@ app.use('/api/listings', require('./src/routes/listings'));
 app.use('/api/requests', require('./src/routes/requests'));
 app.use('/api/admin', require('./src/routes/admin'));
 app.use('/api/user', require('./src/routes/user'));
+app.use('/api/users', require('./src/routes/users'));
 app.use('/api/geo', require('./src/routes/geo'));
 app.use('/api/payments', require('./src/routes/payments'));
 
 // Serve frontend pages. HTML is marked no-cache so phones always fetch the
 // latest markup (and therefore the latest cache-busted JS URLs) instead of
 // replaying a stale copy from the browser cache.
-const pages = ['', 'listings', 'listing', 'post-ad', 'edit-listing', 'login', 'signup', 'reset-password', 'dashboard', 'admin', 'about', 'contact', 'seekers', 'agents'];
+const pages = ['', 'listings', 'listing', 'post-ad', 'edit-listing', 'login', 'signup', 'reset-password', 'dashboard', 'admin', 'about', 'contact', 'seekers', 'agents', 'poster-profile'];
 const sendNoCache = (res, file) => {
   res.set('Cache-Control', 'no-cache');
   res.sendFile(path.join(__dirname, 'public', file));

@@ -77,6 +77,10 @@ const copy = {
       ? `Your request for "${listing}" is now ${REQUEST_STATUS_LABEL[status] || status}.`
       : `Your contact request is now ${REQUEST_STATUS_LABEL[status] || status}.`
   }),
+  newRoomFromFollowed: (owner, title) => ({
+    title: `New room from ${owner}`,
+    message: `${owner} posted a new room: "${title}".`
+  }),
   payoutConfirmed: (amount) => ({
     title: 'Your payout was processed',
     message: `Your payout of GHS ${amount} has been processed.`

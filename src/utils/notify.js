@@ -22,4 +22,18 @@ async function notify(userId, key, args = [], opts = {}) {
   }
 }
 
-module.exports = { notify };
+// Notify every follower of a poster that they posted a new room. Fire-and-forget:
+// a failure here must never block the underlying action.
+async function notifyFollowers(posterId, posterName, listingTitle, link) {
+  if (!posterId) return;
+  try {
+    const res = await db.query('SELECT follower_id FROM follows WHERE poster_id=$1', [posterId]);
+    for (const row of res.rows) {
+      await notify(row.follower_id, 'newRoomFromFollowed', [posterName, listingTitle], { link });
+    }
+  } catch (err) {
+    console.error('NOTIFY FOLLOWERS FAILED:', err.message);
+  }
+}
+
+module.exports = { notify, notifyFollowers };
