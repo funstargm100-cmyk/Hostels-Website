@@ -509,74 +509,6 @@ textarea{ resize:vertical; min-height:110px; }
 .map-fullscreen:active{ transform:scale(.94); }
 .map-fullscreen svg, .map-fullscreen i{ width:18px; height:18px; }
 [data-theme="dark"] .map-fullscreen{ background:rgba(31,27,44,.96); border-color:rgba(255,255,255,.14); }
-/* Rotation/panning knob: bottom-LEFT. Dragging inside the dial pans the map,
-   dragging around its rim rotates it; a plain click toggles the lock. The
-   inner needle points to the map's current heading, so the knob doubles as a
-   bearing indicator (what the old compass did) while also being draggable. */
-.map-knob{
-  position:absolute; left:14px; bottom:60px; z-index:30;
-  width:52px; height:52px; border-radius:50%;
-  background:var(--card-bg); border:1px solid var(--border);
-  box-shadow:0 4px 14px rgba(0,0,0,.18); cursor:grab;
-  touch-action:none; user-select:none;
-  display:flex; align-items:center; justify-content:center;
-  transition:box-shadow .18s ease;
-}
-.map-knob:active{ cursor:grabbing; }
-.map-knob.locked{ cursor:not-allowed; }
-.map-knob.locked .map-knob-ring{ opacity:.45; }
-.map-knob.locked .map-knob-needle{ background:#e5484d; }
-.map-knob-needle{
-  position:absolute; top:5px; left:50%; width:3px; height:14px;
-  transform:translateX(-50%); background:var(--primary);
-  border-radius:2px; transform-origin:50% 21px; transition:background .2s ease;
-}
-.map-knob-center{
-  width:20px; height:20px; border-radius:50%;
-  background:var(--primary); opacity:.85;
-  display:flex; align-items:center; justify-content:center;
-}
-.map-knob-center svg, .map-knob-center i{ width:12px; height:12px; color:#fff; }
-.map-knob-badge{
-  position:absolute; top:-4px; right:-4px; width:16px; height:16px;
-  border-radius:50%; background:#e5484d; color:#fff; font-size:9px;
-  display:none; align-items:center; justify-content:center; pointer-events:none;
-}
-.map-knob.locked .map-knob-badge{ display:flex; }
-[data-theme="dark"] .map-knob{ background:rgba(31,27,44,.96); border-color:rgba(255,255,255,.14); }
-/* Hamburger filter/search launcher: top-left, fullscreen mode only. */
-.map-burger{
-  position:absolute; top:12px; left:12px; z-index:40;
-  width:40px; height:40px; display:none;
-  align-items:center; justify-content:center;
-  background:var(--card-bg); border:1px solid var(--border); border-radius:10px;
-  box-shadow:0 4px 14px rgba(0,0,0,.18); cursor:pointer; color:var(--text);
-}
-.map-burger svg, .map-burger i{ width:20px; height:20px; pointer-events:none; }
-.map-burger:hover{ color:var(--primary); border-color:var(--primary); }
-[data-theme="dark"] .map-burger{ background:rgba(31,27,44,.96); border-color:rgba(255,255,255,.14); }
-/* Only visible while the map is fullscreen — that is where filtering matters. */
-#mapWrap.map-fullscreen-on .map-burger{ display:inline-flex; }
-/* Slide-over panel anchored under the burger, for filters + search. */
-.map-drawer{
-  position:absolute; top:60px; left:12px; z-index:60;
-  width:min(300px, calc(100vw - 24px)); max-height:calc(100% - 80px);
-  overflow:auto; display:none;
-  background:var(--card-bg); border:1px solid var(--border); border-radius:14px;
-  box-shadow:0 10px 30px rgba(0,0,0,.25); padding:14px;
-}
-.map-drawer.open{ display:block; animation:mapDrawerIn .18s ease; }
-@keyframes mapDrawerIn{ from{ opacity:0; transform:translateY(-6px);} to{ opacity:1; transform:none;} }
-.map-drawer h4{ margin:.2rem 0 .5rem; font-size:.8rem; text-transform:uppercase; letter-spacing:.04em; opacity:.7; }
-.map-drawer input[type="search"], .map-drawer select, .map-drawer input[type="text"]{
-  width:100%; padding:.5rem .7rem; margin-bottom:.6rem; font-size:.85rem;
-  border:1px solid var(--border); border-radius:8px; background:var(--bg, #fff); color:var(--text);
-}
-.map-drawer label{ display:flex; align-items:center; gap:.45rem; font-size:.83rem; margin-bottom:.45rem; cursor:pointer; }
-.map-drawer .drawer-actions{ display:flex; gap:.5rem; margin-top:.6rem; }
-.map-drawer .drawer-actions button{ flex:1; padding:.5rem; border-radius:8px; border:1px solid var(--border); background:none; color:var(--text); font-weight:600; cursor:pointer; font-size:.82rem; }
-.map-drawer .drawer-actions .apply{ background:var(--primary); border-color:var(--primary); color:#fff; }
-[data-theme="dark"] .map-drawer{ background:rgba(31,27,44,.97); }
 
 /* Fullscreen mode: #mapWrap escapes its column and covers the viewport. Using
    position:fixed keeps Google Maps' feel — the page behind is untouched and the
@@ -594,16 +526,6 @@ body.map-fullscreen-active .footer-nav,
 body.map-fullscreen-active .results-toolbar{ display:none !important; }
 /* Tuck the hint to the bottom-left so it never fights the top-center pill. */
 #mapWrap .map-hint{ top:auto; bottom:12px; left:12px; transform:none; }
-/* Fullscreen hamburger menu: lifts the REAL filter panel over the map as a
-   fixed overlay. Same node → same field IDs, so apply/clear filters work as-is
-   on desktop and mobile. Only active while the map is fullscreen. */
-body.map-filters-open .filters-panel{
-  position:fixed; top:64px; left:12px; z-index:1300;
-  width:min(320px, calc(100vw - 24px)); max-height:calc(100vh - 88px);
-  overflow:auto; display:block !important;
-  border-radius:14px; box-shadow:0 12px 34px rgba(0,0,0,.3);
-}
-#mapMenuBtn.open{ color:var(--primary); border-color:var(--primary); }
 @media (max-width:640px){
   #mapWrap .map-hint{ display:none; }
   .map-pill{ font-size:.75rem; padding:.4rem .75rem; }
