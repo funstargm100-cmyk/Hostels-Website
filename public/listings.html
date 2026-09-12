@@ -158,10 +158,9 @@
           <i data-lucide="navigation"></i>
         </button>
 
-        <!-- Reset view: bearing back to north AND the camera back to the results
-             bounding box — one click undoes any rotation, panning and zooming. -->
-        <button type="button" id="mapResetBtn" class="map-reset" onclick="resetMapView()"
-                title="Reset view" aria-label="Reset map view">
+        <!-- 3D toggle: tilts the map 35° (Google-Maps-style pitch) and back. -->
+        <button type="button" id="mapResetBtn" class="map-reset" onclick="toggleMap3D()"
+                title="Pan map by 35 degrees (3D view)" aria-label="Toggle 3D map view" aria-pressed="false">
           <i data-lucide="rotate-ccw"></i>
         </button>
 
