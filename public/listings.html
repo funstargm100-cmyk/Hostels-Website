@@ -138,6 +138,16 @@
         <div id="mapSearch"></div>
         <div id="mapSidebar" class="card" style="display:none;position:absolute;left:12px;bottom:12px;z-index:900;width:280px;padding:.9rem"></div>
 
+        <!-- Empty state: shown when a search/filter returns no rooms, so the map
+             is wiped clean and the user is told why no pins are showing. -->
+        <div id="mapEmptyState" class="map-empty" style="display:none">
+          <div class="map-empty-icon"><i data-lucide="map-pin-off"></i></div>
+          <h3>No rooms found</h3>
+          <p>Try widening your filters or panning the map, then click
+            <strong>Search this area</strong>.</p>
+          <button type="button" class="btn btn-outline btn-sm" onclick="clearFilters()">Clear filters</button>
+        </div>
+
         <!-- Google-style "Search this area": hidden until the user moves the map,
              then offered as an explicit re-query of the new viewport. -->
         <button type="button" id="searchAreaPill" class="map-pill" onclick="searchThisArea()">

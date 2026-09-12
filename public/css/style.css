@@ -467,6 +467,22 @@ textarea{ resize:vertical; min-height:110px; }
   overflow:hidden; text-overflow:ellipsis;
 }
 [data-theme="dark"] .map-hint{ background:rgba(0,0,0,.72); }
+/* "No rooms found" notice, shown centered on the map when a search/filter
+   returns nothing. Overlay, not a marker, so it can never be missed. */
+.map-empty{
+  position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+  background:rgba(28,23,48,.85); color:#fff; text-align:center;
+  padding:1.1rem 1.5rem; border-radius:14px; z-index:1100;
+  backdrop-filter:blur(4px); max-width:min(320px, 86%);
+  box-shadow:0 8px 24px rgba(0,0,0,.35);
+}
+.map-empty h3{ margin:.4rem 0 .3rem; font-size:1rem; }
+.map-empty p{ margin:0 0 .8rem; font-size:.8rem; opacity:.85; }
+.map-empty .map-empty-icon{ display:flex; justify-content:center; }
+.map-empty .map-empty-icon svg{ width:28px; height:28px; opacity:.9; }
+.map-empty .btn{ color:#fff; border-color:rgba(255,255,255,.4); }
+.map-empty .btn:hover{ border-color:#fff; }
+[data-theme="dark"] .map-empty{ background:rgba(0,0,0,.8); }
 @media (max-width:640px){ .map-hint{ font-size:.66rem; padding:.25rem .55rem; } }
 
 /* ── Google-Maps-style map controls ─────────────────────── */

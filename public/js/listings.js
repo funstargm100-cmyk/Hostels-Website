@@ -158,6 +158,13 @@ async function loadListings() {
       grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="icon"><i data-lucide="building-2" style="width:48px;height:48px"></i></div><h3>No rooms found</h3><p>Try adjusting your filters.</p></div>`;
       if (typeof lucide !== 'undefined') lucide.createIcons();
       document.getElementById('pagination').innerHTML = '';
+      // On the map: remove every stale pin so nothing suggests results exist,
+      // and tell the user why the map is empty (renderMapListings never runs
+      // on this path, so the map must be handled here).
+      if (currentView === 'map' && mapInstance) {
+        mapMarkersLayer.clearLayers();
+        setMapEmptyState(true);
+      }
       return;
     }
 
@@ -589,6 +596,14 @@ function escapeHtml(s) {
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
+// Show / hide the "No rooms found" notice centred on the map.
+function setMapEmptyState(on) {
+  const el = document.getElementById('mapEmptyState');
+  if (!el) return;
+  el.style.display = on ? 'block' : 'none';
+  if (on && typeof lucide !== 'undefined') lucide.createIcons({ nodes: [el] });
+}
+
 // fitToResults:
 //   true  — a fresh search / first map open: frame the camera on the results and
 //           remember that area as "the searched area".
@@ -599,7 +614,11 @@ function renderMapListings(fitToResults = true) {
   const map = ensureMap();
   if (!map) return;
   mapMarkersLayer.clearLayers();
+  setMapEmptyState(false);
   if (!lastFetchedListings.length) {
+    // A search/filter with no matches: wipe the stale pins so nothing on the
+    // map suggests results exist, and tell the user why the map is empty.
+    setMapEmptyState(true);
     if (fitToResults) {
       setMapViewGuarded([5.6037, -0.1870], 12);
     }
@@ -1114,6 +1133,7 @@ function setView(v) {
     // Leaving the map drops any area search and Near Base so the grid shows the
     // full result set again, the way Google Maps keeps list and map scopes
     // independent.
+    setMapEmptyState(false);
     if (nearMeKm) { nearMeLat = null; nearMeLng = null; nearMeKm = null; }
     mapAreaScope = null;
     setNearMeBtnState(document.getElementById('nearMeBtn'), false);
