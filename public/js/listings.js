@@ -789,12 +789,14 @@ function setMapViewGuarded(latlng, zoom, opts) {
   mapInstance.setView(latlng, zoom, opts);
   clearSuppressSoon();
 }
-function fitBoundsGuarded(bounds, opts) {
+function fitBoundsGuarded(bounds, opts = {}) {
   if (!mapInstance) return;
   hideSearchAreaPill();
   setSuppress(true);
-  mapInstance.fitBounds(bounds, opts);
-  clearSuppressSoon();
+  // flyToBounds instead of fitBounds: an EASED pan+zoom glide (Google-Maps
+  // style camera move) rather than an instant snap to the new frame.
+  mapInstance.flyToBounds(bounds, { duration: 0.8, easeLinearity: 0.25, ...opts });
+  clearSuppressSoon(Math.max(1200, (opts.duration || 0.8) * 1000 + 400));
 }
 // Eased pan/zoom ("flyTo"), the animation Google Maps uses when it reframes.
 // `duration` in seconds — the opening fly-in uses a longer, more cinematic one.
@@ -875,8 +877,10 @@ function recenterMap() {
 function resetMapView() {
   if (!mapInstance) return;
   if (typeof mapInstance.setBearing === 'function') {
+    // Animated bearing reset (leaflet-rotate supports {animate}) — the map
+    // swings back to north instead of snapping.
     suppressMoveEvent = true;
-    mapInstance.setBearing(0);
+    mapInstance.setBearing(0, { animate: true, duration: 0.5 });
     suppressMoveEvent = false;
   }
   recenterMap();
@@ -1078,6 +1082,11 @@ function setView(v) {
     // Clicking "Map" is an explicit "show me the results on the map", so it
     // reframes even if the map had been panned before.
     beginFreshSearch();
+    // Re-run the opening cinematic every time the map view is entered — not
+    // just on first creation — so switching away and back zooms into Sunyani
+    // again. ensureMap() plays it once the container is measured, and the
+    // introFlyUntil window stops result-framing from cutting the flight short.
+    pendingIntroFly = true;
     // If data hasn't arrived yet (user clicked Map immediately), load it —
     // loadListings() renders the map once the rooms come back.
     if (lastFetchedListings.length) renderMapListings(true);
