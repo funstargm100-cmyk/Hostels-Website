@@ -52,6 +52,188 @@ const api = {
 };
 
 // ─── TOAST ────────────────────────────────────────────────────────────────────
+// ─── CLIENT-SIDE IMAGE COMPRESSION ───────────────────────────
+// Resize + re-encode photos IN THE BROWSER before they are uploaded.
+//
+// Why this exists: the server already converts uploads to WebP (see
+// src/utils/imageStorage.js), but that happens AFTER the request body has been
+// received. A phone photo is routinely 4-8MB, and the post-ad form sends up to
+// 10 of them in ONE multipart request — easily 40-80MB. Serverless platforms cap
+// the request body (Vercel: ~4.5MB) and reject it with FUNCTION_PAYLOAD_TOO_LARGE
+// before any of our code runs, so the server-side compression is never reached.
+// Compressing here keeps the whole body small enough to be accepted at all.
+//
+// The output is JPEG rather than WebP: canvas.toBlob('image/webp') is only
+// supported in Chromium, and silently falls back to PNG elsewhere (which can be
+// LARGER than the original). JPEG is universally encodable and, at these sizes
+// and qualities, indistinguishable on a listing card.
+const IMAGE_UPLOAD = {
+  maxDim: 1600,            // longest edge, matching the server's own target
+  quality: 0.82,           // starting JPEG quality
+  minQuality: 0.5,         // never push below this — visible artefacts
+  // Per-photo byte budget, and it MUST be chosen against the WHOLE-body limit,
+  // not per file. Measured reality: a busy 4032x3024 photo compresses to ~700KB
+  // at these settings, so 10 of them is ~7MB — comfortably over the ~4.5MB that
+  // serverless platforms accept for the entire request, which is the exact error
+  // we are trying to prevent. 360KB x 10 = ~3.6MB, leaving headroom for the
+  // form fields and multipart boundaries.
+  targetBytes: 360000,
+  // The absolute ceiling for ONE file. Beyond this we keep lowering quality, and
+  // if the image still refuses to shrink we send the best attempt rather than
+  // fail: a slightly-too-large photo the server can still handle beats a blocked
+  // submit.
+  hardBytes: 900000
+};
+
+// Downscale + re-encode ONE image file. Always resolves with a File — on any
+// failure (unsupported codec, canvas unavailable, a corrupt image) it resolves
+// with the ORIGINAL file, so compression can never be the reason an upload
+// breaks. Returns { file, originalSize, size, ratio, skipped }.
+async function compressImage(file, opts = {}) {
+  const cfg = Object.assign({}, IMAGE_UPLOAD, opts);
+  const fail = (skipped) => ({ file, originalSize: file.size, size: file.size, ratio: 1, skipped });
+
+  // Only images, and nothing already small enough to be worth the CPU.
+  if (!file || !file.type || file.type.indexOf('image/') !== 0) return fail('not-an-image');
+  if (file.size < 250000) return fail('already-small');
+  // GIFs may be animated and SVG is vector: canvas would destroy both.
+  if (/image\/(gif|svg\+xml)/.test(file.type)) return fail('unsupported-type');
+
+  // Decode. createImageBitmap is much faster and off-main-thread where available;
+  // the <img> + object URL path is the fallback for older Safari.
+  let source = null;
+  let revoke = null;
+  try {
+    if (typeof createImageBitmap === 'function') {
+      source = await createImageBitmap(file, { imageOrientation: 'from-image' });
+    } else {
+      const url = URL.createObjectURL(file);
+      revoke = url;
+      source = await new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = () => reject(new Error('decode failed'));
+        img.src = url;
+      });
+    }
+  } catch (e) {
+    if (revoke) URL.revokeObjectURL(revoke);
+    return fail('decode-failed');
+  }
+
+  const srcW = source.width || source.naturalWidth;
+  const srcH = source.height || source.naturalHeight;
+  if (!srcW || !srcH) { if (revoke) URL.revokeObjectURL(revoke); return fail('no-dimensions'); }
+
+  // Scale so the LONGEST edge is maxDim (never upscale — that would inflate).
+  const scale = Math.min(1, cfg.maxDim / Math.max(srcW, srcH));
+  const w = Math.max(1, Math.round(srcW * scale));
+  const h = Math.max(1, Math.round(srcH * scale));
+
+  // Draw at the target size with high-quality smoothing. A single large step
+  // (e.g. 4000px -> 1600px) would drop pixels rather than average them and look
+  // aliased; imageSmoothingQuality:'high' makes the browser resample properly.
+  const canvas = document.createElement('canvas');
+  canvas.width = w; canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) { if (revoke) URL.revokeObjectURL(revoke); return fail('no-canvas'); }
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(source, 0, 0, w, h);
+  if (source.close) source.close();
+  if (revoke) URL.revokeObjectURL(revoke);
+
+  // Encode, lowering quality in steps until the file is small enough.
+  const toBlob = (q) => new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', q));
+  let quality = cfg.quality;
+  let outBlob = null;
+  // More steps than strictly needed, so the loop lands close to the target
+  // instead of overshooting to the quality floor and giving up detail for free.
+  for (let i = 0; i < 9; i++) {
+    outBlob = await toBlob(quality);
+    if (!outBlob) break;
+    if (outBlob.size <= cfg.targetBytes || quality <= cfg.minQuality) break;
+    quality = Math.max(cfg.minQuality, quality - 0.06);
+  }
+  if (!outBlob) return fail('encode-failed');
+
+  // If the quality ladder ran out and it is STILL too big, shrink the pixels
+  // instead. Dropping the long edge is far less destructive than crushing the
+  // quality further, and this is what actually saves very detailed images (foliage,
+  // fabric, text on a wall) that resist JPEG compression. Loops, because one
+  // halving may not be enough on a pathological image.
+  let curW = w, curH = h;
+  for (let pass = 0; pass < 3 && outBlob.size > cfg.hardBytes && Math.max(curW, curH) > 640; pass++) {
+    const shrink = Math.max(0.6, Math.sqrt(cfg.hardBytes / outBlob.size));
+    const w2 = Math.max(1, Math.round(curW * shrink));
+    const h2 = Math.max(1, Math.round(curH * shrink));
+    const c2 = document.createElement('canvas');
+    c2.width = w2; c2.height = h2;
+    const ctx2 = c2.getContext('2d');
+    if (!ctx2) break;
+    ctx2.imageSmoothingEnabled = true;
+    ctx2.imageSmoothingQuality = 'high';
+    ctx2.drawImage(canvas, 0, 0, w2, h2);
+    // Re-encode at the best quality that still fits, walking the ladder down.
+    let q2 = cfg.quality;
+    let smaller = null;
+    for (let i = 0; i < 6; i++) {
+      smaller = await new Promise((r) => c2.toBlob(r, 'image/jpeg', q2));
+      if (!smaller) break;
+      if (smaller.size <= cfg.targetBytes || q2 <= cfg.minQuality) break;
+      q2 = Math.max(cfg.minQuality, q2 - 0.08);
+    }
+    if (!smaller || smaller.size >= outBlob.size) break;
+    outBlob = smaller;
+    // Replace the working canvas so a second pass shrinks from the new size.
+    canvas.width = w2; canvas.height = h2;
+    const cx = canvas.getContext('2d');
+    if (!cx) break;
+    cx.imageSmoothingEnabled = true;
+    cx.imageSmoothingQuality = 'high';
+    cx.drawImage(c2, 0, 0);
+    curW = w2; curH = h2;
+  }
+
+  // If compression somehow made it bigger, keep the original.
+  if (outBlob.size >= file.size) return fail('compression-not-helpful');
+
+  const name = (file.name || 'photo').replace(/\.[^.]+$/, '') + '.jpg';
+  const compressed = new File([outBlob], name, { type: 'image/jpeg', lastModified: Date.now() });
+  return {
+    file: compressed,
+    originalSize: file.size,
+    size: compressed.size,
+    ratio: compressed.size / file.size,
+    skipped: null,
+    // Report the FINAL size, which the extra shrink passes above may have
+    // reduced — reporting the original w/h made a shrunk image look full-size.
+    width: curW,
+    height: curH
+  };
+}
+
+// Compress a whole batch. `onProgress(done, total)` lets the caller show a
+// meaningful "Compressing 3/10" message instead of a frozen button.
+// Runs sequentially on purpose: parallel canvas encodes on a phone will jank the
+// UI and can exhaust memory on a 10-photo batch.
+async function compressImages(files, opts = {}, onProgress) {
+  const out = [];
+  for (let i = 0; i < files.length; i++) {
+    out.push(await compressImage(files[i], opts));
+    if (typeof onProgress === 'function') onProgress(i + 1, files.length);
+  }
+  return out;
+}
+
+// Human-readable size, for the compression feedback message.
+function formatBytes(n) {
+  if (!n && n !== 0) return '';
+  if (n < 1024) return n + ' B';
+  if (n < 1024 * 1024) return Math.round(n / 1024) + ' KB';
+  return (n / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
 function showToast(message, type = 'info', duration = 3500) {
   const container = document.getElementById('toastContainer');
   if (!container) return;

@@ -383,15 +383,38 @@ document.getElementById('postAdForm').addEventListener('submit', async (e) => {
   btn.disabled = true; btn.textContent = 'Submitting...';
 
   try {
+    // Compress BEFORE building the request. The whole photo set travels in one
+    // multipart body, and serverless platforms reject anything over ~4.5MB with
+    // FUNCTION_PAYLOAD_TOO_LARGE — a handful of raw phone photos blows past that
+    // instantly. (The server does convert WebP, but only after it has received
+    // the body, so it cannot save an oversized request.)
+    const raws = [coverFile, ...selectedFiles].filter(Boolean);
+    const originals = raws.reduce((n, f) => n + f.size, 0);
+    const compressed = await compressImages(raws, {}, (done, total) => {
+      btn.textContent = `Optimising photo ${done}/${total}...`;
+    });
+    const total = compressed.reduce((n, r) => n + r.size, 0);
+    // Tell the user what happened — silently shrinking their photos would be a
+    // surprise, and the number is reassuring when the originals were huge.
+    if (total < originals) {
+      showToast(`Photos optimised: ${formatBytes(originals)} → ${formatBytes(total)}`, 'info', 3000);
+    }
+
+    btn.textContent = 'Submitting...';
     const formData = new FormData(e.target);
     // Cover photo goes first — the backend marks the first image as primary/cover.
-    formData.append('images', coverFile);
-    selectedFiles.forEach(f => formData.append('images', f));
+    // Order here must match `compressed`, which was built as [cover, ...photos].
+    compressed.forEach(r => formData.append('images', r.file));
     await api.upload('/api/listings', formData);
     showToast('Room submitted for review!', 'success');
     setTimeout(() => location.href = '/dashboard', 1500);
   } catch (ex) {
-    errEl.textContent = ex.message;
+    // A 413 can still happen (very many photos, or a proxy with a tighter cap),
+    // and the raw platform error is meaningless to a user — explain the fix.
+    const msg = /PAYLOAD_TOO_LARGE|413|too large/i.test(ex.message)
+      ? 'Those photos are too large to upload together. Try removing a few, or upload smaller images.'
+      : ex.message;
+    errEl.textContent = msg;
     btn.disabled = false; btn.textContent = 'Submit for Review';
   }
 });

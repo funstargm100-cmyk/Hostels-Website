@@ -361,14 +361,24 @@ document.getElementById('editForm')?.addEventListener('submit', async (e) => {
       }
       return item.id;
     });
-    orderedNewFiles.forEach(f => fd.append('images', f));
+    // Compress the NEW uploads before sending. The whole update (fields + every
+    // staged photo) travels in one multipart body, and the platform rejects a
+    // body over ~4.5MB with FUNCTION_PAYLOAD_TOO_LARGE. It must happen before
+    // they are appended, hence after photoOrder is built.
+    const compressedNew = await compressImages(orderedNewFiles, {}, (done, total) => {
+      btn.textContent = `Optimising photo ${done}/${total}...`;
+    });
+    compressedNew.forEach(r => fd.append('images', r.file));
     fd.append('photo_order', JSON.stringify(photoOrder));
 
     await api.upload(`/api/listings/${editUUID}`, fd, 'PUT');
     showToast('Changes saved!', 'success');
     setTimeout(() => location.href = '/dashboard#listings', 1200);
   } catch (ex) {
-    errEl.textContent = ex.message;
+    // Translate the platform's 413 into something the user can act on.
+    errEl.textContent = /PAYLOAD_TOO_LARGE|413|too large/i.test(ex.message)
+      ? 'The photos are too large to upload together. Try removing one or two, then save again.'
+      : ex.message;
     errEl.style.display = 'block';
     btn.disabled = false; btn.classList.remove('btn-loading');
   }

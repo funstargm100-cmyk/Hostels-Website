@@ -8,15 +8,48 @@ const { applyLocationJitter, calculateDistance } = require('../utils/location');
 const { notifyFollowers } = require('../utils/notify');
 const { storeImage } = require('../utils/imageStorage');
 
-// Use memory storage — Vercel has no writable filesystem
+// Use memory storage — Vercel has no writable filesystem.
+//
+// fileSize is the PER-FILE cap. The client compresses before uploading (see
+// compressImage in public/js/app.js), so a well-behaved request is well under
+// this; the cap exists to bound memory if someone posts directly to the API.
+//
+// 4MB rather than 5MB on purpose: several of these travel in ONE multipart body,
+// and the platform rejects the whole request above roughly 4.5MB. A single file
+// larger than this can never produce a body the platform will accept, so
+// allowing it only moves the failure later, to a less explicable place.
+const MAX_UPLOAD_BYTES = 4 * 1024 * 1024;
+// Declared here (rather than with the other limits below) because the multer
+// setup and its error handler both reference it at module load time.
+const MAX_LISTING_PHOTOS = 10;
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024 },
+  limits: { fileSize: MAX_UPLOAD_BYTES, files: MAX_LISTING_PHOTOS + 1 },
   fileFilter: (req, file, cb) => cb(null, /image\/(jpeg|jpg|png|webp)/.test(file.mimetype))
 });
 
+// Multer reports a too-large upload as an error, which would otherwise surface
+// as a bare 500 or (worse, on serverless) as FUNCTION_PAYLOAD_TOO_LARGE with no
+// useful body. Translate it into a real 413 the client can explain.
+function uploadErrorHandler(err, req, res, next) {
+  if (!err) return next();
+  if (err.code === 'LIMIT_FILE_SIZE') {
+    return res.status(413).json({
+      error: `Each photo must be under ${Math.round(MAX_UPLOAD_BYTES / (1024 * 1024))}MB. Try a smaller image.`,
+      code: 'FILE_TOO_LARGE'
+    });
+  }
+  if (err.code === 'LIMIT_FILE_COUNT' || err.code === 'LIMIT_UNEXPECTED_FILE') {
+    return res.status(400).json({
+      error: `Too many photos — a room can have at most ${MAX_LISTING_PHOTOS}.`,
+      code: 'TOO_MANY_FILES'
+    });
+  }
+  return next(err);
+}
+const uploadListingImages = [upload.array('images', MAX_LISTING_PHOTOS), uploadErrorHandler];
+
 const COMMISSION_RATE = 0; // No transactions — price posted is price shown
-const MAX_LISTING_PHOTOS = 10;
 
 // Multipart form fields arrive as strings ("false" is truthy). Coerce checkbox
 // values properly so an unchecked box really stores false, whichever content
@@ -256,7 +289,7 @@ router.get('/:uuid', optionalAuth, async (req, res) => {
 });
 
 // POST /api/listings
-router.post('/', requireAuth, requireRole('owner', 'agent', 'admin'), upload.array('images', 10), async (req, res) => {
+router.post('/', requireAuth, requireRole('owner', 'agent', 'admin'), uploadListingImages, async (req, res) => {
   const { title, description, occupancy_type, original_price, location_area, location_lat, location_lng, nearest_landmark, gender_preference, move_in_date, water, electricity, security, furnishing, bathroom, kitchen_access, wifi, parking, pet_friendly } = req.body;
 
   if (!title || !original_price || !location_area || !occupancy_type) return res.status(400).json({ error: 'Missing required fields' });
@@ -307,7 +340,7 @@ router.post('/', requireAuth, requireRole('owner', 'agent', 'admin'), upload.arr
 // new ones while editing. `remove_image_ids` (JSON array or CSV) lists
 // listing_images.id values to drop. The 10-photos-per-listing cap is enforced
 // against the FINAL count, not just the newly uploaded files.
-router.put('/:uuid', requireAuth, upload.array('images', 10), async (req, res) => {
+router.put('/:uuid', requireAuth, uploadListingImages, async (req, res) => {
   try {
     const result = await db.query('SELECT * FROM listings WHERE uuid=$1 AND owner_id=$2', [req.params.uuid, req.session.user.id]);
     const listing = result.rows[0];
