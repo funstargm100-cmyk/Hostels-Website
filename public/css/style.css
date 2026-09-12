@@ -510,6 +510,37 @@ textarea{ resize:vertical; min-height:110px; }
 .map-fullscreen svg, .map-fullscreen i{ width:18px; height:18px; }
 [data-theme="dark"] .map-fullscreen{ background:rgba(31,27,44,.96); border-color:rgba(255,255,255,.14); }
 
+/* Rotation knob (bottom-left): drag to spin the map, click to lock/unlock.
+   The glyph itself rotates with the bearing so it reads like a compass needle. */
+.map-rotate-knob{
+  position:absolute; left:12px; bottom:64px; z-index:30;
+  width:40px; height:40px; display:inline-flex; align-items:center; justify-content:center;
+  background:var(--card-bg); color:var(--text-muted);
+  border:1px solid var(--border); border-radius:50%; cursor:grab;
+  box-shadow:0 2px 8px rgba(0,0,0,.18); transition:color .15s, border-color .15s, transform .15s;
+  touch-action:none; user-select:none;
+}
+.map-rotate-knob:hover{ color:var(--primary); border-color:var(--primary); }
+.map-rotate-knob:active{ cursor:grabbing; transform:scale(.94); }
+.map-rotate-knob[data-locked="true"]{ color:var(--danger,#d64545); border-color:var(--danger,#d64545); cursor:not-allowed; }
+.map-rotate-knob svg, .map-rotate-knob i{ width:19px; height:19px; pointer-events:none; }
+[data-theme="dark"] .map-rotate-knob{ background:rgba(31,27,44,.96); border-color:rgba(255,255,255,.14); }
+
+/* Fullscreen-only hamburger (top-left): the page toolbar is hidden while the
+   map is fullscreen, so this button exposes the filter/search sidebar. It only
+   exists in fullscreen mode — outside it the sidebar is always visible. */
+.map-fs-menu{
+  display:none; position:absolute; top:10px; left:12px; z-index:40;
+  width:40px; height:40px; align-items:center; justify-content:center;
+  background:var(--card-bg); color:var(--text-muted);
+  border:1px solid var(--border); border-radius:var(--radius-sm,10px); cursor:pointer;
+  box-shadow:0 2px 8px rgba(0,0,0,.18); transition:color .15s, border-color .15s;
+}
+#mapWrap.map-fullscreen-on .map-fs-menu{ display:inline-flex; }
+.map-fs-menu:hover{ color:var(--primary); border-color:var(--primary); }
+.map-fs-menu svg, .map-fs-menu i{ width:20px; height:20px; }
+[data-theme="dark"] .map-fs-menu{ background:rgba(31,27,44,.96); border-color:rgba(255,255,255,.14); }
+
 /* Fullscreen mode: #mapWrap escapes its column and covers the viewport. Using
    position:fixed keeps Google Maps' feel — the page behind is untouched and the
    map simply grows to fill the screen. */
@@ -524,6 +555,14 @@ body.map-fullscreen-active{ overflow:hidden; }
 body.map-fullscreen-active .site-footer,
 body.map-fullscreen-active .footer-nav,
 body.map-fullscreen-active .results-toolbar{ display:none !important; }
+/* While the map is fullscreen, the filters sidebar becomes a slide-in overlay
+   ABOVE the map (which sits at z-index 1200). Opened via the top-left hamburger. */
+body.map-fullscreen-active .filters-panel{
+  position:fixed; top:0; left:0; bottom:0; width:min(320px, 85vw);
+  z-index:1300; overflow:auto; border-radius:0;
+  transform:translateX(-105%); transition:transform .3s ease;
+}
+body.map-fullscreen-active .filters-panel.open{ transform:translateX(0); }
 /* Tuck the hint to the bottom-left so it never fights the top-center pill. */
 #mapWrap .map-hint{ top:auto; bottom:12px; left:12px; transform:none; }
 @media (max-width:640px){

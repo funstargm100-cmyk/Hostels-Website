@@ -241,6 +241,9 @@ let lastFetchedListings = [];
 // True while WE move the camera (fitBounds/flyTo), so the moveend/zoomend
 // handlers can tell our programmatic moves apart from a genuine user pan/zoom.
 let suppressMoveEvent = false;
+// Map rotation lock state for the bottom-left rotation knob. UNLOCKED by default
+// on both desktop and mobile; clicking the knob toggles it.
+let mapRotationLocked = false;
 // True between movestart/zoomstart and their end events — a marker click during
 // that window is deferred rather than lost.
 let mapBusy = false;
@@ -259,9 +262,10 @@ function ensureMap() {
     //     like Google Maps (and the "Map Search by Area" pattern in enterprise
     //     GIS UIs).
     //   • Zoom     — scroll wheel + pinch + the +/- control.
-    //   • Rotation — the leaflet-rotate plugin's compass, plus ← / → keys. We
-    //     keep `touchRotate`/`shiftKeyRotate` OFF so a rotation can never be
-    //     mistaken for a pan.
+    //   • Rotation — the rotation knob at the bottom-left of the map: DRAG it to
+    //     spin the map, CLICK it to lock/unlock. (The plugin's built-in compass
+    //     control is disabled — rotateControl:false — in favour of the knob.
+    //     Rotation is UNLOCKED by default on both desktop and mobile.)
     mapInstance = L.map(el, {
       scrollWheelZoom: true,
       dragging: true,
@@ -273,7 +277,7 @@ function ensureMap() {
       bearing: 0,
       touchRotate: false,
       shiftKeyRotate: false,
-      rotateControl: { closeOnZeroBearing: false }
+      rotateControl: false
     }).setView([5.6037, -0.1870], 12); // Accra default
     // Leaflet's map-drag handler listens on the whole container and, with the
     // DEFAULT 3px clickTolerance, treats a few pixels of mouse wobble as a pan.
@@ -303,10 +307,65 @@ function ensureMap() {
       mapInstance.getContainer().setAttribute('tabindex', '0');
       mapInstance.getContainer().addEventListener('keydown', (e) => {
         if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+        if (mapRotationLocked) return; // rotation lock also stops the keys
         e.preventDefault();
         const step = e.key === 'ArrowLeft' ? -15 : 15;
         const next = (((mapInstance.getBearing?.() || 0) + step) % 360 + 360) % 360;
         mapInstance.setBearing(next);
+      });
+    }
+    initRotateKnob();
+
+    // ── Rotation knob (bottom-left of the map) ─────────────────────────────
+    // DRAG: pointer movement around the knob's centre sets the map bearing.
+    // CLICK: a short press with no drag toggles the rotation lock — when locked,
+    // dragging the knob (and the ← / → keys) does nothing. Unlocked by default.
+    function initRotateKnob() {
+      const knob = document.getElementById('mapRotateKnob');
+      if (!knob || typeof mapInstance.setBearing !== 'function') return;
+      let dragging = false, moved = false, startBearing = 0, startAngle = 0;
+      const angleAt = (e) => {
+        const r = knob.getBoundingClientRect();
+        const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+        return Math.atan2(e.clientY - cy, e.clientX - cx) * 180 / Math.PI;
+      };
+      const setLocked = (locked) => {
+        mapRotationLocked = locked;
+        knob.dataset.locked = String(locked);
+        knob.title = locked ? 'Rotation locked — click to unlock' : 'Drag to rotate — click to lock';
+        showToast(locked ? 'Map rotation locked' : 'Map rotation unlocked', 'info', 1600);
+      };
+      knob.addEventListener('pointerdown', (e) => {
+        if (mapRotationLocked) { e.preventDefault(); return; }
+        dragging = true; moved = false;
+        startBearing = mapInstance.getBearing?.() || 0;
+        startAngle = angleAt(e);
+        knob.setPointerCapture(e.pointerId);
+        e.preventDefault();
+      });
+      knob.addEventListener('pointermove', (e) => {
+        if (!dragging) return;
+        const delta = angleAt(e) - startAngle;
+        if (Math.abs(delta) < 3 && !moved) return; // dead-zone so a click stays a click
+        moved = true;
+        const bearing = ((startBearing - delta) % 360 + 360) % 360;
+        suppressMoveEvent = true;
+        mapInstance.setBearing(bearing);
+        suppressMoveEvent = false;
+        const icon = knob.querySelector('svg, i');
+        if (icon) icon.style.transform = `rotate(${bearing}deg)`;
+      });
+      const endDrag = () => { dragging = false; };
+      knob.addEventListener('pointerup', endDrag);
+      knob.addEventListener('pointercancel', endDrag);
+      knob.addEventListener('click', () => {
+        if (moved) { moved = false; return; } // it was a drag, not a click
+        setLocked(!mapRotationLocked);
+      });
+      // Keep the knob glyph pointing north as the map rotates by any means.
+      mapInstance.on('rotate', () => {
+        const icon = knob.querySelector('svg, i');
+        if (icon) icon.style.transform = `rotate(${mapInstance.getBearing?.() || 0}deg)`;
       });
     }
     // Google-style "Search this area": whenever the USER moves the map (pan or

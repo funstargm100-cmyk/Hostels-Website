@@ -144,6 +144,20 @@
           <i data-lucide="refresh-cw"></i> Search this area
         </button>
 
+        <!-- Fullscreen-only hamburger: reveals the filter/search sidebar while
+             the map fills the screen (the page toolbar is hidden in fullscreen). -->
+        <button type="button" id="mapFsMenuBtn" class="map-fs-menu" onclick="toggleFilters()"
+                title="Filters & search" aria-label="Filters and search">
+          <i data-lucide="menu"></i>
+        </button>
+
+        <!-- Rotation knob (bottom-left): DRAG it to spin the map, CLICK it to
+             lock/unlock rotation. Unlocked by default on desktop and mobile. -->
+        <button type="button" id="mapRotateKnob" class="map-rotate-knob" title="Drag to rotate — click to lock/unlock"
+                aria-label="Rotate map" data-locked="false">
+          <i data-lucide="rotate-cw"></i>
+        </button>
+
         <!-- Re-center control (the crosshair in the corner of every Maps-style UI). -->
         <button type="button" id="recenterBtn" class="map-recenter" onclick="recenterMap()" title="Re-center on results" aria-label="Re-center on results">
           <i data-lucide="crosshair"></i>
@@ -157,7 +171,7 @@
 
         <!-- Discoverability: panning now works (and is safe — results reframe only
              on request); zoom and rotation are the other supported gestures. -->
-        <div class="map-hint">Drag to pan · scroll to zoom · compass or ← → to rotate</div>
+        <div class="map-hint">Drag to pan · scroll to zoom · drag the knob (bottom-left) or ← → to rotate</div>
       </div>
       <div class="pagination" id="pagination"></div>
     </div>
