@@ -78,11 +78,11 @@ const IMAGE_UPLOAD = {
   // we are trying to prevent. 360KB x 10 = ~3.6MB, leaving headroom for the
   // form fields and multipart boundaries.
   targetBytes: 360000,
-  // The absolute ceiling for ONE file. Beyond this we keep lowering quality, and
-  // if the image still refuses to shrink we send the best attempt rather than
-  // fail: a slightly-too-large photo the server can still handle beats a blocked
-  // submit.
-  hardBytes: 900000
+  // The absolute ceiling for ONE file. Beyond this we keep lowering quality and
+  // then start dropping pixels (see the shrink passes in compressImage).
+  // Deliberately well under the request budget so a single pathological photo
+  // cannot consume the whole allowance and starve the others.
+  hardBytes: 700000
 };
 
 // Downscale + re-encode ONE image file. Always resolves with a File — on any
@@ -157,14 +157,22 @@ async function compressImage(file, opts = {}) {
   }
   if (!outBlob) return fail('encode-failed');
 
-  // If the quality ladder ran out and it is STILL too big, shrink the pixels
-  // instead. Dropping the long edge is far less destructive than crushing the
-  // quality further, and this is what actually saves very detailed images (foliage,
-  // fabric, text on a wall) that resist JPEG compression. Loops, because one
-  // halving may not be enough on a pathological image.
+  // If the quality ladder ran out and it is STILL over the target, shrink the
+  // PIXELS instead. Dropping the long edge is far less destructive than crushing
+  // quality further, and it is what actually saves very detailed images (foliage,
+  // fabric, text on a wall) that resist JPEG compression.
+  //
+  // This gate is `> targetBytes`, NOT `> hardBytes`. Gating on the hard ceiling
+  // was a real bug: a batch can sit comfortably under hardBytes (700KB) while
+  // still being over the REQUEST budget once multiplied by 10 files, and gating
+  // on the ceiling meant the budget was silently never enforced — ten 492KB
+  // photos went out as 4.81MB against a 4.5MB limit.
+  // Loops, because one shrink may not be enough on a pathological image.
   let curW = w, curH = h;
-  for (let pass = 0; pass < 3 && outBlob.size > cfg.hardBytes && Math.max(curW, curH) > 640; pass++) {
-    const shrink = Math.max(0.6, Math.sqrt(cfg.hardBytes / outBlob.size));
+  for (let pass = 0; pass < 3 && outBlob.size > cfg.targetBytes && Math.max(curW, curH) > 640; pass++) {
+    // Shrink toward the TARGET, never below a floor of 0.6 (a single pass that
+    // more than halved the image would throw away far more detail than needed).
+    const shrink = Math.max(0.6, Math.sqrt(cfg.targetBytes / outBlob.size));
     const w2 = Math.max(1, Math.round(curW * shrink));
     const h2 = Math.max(1, Math.round(curH * shrink));
     const c2 = document.createElement('canvas');
@@ -213,15 +221,53 @@ async function compressImage(file, opts = {}) {
   };
 }
 
-// Compress a whole batch. `onProgress(done, total)` lets the caller show a
-// meaningful "Compressing 3/10" message instead of a frozen button.
-// Runs sequentially on purpose: parallel canvas encodes on a phone will jank the
-// UI and can exhaust memory on a 10-photo batch.
+// Compress a whole batch, and enforce a budget for the WHOLE REQUEST.
+//
+// A per-file cap is not enough, and measuring proved it: 10 photos each landing
+// under the 360KB target still summed to 4.81MB, over the ~4.5MB that serverless
+// platforms accept for the entire body. The limit applies to the request, so the
+// budget has to be divided across the files the user actually picked.
+//
+// After a first pass, if the batch is still too heavy we re-encode it against a
+// LOWER per-file target (which walks the quality ladder further, and shrinks
+// pixels if quality alone will not do it). This converges because each pass has
+// a strictly smaller target.
+//
+// `onProgress(done, total)` lets the caller show "Compressing 3/10" instead of a
+// frozen button. Runs sequentially on purpose: parallel canvas encodes on a phone
+// jank the UI and can exhaust memory on a 10-photo batch.
+const REQUEST_BUDGET = 3800000; // bytes for ALL images, leaving ~0.7MB of the 4.5MB
 async function compressImages(files, opts = {}, onProgress) {
+  const list = Array.from(files || []);
+  if (!list.length) return [];
+
+  // Share the request budget evenly, but never demand less than 120KB per photo
+  // — below that a room photo stops being legible, and it is better to send a
+  // slightly heavy request than an unusable listing (the server can also be
+  // raised; see MAX_UPLOAD_BYTES in src/routes/listings.js).
+  const perFileTarget = Math.max(120000, Math.floor(REQUEST_BUDGET / list.length));
+
+  let out = await runPass(list, { ...opts, targetBytes: perFileTarget }, onProgress);
+
+  // Second pass, only if the batch is genuinely over budget. Halve the per-file
+  // target and re-encode the ORIGINALS (not the already-compressed output, which
+  // would compound JPEG artefacts).
+  const total = out.reduce((n, r) => n + r.size, 0);
+  if (total > REQUEST_BUDGET && list.length > 1) {
+    const tighter = Math.max(120000, Math.floor(perFileTarget / 2));
+    const second = await runPass(list, { ...opts, targetBytes: tighter }, onProgress);
+    const secondTotal = second.reduce((n, r) => n + r.size, 0);
+    // Keep whichever pass actually produced the smaller request.
+    if (secondTotal < total) out = second;
+  }
+  return out;
+}
+
+async function runPass(list, opts, onProgress) {
   const out = [];
-  for (let i = 0; i < files.length; i++) {
-    out.push(await compressImage(files[i], opts));
-    if (typeof onProgress === 'function') onProgress(i + 1, files.length);
+  for (let i = 0; i < list.length; i++) {
+    out.push(await compressImage(list[i], opts));
+    if (typeof onProgress === 'function') onProgress(i + 1, list.length);
   }
   return out;
 }

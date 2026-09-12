@@ -401,6 +401,24 @@ document.getElementById('postAdForm').addEventListener('submit', async (e) => {
     }
 
     btn.textContent = 'Submitting...';
+
+    // CRITICAL: neutralise the file input before building the FormData.
+    //
+    // `new FormData(form)` walks the form and appends EVERY file input's files
+    // under the input's own name. #fileInput is declared as
+    //   <input type="file" id="fileInput" name="images" ... />
+    // so the RAW, UNCOMPRESSED photos were being attached automatically — in
+    // ADDITION to the compressed ones appended below. The request therefore
+    // carried both sets, and 10 raw phone photos (~47MB) still blew past the
+    // platform's ~4.5MB body limit with FUNCTION_PAYLOAD_TOO_LARGE.
+    //
+    // Clearing the input first means the automatic pass finds nothing and only
+    // the compressed files below are sent. `selectedFiles`/`coverFile` are the
+    // app's own copies of the user's picks and are unaffected, so the wizard can
+    // still redraw its previews if the submit fails.
+    const fileInput = document.getElementById('fileInput');
+    if (fileInput) fileInput.value = '';
+
     const formData = new FormData(e.target);
     // Cover photo goes first — the backend marks the first image as primary/cover.
     // Order here must match `compressed`, which was built as [cover, ...photos].

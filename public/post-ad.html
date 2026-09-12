@@ -81,7 +81,14 @@
             Show seekers the inside: the room itself, beds, kitchen, bathroom, compound, etc.<br />
             <strong>Tip:</strong> drag a photo onto another to reorder, or tap one then tap another to swap them. The first photo becomes the main room photo.
           </p>
-          <input type="file" id="fileInput" name="images" accept="image/*" multiple hidden onchange="handlePhotoSelect(this.files)" />
+          <!-- No `name` attribute, deliberately. With name="images" this input
+               joined `new FormData(form)` automatically and attached the RAW,
+               UNCOMPRESSED photos alongside the compressed ones the submit
+               handler appends — pushing the request body far past the serverless
+               platform's limit (FUNCTION_PAYLOAD_TOO_LARGE). The files are held
+               in `selectedFiles` and sent explicitly, so the input never needs
+               to be part of the form. -->
+          <input type="file" id="fileInput" accept="image/*" multiple hidden onchange="handlePhotoSelect(this.files)" />
           <div class="photo-preview" id="photoPreview"></div>
           <div id="dropzoneSlot">
             <div class="dropzone" id="dropzone" onclick="document.getElementById('fileInput').click()" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="this.classList.remove('drag');handleDrop(event)">
