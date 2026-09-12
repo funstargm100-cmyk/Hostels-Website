@@ -185,7 +185,7 @@ function renderAmenities(a) {
 function renderPriceBox(l) {
   document.getElementById('occupancyTag').textContent = `${l.occupancy_type}-in-1 Room`;
   document.getElementById('priceMain').textContent = `GHS ${Number(l.price_per_head).toLocaleString()}`;
-  document.getElementById('pricePerHead').textContent = 'per person';
+  document.getElementById('pricePerHead').textContent = 'per person / year';
   document.getElementById('priceBreakdown').textContent = `${l.occupancy_type}-in-1 room`;
   document.getElementById('viewCount').textContent = l.views_count || 0;
   document.getElementById('interestCount').textContent = l.interest_count || 0;

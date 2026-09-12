@@ -129,7 +129,7 @@ async function loadAdminListings() {
       listings.map(l => `<tr>
         <td><a href="/listing?id=${l.uuid}" target="_blank" style="color:var(--primary)">${l.title}</a></td>
         <td>${l.owner_name}<br><span class="text-muted" style="font-size:0.75rem">${l.owner_email}</span></td>
-        <td>GHS ${Number(l.price_per_head).toLocaleString()} / person</td>
+        <td>GHS ${Number(l.price_per_head).toLocaleString()} / person / year</td>
         <td>${new Date(l.created_at).toLocaleDateString()}</td>
         <td style="display:flex;gap:0.4rem;flex-wrap:wrap">
           ${status === 'pending' ? `<button class="btn btn-secondary btn-sm" onclick="approveListing(${l.id})"><i data-lucide="check" style="width:14px;height:14px"></i> Approve</button><button class="btn btn-sm" style="background:#fee2e2;color:#991b1b" onclick="openRejectModal(${l.id})"><i data-lucide="x" style="width:14px;height:14px"></i> Reject</button>` : ''}

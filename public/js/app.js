@@ -252,7 +252,7 @@ function renderListingCard(l, options = {}) {
   const img = l.primary_image ? l.primary_image : '/images/placeholder.jpg';
   const verified = l.owner_verified ? '<span class="badge badge-verified"><i data-lucide="badge-check" style="width:11px;height:11px"></i> Verified</span>' : '';
   const featured = l.is_featured ? '<span class="badge badge-featured"><i data-lucide="star" style="width:11px;height:11px"></i> Featured</span>' : '';
-  const perHead = `<div class="card-price-sub">per&nbsp;person</div>`;
+  const perHead = `<div class="card-price-sub">per&nbsp;person / year</div>`;
   const amenityIcons = [
     l.wifi ? '<i data-lucide="wifi"></i> Wi-Fi' : '',
     l.water === 'constant' ? '<i data-lucide="droplets"></i> Water' : '',

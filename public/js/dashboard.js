@@ -198,7 +198,7 @@ async function loadOwnerListings() {
       listings.map(l => `<tr>
         <td><a href="/listing?id=${l.uuid}" style="color:var(--primary)">${l.title}</a></td>
         <td><span class="status-badge status-${l.status}">${l.status}</span></td>
-        <td>GHS ${Number(l.price_per_head).toLocaleString()} / person</td>
+        <td>GHS ${Number(l.price_per_head).toLocaleString()} / person / year</td>
         <td>${l.views_count}</td>
         <td>${l.interest_count}</td>
         <td style="white-space:nowrap">
