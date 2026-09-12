@@ -202,7 +202,7 @@ function clearFilters() {
   document.getElementById('sortSelect').value = '';
   nearMeLat = null; nearMeLng = null; nearMeKm = null;
   const btn = document.getElementById('nearMeBtn');
-  if (btn) { btn.classList.remove('btn-primary'); btn.classList.add('btn-ghost'); btn.innerHTML = '<i data-lucide="navigation"></i> Near Me'; if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [btn] }); }
+  setNearMeBtnState(btn, false);
   applyFilters();
 }
 
@@ -211,24 +211,44 @@ function filterNearMe() {
   if (nearMeLat && nearMeLng) {
     // Toggle off
     nearMeLat = null; nearMeLng = null; nearMeKm = null;
-    if (btn) { btn.classList.remove('btn-primary'); btn.classList.add('btn-ghost'); btn.innerHTML = '<i data-lucide="navigation"></i> Near Me'; if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [btn] }); }
+    setNearMeBtnState(btn, false);
     applyFilters();
     return;
   }
-  if (!navigator.geolocation) return showToast('Geolocation not supported', 'error');
-  if (btn) { btn.innerHTML = '<i data-lucide="loader"></i> Locating...'; if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [btn] }); }
-  navigator.geolocation.getCurrentPosition(pos => {
-    nearMeLat = pos.coords.latitude;
-    nearMeLng = pos.coords.longitude;
-    if (btn) { btn.classList.remove('btn-ghost'); btn.classList.add('btn-primary'); btn.innerHTML = '<i data-lucide="navigation"></i> Near Me ✓'; if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [btn] }); }
-    applyFilters();
-  }, () => {
-    showToast('Could not get your location', 'error');
-    if (btn) { btn.innerHTML = '<i data-lucide="navigation"></i> Near Me'; if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [btn] }); }
-  });
+  // "Near base" searches around the seeker's SAVED daily base location (set at
+  // signup on the map) instead of the live GPS position — it's stable, works on
+  // desktop without a permission prompt, and matches the base↔room distances
+  // already shown on the cards.
+  const base = window.__userBaseLoc;
+  if (!base || !base.lat || !base.lng) {
+    return showToast('No base location saved — set one in your profile first', 'warning');
+  }
+  nearMeLat = base.lat;
+  nearMeLng = base.lng;
+  setNearMeBtnState(btn, true);
+  applyFilters();
+}
+// Keep the toolbar button's look in sync with the on/off state (it may be absent
+// when triggered from the fullscreen map button).
+function setNearMeBtnState(btn, on) {
+  if (!btn) return;
+  btn.classList.toggle('btn-primary', on);
+  btn.classList.toggle('btn-ghost', !on);
+  btn.innerHTML = `<i data-lucide="navigation"></i> Near Base${on ? ' ✓' : ''}`;
+  if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [btn] });
 }
 function toggleFilters() { document.getElementById('filtersPanel').classList.toggle('open'); }
 function closeFilters() { document.getElementById('filtersPanel').classList.remove('open'); }
+// Clicking OUTSIDE the filters panel closes it. Ignores clicks inside the panel
+// and on the buttons whose whole job is toggling it (the toolbar Filters button
+// and the fullscreen hamburger) so they don't immediately re-open/close it.
+document.addEventListener('click', (e) => {
+  const panel = document.getElementById('filtersPanel');
+  if (!panel || !panel.classList.contains('open')) return;
+  if (panel.contains(e.target)) return;
+  if (e.target.closest && e.target.closest('#mobileFilterBtn, #mapFsMenuBtn, #closeFiltersBtn')) return;
+  closeFilters();
+});
 // ─── MAP VIEW ────────────────────────────────
 // Seekers can switch to a map: listings are plotted with their jittered
 // (privacy-safe) coordinates. Distances/times in popups use the REAL
@@ -265,7 +285,8 @@ function ensureMap() {
     //   • Rotation — the rotation knob at the bottom-left of the map: DRAG it to
     //     spin the map, CLICK it to lock/unlock. (The plugin's built-in compass
     //     control is disabled — rotateControl:false — in favour of the knob.
-    //     Rotation is UNLOCKED by default on both desktop and mobile.)
+    //     Rotation is UNLOCKED by default on both desktop and mobile. On touch
+    //     devices the knob is hidden and a two-finger twist rotates instead.)
     mapInstance = L.map(el, {
       scrollWheelZoom: true,
       dragging: true,
@@ -275,7 +296,10 @@ function ensureMap() {
       zoomControl: false,
       rotate: true,
       bearing: 0,
-      touchRotate: false,
+      // Two-finger twist rotates on phones/tablets, where the knob is hidden.
+      // The knob's click-lock applies to the ← / → keys; touch rotation stays
+      // available because it is an explicit two-finger gesture, not an accident.
+      touchRotate: true,
       shiftKeyRotate: false,
       rotateControl: false
     }).setView([5.6037, -0.1870], 12); // Accra default
@@ -346,14 +370,20 @@ function ensureMap() {
       knob.addEventListener('pointermove', (e) => {
         if (!dragging) return;
         const delta = angleAt(e) - startAngle;
-        if (Math.abs(delta) < 3 && !moved) return; // dead-zone so a click stays a click
+        if (Math.abs(delta) < 4 && !moved) return; // dead-zone so a click stays a click
         moved = true;
-        const bearing = ((startBearing - delta) % 360 + 360) % 360;
+        // Damping: 1px at the knob's edge was producing ~2° of map rotation — far
+        // too twitchy for a mouse. Scale the raw angle down and apply exponential
+        // smoothing so the bearing glides instead of snapping.
+        const target = startBearing - delta * 0.35;
+        const current = mapInstance.getBearing?.() || 0;
+        let smoothed = current + (target - current) * 0.35;
+        smoothed = ((smoothed % 360) + 360) % 360;
         suppressMoveEvent = true;
-        mapInstance.setBearing(bearing);
+        mapInstance.setBearing(smoothed);
         suppressMoveEvent = false;
         const icon = knob.querySelector('svg, i');
-        if (icon) icon.style.transform = `rotate(${bearing}deg)`;
+        if (icon) icon.style.transform = `rotate(${smoothed}deg)`;
       });
       const endDrag = () => { dragging = false; };
       knob.addEventListener('pointerup', endDrag);
@@ -798,6 +828,19 @@ function recenterMap() {
     flyToGuarded([5.6037, -0.1870], 12); // Accra default
   }
 }
+
+// Reset the map view in one click: bearing back to north, then re-frame the
+// results bounding box (which also re-centers and re-zooms). One click undoes
+// any rotation, panning and zooming the user has done.
+function resetMapView() {
+  if (!mapInstance || typeof mapInstance.setBearing !== 'function') return recenterMap();
+  suppressMoveEvent = true;
+  mapInstance.setBearing(0);
+  suppressMoveEvent = false;
+  recenterMap();
+  showToast('View reset', 'info', 1400);
+}
+window.resetMapView = resetMapView;
 
 // ─── FULLSCREEN MAP ───────────────────────────
 // Expand the map to fill the whole viewport and back. Implemented as a CSS class

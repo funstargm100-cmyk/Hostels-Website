@@ -525,6 +525,10 @@ textarea{ resize:vertical; min-height:110px; }
 .map-rotate-knob[data-locked="true"]{ color:var(--danger,#d64545); border-color:var(--danger,#d64545); cursor:not-allowed; }
 .map-rotate-knob svg, .map-rotate-knob i{ width:19px; height:19px; pointer-events:none; }
 [data-theme="dark"] .map-rotate-knob{ background:rgba(31,27,44,.96); border-color:rgba(255,255,255,.14); }
+/* Mobile: no knob — a two-finger twist rotates instead (touchRotate is on). */
+@media (pointer:coarse), (max-width:640px){
+  .map-rotate-knob{ display:none; }
+}
 
 /* Fullscreen-only hamburger (top-left): the page toolbar is hidden while the
    map is fullscreen, so this button exposes the filter/search sidebar. It only
@@ -540,6 +544,30 @@ textarea{ resize:vertical; min-height:110px; }
 .map-fs-menu:hover{ color:var(--primary); border-color:var(--primary); }
 .map-fs-menu svg, .map-fs-menu i{ width:20px; height:20px; }
 [data-theme="dark"] .map-fs-menu{ background:rgba(31,27,44,.96); border-color:rgba(255,255,255,.14); }
+/* Fullscreen-only "Near base": sits under the hamburger in the same style. */
+.map-fs-near{
+  display:none; position:absolute; top:60px; left:12px; z-index:40;
+  width:40px; height:40px; align-items:center; justify-content:center;
+  background:var(--card-bg); color:var(--text-muted);
+  border:1px solid var(--border); border-radius:var(--radius-sm,10px); cursor:pointer;
+  box-shadow:0 2px 8px rgba(0,0,0,.18); transition:color .15s, border-color .15s;
+}
+#mapWrap.map-fullscreen-on .map-fs-near{ display:inline-flex; }
+.map-fs-near:hover{ color:var(--primary); border-color:var(--primary); }
+.map-fs-near svg, .map-fs-near i{ width:19px; height:19px; }
+[data-theme="dark"] .map-fs-near{ background:rgba(31,27,44,.96); border-color:rgba(255,255,255,.14); }
+/* Reset view: above the fullscreen toggle on the right rail. */
+.map-reset{
+  position:absolute; right:12px; bottom:120px; z-index:30;
+  width:40px; height:40px; display:inline-flex; align-items:center; justify-content:center;
+  background:var(--card-bg); color:var(--text-muted);
+  border:1px solid var(--border); border-radius:50%; cursor:pointer;
+  box-shadow:0 2px 8px rgba(0,0,0,.18); transition:color .15s, border-color .15s, transform .15s;
+}
+.map-reset:hover{ color:var(--primary); border-color:var(--primary); }
+.map-reset:active{ transform:scale(.94) rotate(-30deg); }
+.map-reset svg, .map-reset i{ width:18px; height:18px; }
+[data-theme="dark"] .map-reset{ background:rgba(31,27,44,.96); border-color:rgba(255,255,255,.14); }
 
 /* Fullscreen mode: #mapWrap escapes its column and covers the viewport. Using
    position:fixed keeps Google Maps' feel — the page behind is untouched and the

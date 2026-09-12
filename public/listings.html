@@ -53,7 +53,7 @@
         <button id="listViewBtn" onclick="setView('list');document.getElementById('listViewBtn').classList.add('active');document.getElementById('gridViewBtn').classList.remove('active');document.getElementById('mapViewBtn').classList.remove('active')"><i data-lucide="list"></i></button>
         <button id="mapViewBtn" onclick="setView('map');document.getElementById('mapViewBtn').classList.add('active');document.getElementById('gridViewBtn').classList.remove('active');document.getElementById('listViewBtn').classList.remove('active')" title="Map view"><i data-lucide="map"></i></button>
       </div>
-      <button class="btn btn-outline btn-sm" id="nearMeBtn" onclick="filterNearMe()"><i data-lucide="navigation"></i> Near Me</button>
+      <button class="btn btn-outline btn-sm" id="nearMeBtn" onclick="filterNearMe()"><i data-lucide="navigation"></i> Near Base</button>
       <button class="btn btn-outline btn-sm" onclick="toggleFilters()" id="mobileFilterBtn"><i data-lucide="sliders-horizontal"></i> Filters</button>
     </div>
   </div>
@@ -151,6 +151,20 @@
           <i data-lucide="menu"></i>
         </button>
 
+        <!-- Fullscreen-only "Near base": same filter as the toolbar button, which
+             is hidden while the map is fullscreen. -->
+        <button type="button" id="mapFsNearBtn" class="map-fs-near" onclick="filterNearMe()"
+                title="Show rooms near my base location" aria-label="Near my base location">
+          <i data-lucide="navigation"></i>
+        </button>
+
+        <!-- Reset view: bearing back to north AND the camera back to the results
+             bounding box — one click undoes any rotation, panning and zooming. -->
+        <button type="button" id="mapResetBtn" class="map-reset" onclick="resetMapView()"
+                title="Reset view" aria-label="Reset map view">
+          <i data-lucide="rotate-ccw"></i>
+        </button>
+
         <!-- Rotation knob (bottom-left): DRAG it to spin the map, CLICK it to
              lock/unlock rotation. Unlocked by default on desktop and mobile. -->
         <button type="button" id="mapRotateKnob" class="map-rotate-knob" title="Drag to rotate — click to lock/unlock"
@@ -171,7 +185,7 @@
 
         <!-- Discoverability: panning now works (and is safe — results reframe only
              on request); zoom and rotation are the other supported gestures. -->
-        <div class="map-hint">Drag to pan · scroll to zoom · drag the knob (bottom-left) or ← → to rotate</div>
+        <div class="map-hint">Drag to pan · scroll/pinch to zoom · drag the knob or ← → to rotate · two-finger twist on mobile</div>
       </div>
       <div class="pagination" id="pagination"></div>
     </div>
