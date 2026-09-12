@@ -125,10 +125,16 @@ function toggleTheme() {
 document.getElementById('themeToggle')?.addEventListener('click', toggleTheme);
 
 // ─── NAVBAR AUTH STATE ────────────────────────────────────────────────────────
-function setNavAuth(loggedIn) {
+function setNavAuth(loggedIn, role) {
   const show = (id) => { const el = document.getElementById(id); if (el) el.style.display = ''; };
   const hide = (id) => { const el = document.getElementById(id); if (el) el.style.display = 'none'; };
   if (loggedIn) {
+    // Seekers see "Profile" in the top nav; owners/agents/admins keep "Dashboard".
+    const navLabel = role === 'seeker' ? 'Profile' : 'Dashboard';
+    ['dashboardBtn', 'dashboardBtnMobile'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = navLabel;
+    });
     hide('loginBtn'); hide('signupBtn'); hide('loginBtnMobile'); hide('signupBtnMobile');
     show('dashboardBtn'); show('logoutBtn'); show('dashboardBtnMobile'); show('logoutBtnMobile');
   } else {
@@ -148,7 +154,7 @@ async function initNavAuth() {
   try {
     const { user } = await api.get('/api/auth/me');
     localStorage.setItem('user', JSON.stringify(user));
-    setNavAuth(true);
+    setNavAuth(true, user?.role);
     applyRoleToLogo(user?.role);
     return user;
   } catch {
@@ -159,7 +165,7 @@ async function initNavAuth() {
     // flaky mobile connection) silently signed people out; anything that reads
     // the user afterwards (e.g. the map's base-location trace) lost their data.
     const cached = (() => { try { return JSON.parse(localStorage.getItem('user') || 'null'); } catch { return null; } })();
-    setNavAuth(!!(cached && localStorage.getItem('token')));
+    setNavAuth(!!(cached && localStorage.getItem('token')), cached?.role);
     applyRoleToLogo(cached?.role || null);
     return cached;
   }
