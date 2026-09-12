@@ -210,6 +210,10 @@ window.removePhotoAt = removePhotoAt;
 
 // ── Drag & drop reordering ─────────────────────────────
 let dragFromIndex = null;
+// A drag's trailing click (if the browser fires one on the drop target) must
+// never be mistaken for the first tap of a tap-to-swap. Set on dragstart,
+// cleared on the next genuine mousedown.
+let suppressTap = false;
 
 function initPhotoDrag() {
   const wrap = document.getElementById('photoGrid');
@@ -219,6 +223,7 @@ function initPhotoDrag() {
   tiles.forEach((tile) => {
     tile.addEventListener('dragstart', (e) => {
       dragFromIndex = Number(tile.dataset.index);
+      suppressTap = true;
       tile.classList.add('dragging');
       e.dataTransfer.effectAllowed = 'move';
       // Firefox needs some data set for a drag to start.
@@ -243,7 +248,10 @@ function initPhotoDrag() {
     });
 
     // Touch fallback: tap a photo to select it, tap another to place it there.
+    tile.addEventListener('mousedown', () => { suppressTap = false; });
     tile.addEventListener('click', (e) => {
+      // The click trailing a drag lands on the drop target — not a tap.
+      if (suppressTap) return;
       if (e.target.closest('.photo-remove')) return;
       handlePhotoTap(Number(tile.dataset.index));
     });

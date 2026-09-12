@@ -88,16 +88,20 @@ export default async function run(page) {
     await realDrag(0, 2);
     out.afterDrag1Onto3 = await readColors();
     out.evAfterDrag1 = await page.evaluate(() => window._ev);
-    out.tapState = await page.evaluate(() => {
-      const sel = document.querySelector('#photoPreview .tap-selected');
-      return { selected: sel ? sel.dataset.index : null, toast: !!document.querySelector('.toast') };
-    });
-    // Clear stale tap selection from the post-drag pointerup so it can't interfere
-    await page.evaluate(() => {
-      tapIndex = null; tapStart = null;
-      document.querySelectorAll('#photoPreview [data-index]').forEach(t => t.classList.remove('tap-selected'));
-      document.querySelectorAll('.toast').forEach(t => t.remove());
-    });
+    // A drag must NOT leak into the tap path: no selection, no toast, no move.
+    out.tapState = await page.evaluate(() => ({
+      selected: document.querySelector('#photoPreview .tap-selected') ? 'LEAKED' : 'clean',
+      toast: !!document.querySelector('.toast'),
+    }));
+    // And a genuine tap right after the drag must still select.
+    const g0 = await page.$('#photoPreview [data-index="0"]');
+    const gb = await g0.boundingBox();
+    await page.mouse.click(gb.x + gb.width / 2, gb.y + gb.height / 2);
+    await page.waitForTimeout(300);
+    out.tapAfterDrag = await page.evaluate(() => ({
+      selected: document.querySelector('#photoPreview .tap-selected') ? 'selected' : 'not-selected',
+      toast: !!document.querySelector('.toast'),
+    }));
 
     // Drag photo 5 (index 4) onto photo 1 (index 0)
     await page.dragAndDrop('#photoPreview [data-index="4"]', '#photoPreview [data-index="0"]');

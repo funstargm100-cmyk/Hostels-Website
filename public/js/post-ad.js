@@ -148,9 +148,15 @@ function handleDrop(e) {
 }
 
 let dragIndex = null;
+// A real HTML5 drag must never be misread as taps: after a drag the browser can
+// fire pointerup/click on whichever tile the cursor ended up over. We set this
+// flag on dragstart and clear it on the next genuine pointerdown, so drag and
+// tap-tap stay two separate, predictable interactions.
+let suppressTap = false;
 
 function handleTileDragStart(e, i) {
   dragIndex = i;
+  suppressTap = true;
   e.dataTransfer.effectAllowed = 'move';
   try { e.dataTransfer.setData('text/plain', String(i)); } catch (_) {}
 }
@@ -196,12 +202,16 @@ let tapIndex = null;
 let tapStart = null;
 
 function handleTilePointerDown(e, i) {
+  // A fresh press cancels any drag-suppression from a previous drag.
+  suppressTap = false;
   // Remember where the press started so a drag (finger/mouse moves away)
   // is never mistaken for a tap
   tapStart = { x: e.clientX, y: e.clientY, index: i };
 }
 
 function handleTileTap(e, i) {
+  // The pointerup that follows a drag (fired on the drop target) is not a tap.
+  if (suppressTap) return;
   // Ignore taps that are really drags, and taps that started on the remove button
   if (tapStart && tapStart.index === i &&
       Math.hypot(e.clientX - tapStart.x, e.clientY - tapStart.y) > 10) return;
