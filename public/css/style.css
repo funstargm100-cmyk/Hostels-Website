@@ -526,10 +526,11 @@ textarea{ resize:vertical; min-height:110px; }
 .map-fullscreen svg, .map-fullscreen i{ width:18px; height:18px; }
 [data-theme="dark"] .map-fullscreen{ background:rgba(31,27,44,.96); border-color:rgba(255,255,255,.14); }
 
-/* Rotation knob (bottom-left): drag to spin the map, click to lock/unlock.
-   The glyph itself rotates with the bearing so it reads like a compass needle. */
+/* Rotation knob: top of the right-rail control stack. DRAG to spin, CLICK to
+   lock/unlock. The compass glyph rotates with the bearing so it reads like a
+   compass needle pointing north as the map turns. */
 .map-rotate-knob{
-  position:absolute; left:12px; bottom:64px; z-index:30;
+  position:absolute; right:12px; bottom:168px; z-index:30;
   width:40px; height:40px; display:inline-flex; align-items:center; justify-content:center;
   background:var(--card-bg); color:var(--text-muted);
   border:1px solid var(--border); border-radius:50%; cursor:grab;
@@ -541,6 +542,9 @@ textarea{ resize:vertical; min-height:110px; }
 .map-rotate-knob[data-locked="true"]{ color:var(--danger,#d64545); border-color:var(--danger,#d64545); cursor:not-allowed; }
 .map-rotate-knob svg, .map-rotate-knob i{ width:19px; height:19px; pointer-events:none; }
 [data-theme="dark"] .map-rotate-knob{ background:rgba(31,27,44,.96); border-color:rgba(255,255,255,.14); }
+/* Bottom-left of the map is now reserved for the hint text only — ALL buttons
+   live in one ordered rail on the right (bottom → top):
+     re-center → fullscreen → pin-mode → rotation. */
 /* Mobile: no knob — a two-finger twist rotates instead (touchRotate is on). */
 @media (pointer:coarse), (max-width:640px){
   .map-rotate-knob{ display:none; }
@@ -572,7 +576,7 @@ textarea{ resize:vertical; min-height:110px; }
 .map-fs-near:hover{ color:var(--primary); border-color:var(--primary); }
 .map-fs-near svg, .map-fs-near i{ width:19px; height:19px; }
 [data-theme="dark"] .map-fs-near{ background:rgba(31,27,44,.96); border-color:rgba(255,255,255,.14); }
-/* Reset view: above the fullscreen toggle on the right rail. */
+/* Pin-mode toggle: third button in the right rail (above re-center/fullscreen). */
 .map-reset{
   position:absolute; right:12px; bottom:120px; z-index:30;
   width:40px; height:40px; display:inline-flex; align-items:center; justify-content:center;
