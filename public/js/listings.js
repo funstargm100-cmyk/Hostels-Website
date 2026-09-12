@@ -158,7 +158,15 @@ async function loadListings() {
     // The results are in — end the sweep and play the scan for the new pins.
     // "Search this area" gets the tighter radar pulse instead, since the user
     // is already looking at the right patch of map.
-    if (currentView === 'map') mapFxResults(pendingMapAreaSearch ? 'area' : 'search');
+    // Feed the HUD real numbers: how many rooms came back, and which area was
+    // searched. `getFilters().location` is the user's own search box, so the
+    // readout names the place they actually asked for.
+    if (currentView === 'map') {
+      mapFxResults(pendingMapAreaSearch ? 'area' : 'search', {
+        count: data.total,
+        area: filters.location || null
+      });
+    }
     document.getElementById('resultsCount').textContent = `${data.total} room${data.total !== 1 ? 's' : ''} found`;
 
     if (!data.listings.length) {
@@ -1133,6 +1141,116 @@ let fxTimer = null;          // clears the transient one-shot effects
 let fxSearchToken = 0;       // supersedes a running search effect
 function mapFxEl() { return document.getElementById('mapFx'); }
 
+// ─── DIGITAL RAIN ──────
+// A canvas of falling katakana/hex glyphs, drawn ONLY while an effect runs.
+// Deliberately not a permanent animation: an always-on rAF loop would burn
+// battery on a page whose main content is a map, and it would compete with
+// Leaflet's own rendering during pans and zooms.
+let rainRaf = null;
+let rainCtx = null;
+let rainDrops = [];
+let rainLastFrame = 0;
+const RAIN_GLYPHS = '01ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝｦｧｨｩ0123456789ABCDEF';
+
+function stopMatrixRain() {
+  if (rainRaf !== null) { cancelAnimationFrame(rainRaf); rainRaf = null; }
+  // Clear the canvas so no frozen glyphs linger over the map once the effect
+  // ends — a still frame of rain reads as corruption, not as an effect.
+  const canvas = document.getElementById('mapRain');
+  if (canvas && rainCtx) rainCtx.clearRect(0, 0, canvas.width, canvas.height);
+}
+
+function startMatrixRain(durationMs) {
+  const canvas = document.getElementById('mapRain');
+  const fx = mapFxEl();
+  if (!canvas || !fx) return;
+  // Respect the OS setting: the rain is pure motion with no informational value,
+  // so it is omitted entirely rather than frozen (the CSS hides it too).
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+  const host = fx.getBoundingClientRect();
+  if (!host.width || !host.height) return;
+  // Cap the backing store. A full-DPR canvas at map size is far more pixels than
+  // this effect needs; the smaller buffer keeps the per-frame cost flat on
+  // high-DPR phones.
+  const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+  canvas.width = Math.round(host.width * dpr);
+  canvas.height = Math.round(host.height * dpr);
+  rainCtx = canvas.getContext('2d');
+  if (!rainCtx) return;
+  rainCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  const W = host.width, H = host.height;
+  const fontSize = W < 640 ? 12 : 15;
+  const colWidth = fontSize + 2;
+  const colCount = Math.ceil(W / colWidth);
+  // Each column gets its own fall speed, so the rain never looks like one sheet
+  // sliding down — independent columns are what sell the effect.
+  rainDrops = [];
+  for (let i = 0; i < colCount; i++) {
+    rainDrops.push({
+      y: Math.random() * -H,
+      speed: 90 + Math.random() * 190,   // px per second
+      // A small share of columns are much brighter: highlighted glyph clusters,
+      // the detail that makes it read as a system rather than a texture.
+      hot: Math.random() < 0.18
+    });
+  }
+  rainLastFrame = performance.now();
+  const startedAt = rainLastFrame;
+
+  const frame = (now) => {
+    const dt = Math.min((now - rainLastFrame) / 1000, 0.05); // clamp tab-restore spikes
+    rainLastFrame = now;
+
+    // Fade rather than clear: a translucent fill leaves the comet trail behind
+    // each glyph, which is the whole look. Too opaque smears, too transparent
+    // and the glyphs never disappear.
+    rainCtx.globalCompositeOperation = 'destination-out';
+    rainCtx.fillStyle = 'rgba(0,0,0,0.16)';
+    rainCtx.fillRect(0, 0, W, H);
+    rainCtx.globalCompositeOperation = 'source-over';
+    rainCtx.font = fontSize + 'px ui-monospace, monospace';
+    rainCtx.textBaseline = 'top';
+
+    for (let i = 0; i < rainDrops.length; i++) {
+      const drop = rainDrops[i];
+      drop.y += drop.speed * dt;
+      const x = i * colWidth;
+      const ch = RAIN_GLYPHS[(Math.random() * RAIN_GLYPHS.length) | 0];
+      // The leading glyph is brighter than the trail behind it: that contrast is
+      // what makes a column look like it is being WRITTEN rather than merely
+      // falling. Alphas are moderate because this canvas is screen-blended ON TOP
+      // of three other screen-blended layers — see the note in the CSS about the
+      // alphas compounding. Bright rain here turned the whole map into a green
+      // wall, so the glyphs stay legible against the tiles below.
+      // Full strength: with the darkening veil behind it, bright glyphs read as
+      // light coming THROUGH the map rather than a wash sitting on top of it.
+      rainCtx.fillStyle = drop.hot ? 'rgba(215,255,235,.98)' : 'rgba(70,255,150,.90)';
+      rainCtx.fillText(ch, x, drop.y);
+      rainCtx.fillStyle = 'rgba(0,255,140,.40)';
+      rainCtx.fillText(RAIN_GLYPHS[(Math.random() * RAIN_GLYPHS.length) | 0], x, drop.y - fontSize);
+      // Recycle to the top once it leaves the bottom, with a fresh speed.
+      if (drop.y > H) {
+        drop.y = -fontSize * (2 + Math.random() * 14);
+        drop.speed = 90 + Math.random() * 190;
+      }
+    }
+
+    if (now - startedAt >= durationMs) { stopMatrixRain(); return; }
+    rainRaf = requestAnimationFrame(frame);
+  };
+  rainRaf = requestAnimationFrame(frame);
+}
+
+// ─── HUD READOUT ──
+// Corner telemetry, built from REAL values (how many rooms came back, which area
+// was searched), so it reads as information rather than sci-fi noise.
+function setMapHud(lines) {
+  const el = document.getElementById('mapHud');
+  if (el) el.textContent = lines;
+}
+
 // The tiny status chip on the overlay ("Loading rooms…", "Scanning area…").
 function setMapFxLabel(text) {
   const el = document.getElementById('mapLabel');
@@ -1146,37 +1264,66 @@ function mapFxLoading(on) {
   // The vignette lives on #mapSearch::after (see style.css) so it can never
   // fight Leaflet's pane stack for a z-index slot inside the map.
   if (wrap) wrap.classList.toggle('map-busy', !!on);
-  if (on) setMapFxLabel('Loading rooms…');
+  if (on) {
+    setMapFxLabel('Loading rooms…');
+    // The rain runs for the whole load, but is hard-capped: if a request hangs,
+    // an unbounded rAF loop would keep the canvas animating forever.
+    startMatrixRain(8000);
+  } else {
+    stopMatrixRain();
+  }
 }
 
 // Play the one-shot search effect. `kind`:
-//   'search' — a fresh search / filter: rings expand from the centre and the
-//              map briefly "locks on".
-//   'area'   — "Search this area": a single radar pulse, because the user is
-//              already looking at the right place.
-function mapFxSearch(kind = 'search') {
+//   'search' — a fresh search / filter: full-strength wave, rain and glitch.
+//   'area'   — "Search this area": the same instrument, tighter and faster,
+//              because the user is already looking at the right place.
+//
+// `meta` is optional telemetry for the HUD readout: { count, area }.
+function mapFxSearch(kind = 'search', meta) {
   clearTimeout(fxTimer);
   mapFxLoading(false);
   const fx = mapFxEl();
   if (!fx) return;
-  // Drop any previous one-shot before starting the next, or the classes pile
-  // up and the second search looks like it never played.
+  // Drop any previous one-shot before starting the next, or the classes pile up
+  // and the second search looks like it never played.
   fx.classList.remove('fx-searching', 'fx-focus', 'fx-area-search');
   setMapFxLabel(kind === 'area' ? 'Scanning this area…' : 'Scanning rooms…');
+
+  // HUD telemetry. Lines are padded to a fixed width so the readout does not
+  // jitter as the numbers change — a twitching HUD looks broken, not digital.
+  const pad = (s, n) => (s + '                    ').slice(0, n);
+  const count = meta && typeof meta.count === 'number' ? meta.count : null;
+  const area = meta && meta.area ? String(meta.area).toUpperCase().slice(0, 22) : null;
+  setMapHud([
+    '> scan ' + (kind === 'area' ? 'viewport' : 'region'),
+    count === null ? '> hits --' : '> hits ' + pad(String(count), 4),
+    '> sector ' + (area ? area : 'ALL')
+  ].join('\n'));
+
   // Force a reflow so removing and re-adding the class in the same tick still
   // restarts the keyframes (the classic "repeat animation does not replay").
   void fx.offsetWidth;
   const token = ++fxSearchToken;
+  // The CSS animations are built on ONE shared beat: 1.55s for a full search,
+  // 1.05s for an area search. The timers here must match those durations — pull
+  // the class early and the wave visibly cuts off mid-travel. Keep them in sync
+  // with mapfx-veil / mapfx-wave / mapfx-bloom in css/style.css.
   if (kind === 'area') {
-    fx.classList.add('fx-area-search');
-    fxTimer = setTimeout(() => { if (token === fxSearchToken) fx.classList.remove('fx-area-search'); }, 2000);
+    fx.classList.add('fx-area-search', 'fx-focus');
+    startMatrixRain(1100);
+    fxTimer = setTimeout(() => {
+      if (token !== fxSearchToken) return;
+      fx.classList.remove('fx-area-search', 'fx-focus');
+    }, 1100);
     return;
   }
   fx.classList.add('fx-searching', 'fx-focus');
+  startMatrixRain(1600);
   fxTimer = setTimeout(() => {
     if (token !== fxSearchToken) return;
     fx.classList.remove('fx-searching', 'fx-focus');
-  }, 1400);
+  }, 1600);
 }
 
 // A fresh search or filter: sweep while we wait, then a scan when it lands.
@@ -1198,7 +1345,7 @@ function markActivePin(marker) {
 }
 
 // The result landed: stop the loader and play the "new pins" beat.
-function mapFxResults(kind = 'search') { mapFxSearch(kind); }
+function mapFxResults(kind = 'search', meta) { mapFxSearch(kind, meta); }
 
 // ─── BASE ↔ ROOM TRACE LINE ───────────────────
 // When a popup opens, draw a line from the pinned room to the seeker's daily
@@ -1407,8 +1554,10 @@ function setView(v) {
     // independent.
     setMapEmptyState(false);
     // Stop any running effect: the overlays are hidden with the map, but a live
-    // timer would still be ticking against a hidden container.
+    // timer would still be ticking against a hidden container — and the rain
+    // canvas would keep painting frames nobody can see.
     mapFxLoading(false);
+    stopMatrixRain();
     clearTimeout(fxTimer);
     if (nearMeKm) { nearMeLat = null; nearMeLng = null; nearMeKm = null; }
     mapAreaScope = null;

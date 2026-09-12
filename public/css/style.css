@@ -683,13 +683,58 @@ body.map-fullscreen-active .filters-panel.open{ transform:translateX(0); }
    ══════ */
 
 /* ── overlay layer ─────────────────── */
+/* Z-INDEX 3, and this matters a great deal.
+   Leaflet's own pane stack inside #mapSearch is: tiles 2, overlay 4, markers 6,
+   popups 7 (see the pane rules further up this file). The FX layer previously
+   sat at 10, which put it ABOVE the markers and popups — so the filter washed
+   over the room pins and their labels, turning the very results the user had
+   just searched for into unreadable smudges.
+   At 3 the effect lands on the TILES (which is what should get the sci-fi
+   treatment) while pins, labels and popups render on top of it, so results stay
+   crisp and clickable throughout. It also stays below Leaflet's controls, which
+   are pinned at z-index 20. */
 .map-fx{
-  position:absolute; inset:0; z-index:10;
+  position:absolute; inset:0; z-index:3;
   pointer-events:none; overflow:hidden;
   border-radius:var(--radius-sm);
 }
 /* Fullscreen map: the wrap is edge-to-edge, so drop the rounded corners. */
 #mapWrap.map-fullscreen-on .map-fx{ border-radius:0; }
+
+/* ── darkening veil ── */
+/* A LIGHT tint that adds contrast for the green without hiding the map.
+
+   This layer took several attempts to get right, and the first versions were
+   badly wrong: they used a near-opaque rgba(2,12,8,.92) plate, which simply
+   ERASED the map — including the room pins — for most of the effect. Obscuring
+   the results the user just searched for is worse than having no effect at all.
+
+   The correction is to stop trying to make the map dark and instead let the map
+   stay legible while green light plays over it. The tint below only takes the
+   brightest edge off the tiles so the glyphs and the wave stand out, and it is
+   held to a low ceiling. */
+@keyframes mapfx-veil{
+  0%  { opacity:0; }
+  /* Brief peak, then out. Measured: at full strength this tint takes the map
+     from ~220 average brightness to ~128 — a 42% drop, which is a heavy cast on
+     an OSM basemap. Halved here so the map keeps its own light while the green
+     layers still have enough contrast to read. */
+  12% { opacity:.62; }
+  40% { opacity:.40; }
+  62% { opacity:.20; }
+  100%{ opacity:0; }
+}
+.map-fx__veil{
+  position:absolute; inset:0; opacity:0;
+  /* Teal-black, edge-weighted: strongest at the periphery where the CRT bloom
+     wants it, nearly absent in the centre where the pins and labels are. */
+  background:radial-gradient(ellipse at 50% 50%,
+    rgba(4,20,14,.20) 0%,
+    rgba(4,22,15,.34) 62%,
+    rgba(3,18,12,.50) 100%);
+}
+.map-fx.fx-searching .map-fx__veil{ animation:mapfx-veil 1.55s ease-in-out both; }
+.map-fx.fx-area-search .map-fx__veil{ animation:mapfx-veil 1.05s ease-in-out both; }
 
 @keyframes mapfx-spin{ to{ transform:rotate(360deg); } }
 @keyframes mapfx-sweep{
@@ -698,15 +743,8 @@ body.map-fullscreen-active .filters-panel.open{ transform:translateX(0); }
   88% { opacity:.9; }
   100%{ transform:translateY(560%); opacity:0; }
 }
-@keyframes mapfx-ring{
-  0%  { transform:scale(.12); opacity:.75; border-width:3px; }
-  70% { opacity:.28; }
-  100%{ transform:scale(1); opacity:0; border-width:1px; }
-}
-@keyframes mapfx-radar{
-  0%  { transform:scale(.05); opacity:.85; }
-  100%{ transform:scale(1); opacity:0; }
-}
+/* (mapfx-ring and mapfx-radar were removed: the search rings and the separate
+   "search this area" radar are both replaced by the blurred wave above.) */
 @keyframes mapfx-focus-in{
   0%  { transform:scale(1.5); opacity:0; }
   25% { opacity:1; }
@@ -724,15 +762,20 @@ body.map-fullscreen-active .filters-panel.open{ transform:translateX(0); }
 /* A soft horizontal bar of light that travels top → bottom, like a scanner
    painting the map. Deliberately faint: it should read as "working", not
    as a decorative stripe over the tiles. */
+/* A thin BRIGHT bar with a long soft tail, travelling top → bottom like a HUD
+   read-head. Much narrower and sharper than the old soft glow band: this should
+   read as a scanner tracing the map, which is the instrument being sold. */
 .map-fx__sweep{
-  position:absolute; left:-20%; right:-20%; top:0; height:26%;
+  position:absolute; left:0; right:0; top:0; height:22%;
   opacity:0;
   background:linear-gradient(180deg,
-    rgba(124,92,255,0) 0%,
-    rgba(124,92,255,.16) 45%,
-    rgba(56,208,222,.22) 55%,
-    rgba(124,92,255,0) 100%);
-  filter:blur(2px);
+    rgba(0,255,140,0) 0%,
+    rgba(0,255,140,.05) 62%,
+    rgba(0,255,140,.22) 88%,
+    rgba(180,255,225,.55) 96%,
+    rgba(255,255,255,.75) 99%,
+    rgba(255,255,255,0) 100%);
+  filter:blur(1px);
   transform:translateY(-140%);
 }
 .map-fx.fx-loading .map-fx__sweep{
@@ -741,42 +784,207 @@ body.map-fullscreen-active .filters-panel.open{ transform:translateX(0); }
 }
 
 /* ── searching: expanding rings from the centre ────────────────────── */
-.map-fx__rings{
+/* ── digital rain ── */
+/* Sized and cleared by js/listings.js. At the back of the stack, and invisible
+   except during a search, so it costs nothing when the map is idle. */
+.map-fx__rain{
+  position:absolute; inset:0; width:100%; height:100%;
+  opacity:0; transition:opacity .3s ease;
+  /* NO mix-blend-mode, deliberately. Screen-blending this canvas meant every
+     faded trail pixel ADDED green over the whole map area, not just over the
+     glyphs — the canvas covers the full container, so "screen" washed the entire
+     viewport instead of lighting the characters. Normal blending keeps the glyphs
+     as green strokes on transparent pixels, so the tiles show through and the
+     map stays fully readable while the rain falls over it. */
+}
+/* Visible during BOTH phases: the loading sweep and the search wave. The rain
+   carries the "matrix" identity of the effect, so gating it to only the search
+   phase made the loader look like a different, plainer animation. */
+.map-fx.fx-loading .map-fx__rain,
+.map-fx.fx-searching .map-fx__rain,
+.map-fx.fx-area-search .map-fx__rain{ opacity:1; }
+/* Dimmer while merely loading: the sweep is the primary signal then, and full
+   rain under it is visual noise. It goes to full strength for the search. */
+.map-fx.fx-loading .map-fx__rain{ opacity:.55; }
+
+/* ── THE BLURRED WAVE ── */
+/* Shockwave fronts launched from the map centre. Each is a radial-gradient RING
+   with deliberately wide, soft stops — that gradient falloff is what makes it a
+   blurred wave rather than a hard circle outline — and the whole layer goes
+   through a blur filter on top. They expand well past the viewport, so a front
+   always sweeps fully off the map instead of stopping short. */
+@keyframes mapfx-wave{
+  0%  { transform:scale(.04); opacity:0; }
+  10% { opacity:1; }
+  /* Fades as it travels outward, so by the time the front reaches the map edges
+     it is already spent. Without this the ring arrived at full strength at the
+     border and framed the view in green instead of passing through it. */
+  45% { opacity:.7; }
+  100%{ transform:scale(1); opacity:0; }
+}
+.map-fx__wave{
   position:absolute; top:50%; left:50%; width:0; height:0;
+  /* Heat haze, not a drawn line. Kept at 7px: enough to soften the rim without
+     smearing it into the washing-out that a heavier blur produced. */
+  filter:blur(7px);
 }
-.map-fx__rings span{
+.map-fx__wave span{
   position:absolute; top:50%; left:50%;
-  width:min(70vw, 620px); height:min(70vw, 620px);
-  margin:calc(min(70vw, 620px) / -2) 0 0 calc(min(70vw, 620px) / -2);
-  border:2px solid var(--primary); border-radius:50%;
-  opacity:0; transform:scale(.12);
+  /* Small enough that the ring stays a RING. Measured problem: at 165vmax the
+     disc resolved to 772px inside an 830x504 map, so once the front expanded
+     past ~60% its bright band covered essentially the entire viewport and the
+     map read as a pale flat field. A wave should sweep THROUGH the view, not
+     become it. */
+  width:90vmax; height:90vmax;
+  margin:-45vmax 0 0 -45vmax;
+  border-radius:50%; opacity:0; transform:scale(.04);
+  /* A TIGHT annulus: transparent core, narrow bright rim, transparent outside.
+     The rim is only ~10% of the radius, which is what keeps this reading as a
+     travelling wave instead of a filled disc. Alphas stay moderate because
+     `screen` is additive and the rim covers a large circle at full expansion. */
+  background:radial-gradient(circle,
+    rgba(0,255,140,0) 0 70%,
+    rgba(0,255,140,.28) 78%,
+    rgba(170,255,215,.55) 86%,
+    rgba(0,255,140,.22) 92%,
+    rgba(0,255,140,0) 100%);
+  mix-blend-mode:screen;
 }
-.map-fx.fx-searching .map-fx__rings span{
-  animation:mapfx-ring 1.25s cubic-bezier(.22,.61,.36,1) infinite;
+.map-fx.fx-searching .map-fx__wave span,
+.map-fx.fx-area-search .map-fx__wave span{
+  animation:mapfx-wave 1.55s cubic-bezier(.16,.72,.30,1) both;
 }
-.map-fx.fx-searching .map-fx__rings span:nth-child(2){ animation-delay:.28s; }
-.map-fx.fx-searching .map-fx__rings span:nth-child(3){ animation-delay:.56s; }
+/* The offsets make this a TRAVELLING pulse rather than one expanding hoop:
+   three fronts a beat apart read as a continuing wave, which is what the map
+   should feel like while it is fetching. */
+.map-fx.fx-searching .map-fx__wave span:nth-child(2),
+.map-fx.fx-area-search .map-fx__wave span:nth-child(2){ animation-delay:.18s; }
+.map-fx.fx-searching .map-fx__wave span:nth-child(3),
+.map-fx.fx-area-search .map-fx__wave span:nth-child(3){ animation-delay:.36s; }
+/* "Search this area" is a smaller gesture: the wave travels less far and
+   resolves sooner, so it never feels like a full reload. */
+.map-fx.fx-area-search .map-fx__wave{ filter:blur(5px); }
+.map-fx.fx-area-search .map-fx__wave span{ animation-duration:1.25s; }
+
+/* ── chromatic CRT bloom ── */
+/* A green phosphor wash plus magenta/cyan edge fringing. This is the layer that
+   sells "the display is doing something", and it is pure gradient work, so it
+   stays cheap to composite. */
+@keyframes mapfx-bloom{
+  0%  { opacity:0; }
+  /* Measured: at .9 this layer alone accounted for a visible share of the
+     darkening, because screen-blended green over a darkened base reads as a
+     cast, not as light. Held lower and shorter than the veil. */
+  15% { opacity:.55; }
+  /* A flicker at the peak: CRT power sag, like the beam stuttering. */
+  34% { opacity:.22; }
+  38% { opacity:.50; }
+  70% { opacity:.28; }
+  100%{ opacity:0; }
+}
+.map-fx__bloom{
+  position:absolute; inset:0; opacity:0;
+  /* Very restrained, and EDGE-ONLY: fully transparent across the middle 72% so
+     the centre of the map (where the results are) is never tinted. A CRT bloom
+     should be felt at the periphery, never applied across the whole image. */
+  background:
+    radial-gradient(ellipse at 50% 50%, rgba(0,255,140,0) 0%, rgba(0,255,140,0) 72%, rgba(0,255,140,.13) 100%),
+    linear-gradient(90deg, rgba(255,0,140,.05) 0%, rgba(255,0,140,0) 10%),
+    linear-gradient(270deg, rgba(0,200,255,.05) 0%, rgba(0,200,255,0) 10%);
+  mix-blend-mode:screen;
+}
+.map-fx.fx-searching .map-fx__bloom{ animation:mapfx-bloom 1.55s ease-in-out both; }
+.map-fx.fx-area-search .map-fx__bloom{ animation:mapfx-bloom 1.05s ease-in-out both; }
+
+/* ── CRT scanlines ── */
+/* Repeating horizontal lines, always faintly present so the map keeps a screen
+   quality even when idle. A slow drift stops it looking like a static texture
+   stuck to the glass. */
+@keyframes mapfx-scanline-drift{
+  from{ transform:translateY(0); }
+  to  { transform:translateY(4px); }
+}
+/* The lines must be SPARSE and FAINT. An earlier pass used a 1px-on/2px-off
+   gradient at .42 opacity during a search: that is a third of the map covered in
+   half-black lines, which turned the whole surface into grey-green mush and made
+   the pin unreadable. 1px every 4px at a low opacity is texture you notice only
+   when you look for it — which is what a CRT scanline should be. */
+/* On the dark veil the lines can be BOTH sparse and clearly visible: bright
+   green rather than black, so they read as phosphor rows instead of a grey
+   mesh. Sparse spacing still matters — a dense grid would moiré against the
+   glyphs. */
+.map-fx__scanlines{
+  position:absolute; inset:0; opacity:.10;
+  background:repeating-linear-gradient(180deg,
+    rgba(120,255,180,.30) 0 1px,
+    rgba(0,0,0,0) 1px 4px);
+  animation:mapfx-scanline-drift .45s linear infinite;
+}
+.map-fx.fx-searching .map-fx__scanlines{ opacity:.55; }
+.map-fx.fx-area-search .map-fx__scanlines{ opacity:.42; }
+
+/* ── glitch bars ── */
+/* Thin horizontal slices that jump sideways. Short, sharp and low-opacity: a
+   hint of signal tearing, never a broken page. */
+@keyframes mapfx-glitch{
+  0%  { opacity:0; }
+  8%  { opacity:1; transform:translateX(-6%); }
+  16% { opacity:1; transform:translateX(4%); }
+  24% { opacity:.6; transform:translateX(-3%); }
+  40% { opacity:0; transform:translateX(0); }
+  100%{ opacity:0; }
+}
+.map-fx__glitch{ position:absolute; inset:0; opacity:0; }
+.map-fx__glitch span{
+  position:absolute; left:-4%; right:-4%;
+  background:linear-gradient(90deg,
+    rgba(0,255,140,0) 0%,
+    rgba(0,255,140,.55) 18%,
+    rgba(255,255,255,.75) 50%,
+    rgba(0,255,140,.55) 82%,
+    rgba(0,255,140,0) 100%);
+  mix-blend-mode:screen;
+  filter:blur(1px);
+}
+.map-fx__glitch span:nth-child(1){ top:22%; height:2px; }
+.map-fx__glitch span:nth-child(2){ top:48%; height:1px; }
+.map-fx__glitch span:nth-child(3){ top:71%; height:3px; }
+.map-fx.fx-searching .map-fx__glitch,
+.map-fx.fx-area-search .map-fx__glitch{
+  animation:mapfx-glitch 1.55s steps(1, end) both;
+}
+.map-fx.fx-searching .map-fx__glitch span:nth-child(2){ animation-delay:.12s; }
+.map-fx.fx-searching .map-fx__glitch span:nth-child(3){ animation-delay:.26s; }
+
+/* ── HUD readout ── */
+/* Monospaced telemetry in the corner. The text is written by js/listings.js from
+   REAL room counts and area names, so it reads as information, not decoration. */
+.map-fx__hud{
+  position:absolute; left:14px; top:14px;
+  font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size:.66rem; letter-spacing:.09em; text-transform:uppercase;
+  color:rgba(140,255,190,.92);
+  text-shadow:0 0 6px rgba(0,255,140,.7), 0 0 2px rgba(0,0,0,.9);
+  opacity:0; transition:opacity .25s ease; white-space:pre;
+  pointer-events:none; max-width:60%;
+}
+.map-fx.fx-searching .map-fx__hud,
+.map-fx.fx-area-search .map-fx__hud{ opacity:1; }
+@media (max-width:640px){
+  .map-fx__hud{ font-size:.58rem; letter-spacing:.06em; }
+}
 
 /* ── "Search this area": a single radar pulse ─────────────────────── */
-.map-fx__radar{ position:absolute; top:50%; left:50%; width:0; height:0; }
-.map-fx__radar span{
-  position:absolute; top:50%; left:50%;
-  width:min(80vw, 760px); height:min(80vw, 760px);
-  margin:calc(min(80vw, 760px) / -2) 0 0 calc(min(80vw, 760px) / -2);
-  border-radius:50%; opacity:0;
-  border:2px solid var(--teal, #0e7490);
-  box-shadow:0 0 24px 4px rgba(14,116,144,.35), inset 0 0 22px rgba(14,116,144,.25);
-  background:radial-gradient(circle, rgba(14,116,144,.10) 0%, rgba(14,116,144,0) 62%);
-}
-.map-fx.fx-area-search .map-fx__radar span{
-  animation:mapfx-radar .95s cubic-bezier(.16,.84,.44,1) 2;
-}
+/* "Search this area" no longer has its own radar: it shares the blurred wave
+   above (.fx-area-search retunes that wave to be tighter and faster), so the two
+   searches feel like the same instrument at two intensities. */
 
 /* ── focus brackets: the map "locks on" to the searched area ────────── */
 .map-fx__focus{ position:absolute; inset:14px; opacity:0; }
 .map-fx__focus i{
   position:absolute; width:22px; height:22px;
-  border:2px solid var(--primary);
+  border:2px solid rgba(0,255,140,.85);
+  filter:drop-shadow(0 0 5px rgba(0,255,140,.8));
 }
 .map-fx__focus i:nth-child(1){ top:0; left:0;  border-right:none;  border-bottom:none; }
 .map-fx__focus i:nth-child(2){ top:0; right:0; border-left:none;   border-bottom:none; }
@@ -814,7 +1022,7 @@ body.map-fullscreen-active .filters-panel.open{ transform:translateX(0); }
    class. filter is used (not opacity) so the pins stay crisp underneath. */
 .map-fx.fx-searching::before{
   content:''; position:absolute; inset:0;
-  background:radial-gradient(circle at 50% 50%, rgba(124,92,255,.10) 0%, rgba(124,92,255,0) 60%);
+  background:radial-gradient(circle at 50% 50%, rgba(0,255,140,.12) 0%, rgba(0,255,140,0) 62%);
   animation:mapfx-focus-in 1.25s ease-out;
 }
 
@@ -1017,6 +1225,18 @@ body.map-fullscreen-active .filters-panel.open{ transform:translateX(0); }
     rgba(56,208,222,.3) 38deg,
     rgba(56,208,222,0) 76deg,
     rgba(56,208,222,0) 360deg);
+}
+
+/* Reduced motion: keep the sci-fi LOOK (scanlines, bloom, HUD) but stop all
+   movement. The wave and the rain are pure motion with no informational value,
+   so they are removed entirely rather than frozen mid-ripple. */
+@media (prefers-reduced-motion:reduce){
+  .map-fx__rain{ display:none; }
+  .map-fx__wave,
+  .map-fx__glitch{ display:none; }
+  .map-fx__scanlines{ animation:none; opacity:.12; }
+  .map-fx.fx-searching .map-fx__bloom,
+  .map-fx.fx-area-search .map-fx__bloom{ animation:none; opacity:.35; }
 }
 
 /* Respect the reduced-motion preference: keep the radar ring visible as a

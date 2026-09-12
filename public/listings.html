@@ -147,16 +147,29 @@
                · .fx-focus        — a brief spotlight on the searched area
              Kept in its own layer so nothing here can ever eat a map gesture. -->
         <div id="mapFx" class="map-fx" aria-hidden="true">
-          <!-- Scan sweep: a soft light bar that glides across the map. -->
-          <div class="map-fx__sweep"></div>
-          <!-- Expanding rings, centred on the map, for a fresh search. -->
-          <div class="map-fx__rings">
+          <!-- Darkening veil: pushes the map to a dark backing plate so the
+               green layers above have contrast to glow against. Must be FIRST,
+               so everything else paints on top of it. -->
+          <div class="map-fx__veil"></div>
+          <!-- Digital rain: drawn on a canvas, sized to the map container.
+               A canvas because hundreds of independently falling glyphs cannot
+               be done with CSS transforms at any sane cost. -->
+          <canvas class="map-fx__rain" id="mapRain"></canvas>
+          <!-- Blurred energy wave: three offset shockwave fronts rippling out
+               from the centre — the "blurred wave" of the brief. -->
+          <div class="map-fx__wave">
             <span></span><span></span><span></span>
           </div>
-          <!-- Radar pulse used when the viewport itself is re-queried. -->
-          <div class="map-fx__radar"><span></span></div>
-          <!-- Corner brackets that lock onto the searched area. -->
+          <!-- Chromatic bloom: green/magenta ghosts, like a CRT losing focus. -->
+          <div class="map-fx__bloom"></div>
+          <!-- CRT scanlines, faintly present for texture. -->
+          <div class="map-fx__scanlines"></div>
+          <!-- Glitch bars: horizontal displacement slices during the peak. -->
+          <div class="map-fx__glitch"><span></span><span></span><span></span></div>
+          <!-- HUD sweep bar, corner brackets, and a live readout. -->
+          <div class="map-fx__sweep"></div>
           <div class="map-fx__focus"><i></i><i></i><i></i><i></i></div>
+          <div class="map-fx__hud" id="mapHud"></div>
           <!-- Loader chip: tells the user the map is fetching, not frozen. -->
           <div class="map-fx__loader">
             <span class="map-fx__spinner"></span>
