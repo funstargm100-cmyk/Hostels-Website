@@ -953,6 +953,28 @@ body.map-fullscreen-active .filters-panel.open{ transform:translateX(0); }
 .photo-preview{ display:grid; grid-template-columns:repeat(4,1fr); gap:.6rem; margin-top:1rem; }
 @media (max-width:600px){ .photo-preview{ grid-template-columns:repeat(3,1fr); } }
 
+/* ── Cover-photo section (post-ad step 1) ── */
+.cover-photo-section{
+  border:1px solid var(--border); border-radius:var(--radius);
+  padding:1rem; background:var(--bg); margin-top:.5rem;
+}
+.cover-dropzone{ padding:0; overflow:hidden; min-height:180px; display:flex; align-items:center; justify-content:center; }
+.cover-preview-empty{ padding:2rem 1rem; }
+.cover-dropzone.filled{ padding:0; }
+.cover-dropzone.filled .cover-preview-empty{ padding:0; }
+.cover-preview-img{ position:relative; width:100%; aspect-ratio:16/9; }
+.cover-preview-img img{ width:100%; height:100%; object-fit:cover; display:block; }
+.cover-preview-img .cover-tag{
+  position:absolute; top:.6rem; left:.6rem;
+  background:rgba(255,107,107,.92); color:#fff; font-size:.7rem; font-weight:700;
+  padding:.2rem .6rem; border-radius:999px; display:inline-flex; align-items:center; gap:.25rem;
+}
+.cover-preview-img .cover-remove{
+  position:absolute; top:.6rem; right:.6rem; background:rgba(0,0,0,.65); color:#fff;
+  border:none; border-radius:50%; width:26px; height:26px; cursor:pointer; font-size:.8rem;
+  display:flex; align-items:center; justify-content:center;
+}
+
 /* ── edit-listing: removable / addable photos ─────────────── */
 .photo-tile{ position:relative; aspect-ratio:1; border-radius:var(--radius-sm); overflow:hidden; border:1px solid var(--border); }
 .photo-tile img{ width:100%; height:100%; object-fit:cover; display:block; }

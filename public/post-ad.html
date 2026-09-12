@@ -48,13 +48,46 @@
       <!-- STEP 1: PHOTOS -->
       <div class="wizard-panel active">
         <h3>Add photos</h3>
-        <p class="text-muted" style="font-size:.85rem">Up to 10 photos. Your first photo becomes the cover.</p>
-        <div class="dropzone" id="dropzone" onclick="document.getElementById('fileInput').click()" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="this.classList.remove('drag');handleDrop(event)">
-          <i data-lucide="image-plus" style="width:32px;height:32px;color:var(--text-muted)"></i>
-          <p class="mt-2" style="margin-bottom:0">Tap to upload or drag photos here</p>
+
+        <!-- Cover photo: exactly one image of the ENTIRE BUILDING -->
+        <div class="cover-photo-section">
+          <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.4rem">
+            <i data-lucide="building-2" style="width:18px;height:18px;color:var(--primary)"></i>
+            <strong style="font-size:.95rem">Cover photo — the entire building</strong>
+            <span class="badge badge-featured" style="font-size:.65rem">Required</span>
+          </div>
+          <p class="text-muted" style="font-size:.82rem;margin-bottom:.8rem">
+            Upload <strong>one photo showing the whole building from outside</strong> — the full
+            compound, gate and structure. Seekers see this first when browsing, so make it count.
+          </p>
+          <div class="dropzone cover-dropzone" id="coverDropzone" onclick="if(!coverFile) document.getElementById('coverInput').click()" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="this.classList.remove('drag');handleCoverDrop(event)">
+            <div id="coverPreview" class="cover-preview-empty">
+              <i data-lucide="building" style="width:30px;height:30px;color:var(--text-muted)"></i>
+              <p class="mt-2 mb-0" style="font-size:.85rem">Tap to upload a photo of the entire building</p>
+              <p class="text-muted" style="font-size:.72rem;margin-top:.3rem">Only 1 photo · this becomes the cover</p>
+            </div>
+          </div>
+          <input type="file" id="coverInput" accept="image/*" hidden onchange="handleCoverSelect(this.files)" />
         </div>
-        <input type="file" id="fileInput" name="images" accept="image/*" multiple hidden onchange="handlePhotoSelect(this.files)" />
-        <div class="photo-preview" id="photoPreview"></div>
+
+        <!-- Remaining photos: rooms, kitchen, bathroom etc. -->
+        <div class="mt-3">
+          <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.4rem">
+            <i data-lucide="images" style="width:18px;height:18px;color:var(--primary)"></i>
+            <strong style="font-size:.95rem">More photos — rooms &amp; features</strong>
+            <span class="text-muted" style="font-size:.75rem">(optional, up to 9)</span>
+          </div>
+          <p class="text-muted" style="font-size:.82rem;margin-bottom:.8rem">
+            Show seekers the inside: the room itself, beds, kitchen, bathroom, compound, etc.
+          </p>
+          <div class="dropzone" id="dropzone" onclick="document.getElementById('fileInput').click()" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="this.classList.remove('drag');handleDrop(event)">
+            <i data-lucide="image-plus" style="width:32px;height:32px;color:var(--text-muted)"></i>
+            <p class="mt-2" style="margin-bottom:0">Tap to upload or drag photos here</p>
+          </div>
+          <input type="file" id="fileInput" name="images" accept="image/*" multiple hidden onchange="handlePhotoSelect(this.files)" />
+          <div class="photo-preview" id="photoPreview"></div>
+        </div>
+
         <div class="alert alert-danger" id="step1Error" style="display:none"></div>
       </div>
 

@@ -1,6 +1,7 @@
 let currentStep = 1;
 const TOTAL_STEPS = 6;
-let selectedFiles = [];
+let coverFile = null;       // required: the entire-building photo (becomes the cover)
+let selectedFiles = [];     // optional: room/feature photos
 let postMap = null;
 let postMarker = null;
 
@@ -47,7 +48,8 @@ function validateStep(step) {
   if (errEl) errEl.textContent = '';
 
   if (step === 1) {
-    if (!selectedFiles.length) { if (errEl) errEl.textContent = 'Please upload at least one photo.'; return false; }
+    if (!coverFile) { if (errEl) errEl.textContent = 'Please upload a cover photo of the entire building first.'; return false; }
+    if (selectedFiles.length > 9) { if (errEl) errEl.textContent = 'Maximum 9 additional photos allowed.'; return false; }
   }
   if (step === 2) {
     const title = document.getElementById('adTitle').value.trim();
@@ -92,9 +94,51 @@ function calcPrice() {
   preview.style.display = 'block';
 }
 
+// ─── COVER PHOTO (entire building) ──────────────────────────────────────────────
+function handleCoverSelect(files) {
+  const file = files && files[0];
+  if (!file) return;
+  if (!file.type.startsWith('image/')) return showToast('Please choose an image file', 'error');
+  coverFile = file;
+  renderCoverPreview();
+}
+
+function handleCoverDrop(e) {
+  e.preventDefault();
+  handleCoverSelect(e.dataTransfer.files);
+}
+
+function renderCoverPreview() {
+  const zone = document.getElementById('coverDropzone');
+  const holder = document.getElementById('coverPreview');
+  if (!zone || !holder) return;
+  if (!coverFile) {
+    zone.classList.remove('filled');
+    holder.innerHTML = `
+      <i data-lucide="building" style="width:30px;height:30px;color:var(--text-muted)"></i>
+      <p class="mt-2 mb-0" style="font-size:.85rem">Tap to upload a photo of the entire building</p>
+      <p class="text-muted" style="font-size:.72rem;margin-top:.3rem">Only 1 photo · this becomes the cover</p>`;
+  } else {
+    zone.classList.add('filled');
+    holder.innerHTML = `
+      <div class="cover-preview-img">
+        <img src="${URL.createObjectURL(coverFile)}" alt="Cover photo" />
+        <span class="cover-tag"><i data-lucide="building" style="width:11px;height:11px"></i> Cover — entire building</span>
+        <button type="button" class="cover-remove" onclick="event.stopPropagation();removeCover()" aria-label="Remove cover photo">✕</button>
+      </div>`;
+  }
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function removeCover() {
+  coverFile = null;
+  document.getElementById('coverInput').value = '';
+  renderCoverPreview();
+}
+
 // ─── PHOTO HANDLING ───────────────────────────────────────────────────────────
 function handlePhotoSelect(files) {
-  selectedFiles = [...selectedFiles, ...Array.from(files)].slice(0, 10);
+  selectedFiles = [...selectedFiles, ...Array.from(files)].slice(0, 9);
   renderPhotoPreview();
 }
 
@@ -108,7 +152,7 @@ function renderPhotoPreview() {
   preview.innerHTML = selectedFiles.map((f, i) => `
     <div style="position:relative;border-radius:var(--radius-sm);overflow:hidden;aspect-ratio:1">
       <img src="${URL.createObjectURL(f)}" style="width:100%;height:100%;object-fit:cover" />
-      ${i === 0 ? '<span style="position:absolute;bottom:0;left:0;right:0;background:rgba(255,107,107,0.85);color:#fff;font-size:0.65rem;text-align:center;padding:2px">Cover</span>' : ''}
+      ${i === 0 ? '<span style="position:absolute;bottom:0;left:0;right:0;background:rgba(59,130,246,0.85);color:#fff;font-size:0.65rem;text-align:center;padding:2px">Room / Feature</span>' : ''}
       <button onclick="removePhoto(${i})" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,0.6);color:#fff;border:none;border-radius:50%;width:20px;height:20px;font-size:0.7rem;cursor:pointer">✕</button>
     </div>`).join('');
 }
@@ -234,6 +278,8 @@ document.getElementById('postAdForm').addEventListener('submit', async (e) => {
 
   try {
     const formData = new FormData(e.target);
+    // Cover photo goes first — the backend marks the first image as primary/cover.
+    formData.append('images', coverFile);
     selectedFiles.forEach(f => formData.append('images', f));
     await api.upload('/api/listings', formData);
     showToast('Room submitted for review!', 'success');
