@@ -664,6 +664,18 @@ function renderMapListings(fitToResults = true) {
     // (keeping the popup itself bound) and drive the open ourselves.
     if (marker._openPopup) marker.off('click', marker._openPopup, marker);
     const toggleMarkerPopup = () => {
+      // TRACE-ONLY mode (popups toggled off): a pin click draws/clears the route
+      // to the seeker's base without ever opening the room card.
+      if (!popupsEnabled) {
+        if (tracedMarker === marker) { // same pin again -> clear the trace
+          clearTraceLine(); tracedMarker = null;
+          return;
+        }
+        tracedMarker = marker;
+        clearTraceLine();
+        drawTraceToBase(marker);
+        return;
+      }
       if (marker.isPopupOpen()) { marker.closePopup(); return; }
       if (mapBusy) {
         // A gesture is still in flight; wait for it to settle so the popup is
@@ -706,8 +718,9 @@ function renderMapListings(fitToResults = true) {
       const img = el && el.querySelector('img');
       if (img) img.addEventListener('load', ensurePopupVisible, { once: true });
       drawTraceToBase(marker);
+      openPopupMarker = marker;
     });
-    marker.on('popupclose', clearTraceLine);
+    marker.on('popupclose', () => { clearTraceLine(); tracedMarker = null; openPopupMarker = null; });
     marker.addTo(mapMarkersLayer);
   });
   if (pts.length && fitToResults && Date.now() >= introFlyUntil) {
@@ -909,22 +922,49 @@ function recenterMap() {
   }
 }
 
-// One-click camera reset: bearing back to north, then re-frame the results
-// bounding box (which also re-centers and re-zooms). Undoes any rotation,
-// panning and zooming the user has done.
-function resetMapView() {
-  if (!mapInstance) return;
-  if (typeof mapInstance.setBearing === 'function') {
-    // Animated bearing reset (leaflet-rotate supports {animate}) — the map
-    // swings back to north instead of snapping.
-    suppressMoveEvent = true;
-    mapInstance.setBearing(0, { animate: true, duration: 0.5 });
-    suppressMoveEvent = false;
-  }
-  recenterMap();
-  showToast('View reset', 'info', 1400);
+// ─── PIN CLICK MODE TOGGLE (was "Reset view") ─
+// When popups are ENABLED (default), clicking a pin opens its room card and
+// traces the route to the seeker's base, as before. When DISABLED, a pin click
+// ONLY draws (or clears, on a second click) the route trace — useful when the
+// card gets in the way of reading the map. The button that used to reset the
+// camera now toggles between these two behaviours.
+let popupsEnabled = true;
+// Marker currently traced in trace-only mode (a second click on it clears).
+let tracedMarker = null;
+// Marker whose popup is open, so switching to trace-only mode can keep its
+// trace on screen after closing the card.
+let openPopupMarker = null;
+
+function updatePopupModeBtn() {
+  const btn = document.getElementById('mapPopupModeBtn');
+  if (!btn) return;
+  btn.setAttribute('aria-pressed', String(popupsEnabled));
+  btn.title = popupsEnabled
+    ? 'Popups on — click a pin to open its room card'
+    : 'Trace only — click a pin to draw the route to your base';
+  btn.innerHTML = `<i data-lucide="${popupsEnabled ? 'message-square' : 'route'}"></i>`;
+  if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [btn] });
 }
-window.resetMapView = resetMapView;
+
+function togglePopupMode() {
+  popupsEnabled = !popupsEnabled;
+  updatePopupModeBtn();
+  if (!popupsEnabled) {
+    // Switching to trace-only: close any open card (its close handler wipes the
+    // trace) and redraw that room's trace so the context is not lost.
+    const m = openPopupMarker;
+    if (m && m.isPopupOpen()) m.closePopup();
+    if (m) { tracedMarker = m; drawTraceToBase(m); }
+    showToast('Trace only — pins draw the route, no card', 'info', 2200);
+  } else {
+    // Back to popups: a trace-only line has no card anchored to it, so clear it
+    // and let the next pin click open the card as usual.
+    tracedMarker = null;
+    clearTraceLine();
+    showToast('Popups on — pins open the room card', 'info', 2200);
+  }
+}
+window.togglePopupMode = togglePopupMode;
 
 // ─── FULLSCREEN MAP ───────────────────────────
 // Expand the map to fill the whole viewport and back. Implemented as a CSS class

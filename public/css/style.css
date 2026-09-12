@@ -584,6 +584,8 @@ textarea{ resize:vertical; min-height:110px; }
 .map-reset:active{ transform:scale(.94) rotate(-30deg); }
 .map-reset svg, .map-reset i{ width:18px; height:18px; }
 [data-theme="dark"] .map-reset{ background:rgba(31,27,44,.96); border-color:rgba(255,255,255,.14); }
+/* Popup-mode toggle: when "trace only" is active the button reads as engaged. */
+.map-reset[aria-pressed="false"]{ color:var(--primary); border-color:var(--primary); }
 
 /* Fullscreen mode: #mapWrap escapes its column and covers the viewport. Using
    position:fixed keeps Google Maps' feel — the page behind is untouched and the

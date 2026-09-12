@@ -168,11 +168,13 @@
           <i data-lucide="navigation"></i>
         </button>
 
-        <!-- Reset view: bearing back to north AND the camera back to the results
-             bounding box — one click undoes any rotation, panning and zooming. -->
-        <button type="button" id="mapResetBtn" class="map-reset" onclick="resetMapView()"
-                title="Reset view" aria-label="Reset map view">
-          <i data-lucide="rotate-ccw"></i>
+        <!-- Popup mode toggle (was "Reset view"): when ON, clicking a pin opens
+             its room card; when OFF, clicking a pin ONLY draws the route trace
+             to the seeker's base without opening any popup. -->
+        <button type="button" id="mapPopupModeBtn" class="map-reset" onclick="togglePopupMode()"
+                title="Popups on — click a pin to open its room card"
+                aria-label="Toggle pin popups" aria-pressed="true">
+          <i data-lucide="message-square"></i>
         </button>
 
         <!-- Rotation knob (bottom-left): DRAG it to spin the map, CLICK it to
