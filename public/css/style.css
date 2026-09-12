@@ -489,6 +489,12 @@ textarea{ resize:vertical; min-height:110px; }
   backdrop-filter:blur(4px); max-width:min(320px, 86%);
   box-shadow:0 8px 24px rgba(0,0,0,.35);
 }
+@keyframes map-empty-pop{
+  0%  { transform:translate(-50%,-50%) scale(.82); opacity:0; }
+  60% { transform:translate(-50%,-50%) scale(1.04); opacity:1; }
+  100%{ transform:translate(-50%,-50%) scale(1);   opacity:1; }
+}
+.map-empty.map-empty-in{ animation:map-empty-pop .38s cubic-bezier(.34,1.32,.5,1) both; }
 .map-empty h3{ margin:.4rem 0 .3rem; font-size:1rem; }
 .map-empty p{ margin:0 0 .8rem; font-size:.8rem; opacity:.85; }
 .map-empty .map-empty-icon{ display:flex; justify-content:center; }
@@ -635,6 +641,264 @@ body.map-fullscreen-active .filters-panel.open{ transform:translateX(0); }
 }
 #mapSearch .map-price-pin.price-low{ background:var(--teal, #0e7490); }
 #mapSearch .map-price-pin.price-high{ background:var(--brick, #C1633A); }
+
+/* ══════
+   LIVING MAP — SCREEN EFFECTS, PIN + TRACE ANIMATIONS
+   Everything below makes the browse map feel like a live surface rather
+   than a static picture: a sweep while rooms load, expanding scan rings on
+   a search, a radar pulse for "Search this area", pins that drop and settle
+   with a halo, and a trace line that flows between base and room.
+
+   Rules of the road for this block (the map is gesture-heavy, so be careful):
+     1. Every overlay is pointer-events:none — nothing may swallow a pan,
+        a pinch, a rotation or a pin tap.
+     2. Overlays live ABOVE tiles but BELOW Leaflet's controls (z-index 20)
+        so the buttons and the popup stay readable.
+     3. Keyframes are transform/opacity only, so they composite on the GPU
+        and never force a layout pass mid-drag.
+   The prefers-reduced-motion rule near the top of this file already flattens
+   all of it for users who ask for less motion.
+   ══════ */
+
+/* ── overlay layer ─────────────────── */
+.map-fx{
+  position:absolute; inset:0; z-index:10;
+  pointer-events:none; overflow:hidden;
+  border-radius:var(--radius-sm);
+}
+/* Fullscreen map: the wrap is edge-to-edge, so drop the rounded corners. */
+#mapWrap.map-fullscreen-on .map-fx{ border-radius:0; }
+
+@keyframes mapfx-spin{ to{ transform:rotate(360deg); } }
+@keyframes mapfx-sweep{
+  0%  { transform:translateY(-140%); opacity:0; }
+  12% { opacity:.9; }
+  88% { opacity:.9; }
+  100%{ transform:translateY(560%); opacity:0; }
+}
+@keyframes mapfx-ring{
+  0%  { transform:scale(.12); opacity:.75; border-width:3px; }
+  70% { opacity:.28; }
+  100%{ transform:scale(1); opacity:0; border-width:1px; }
+}
+@keyframes mapfx-radar{
+  0%  { transform:scale(.05); opacity:.85; }
+  100%{ transform:scale(1); opacity:0; }
+}
+@keyframes mapfx-focus-in{
+  0%  { transform:scale(1.5); opacity:0; }
+  25% { opacity:1; }
+  70% { opacity:1; }
+  100%{ transform:scale(1); opacity:0; }
+}
+@keyframes mapfx-rise{
+  0%  { transform:translateY(10px) scale(.96); opacity:0; }
+  20% { transform:translateY(0)   scale(1);   opacity:1; }
+  85% { opacity:1; }
+  100%{ transform:translateY(-6px) scale(.99); opacity:0; }
+}
+
+/* ── scan sweep (loading) ──────────────────────────── */
+/* A soft horizontal bar of light that travels top → bottom, like a scanner
+   painting the map. Deliberately faint: it should read as "working", not
+   as a decorative stripe over the tiles. */
+.map-fx__sweep{
+  position:absolute; left:-20%; right:-20%; top:0; height:26%;
+  opacity:0;
+  background:linear-gradient(180deg,
+    rgba(124,92,255,0) 0%,
+    rgba(124,92,255,.16) 45%,
+    rgba(56,208,222,.22) 55%,
+    rgba(124,92,255,0) 100%);
+  filter:blur(2px);
+  transform:translateY(-140%);
+}
+.map-fx.fx-loading .map-fx__sweep{
+  opacity:1;
+  animation:mapfx-sweep 1.5s cubic-bezier(.45,0,.55,1) infinite;
+}
+
+/* ── searching: expanding rings from the centre ────────────────────── */
+.map-fx__rings{
+  position:absolute; top:50%; left:50%; width:0; height:0;
+}
+.map-fx__rings span{
+  position:absolute; top:50%; left:50%;
+  width:min(70vw, 620px); height:min(70vw, 620px);
+  margin:calc(min(70vw, 620px) / -2) 0 0 calc(min(70vw, 620px) / -2);
+  border:2px solid var(--primary); border-radius:50%;
+  opacity:0; transform:scale(.12);
+}
+.map-fx.fx-searching .map-fx__rings span{
+  animation:mapfx-ring 1.25s cubic-bezier(.22,.61,.36,1) infinite;
+}
+.map-fx.fx-searching .map-fx__rings span:nth-child(2){ animation-delay:.28s; }
+.map-fx.fx-searching .map-fx__rings span:nth-child(3){ animation-delay:.56s; }
+
+/* ── "Search this area": a single radar pulse ─────────────────────── */
+.map-fx__radar{ position:absolute; top:50%; left:50%; width:0; height:0; }
+.map-fx__radar span{
+  position:absolute; top:50%; left:50%;
+  width:min(80vw, 760px); height:min(80vw, 760px);
+  margin:calc(min(80vw, 760px) / -2) 0 0 calc(min(80vw, 760px) / -2);
+  border-radius:50%; opacity:0;
+  border:2px solid var(--teal, #0e7490);
+  box-shadow:0 0 24px 4px rgba(14,116,144,.35), inset 0 0 22px rgba(14,116,144,.25);
+  background:radial-gradient(circle, rgba(14,116,144,.10) 0%, rgba(14,116,144,0) 62%);
+}
+.map-fx.fx-area-search .map-fx__radar span{
+  animation:mapfx-radar .95s cubic-bezier(.16,.84,.44,1) 2;
+}
+
+/* ── focus brackets: the map "locks on" to the searched area ────────── */
+.map-fx__focus{ position:absolute; inset:14px; opacity:0; }
+.map-fx__focus i{
+  position:absolute; width:22px; height:22px;
+  border:2px solid var(--primary);
+}
+.map-fx__focus i:nth-child(1){ top:0; left:0;  border-right:none;  border-bottom:none; }
+.map-fx__focus i:nth-child(2){ top:0; right:0; border-left:none;   border-bottom:none; }
+.map-fx__focus i:nth-child(3){ bottom:0; left:0;  border-right:none; border-top:none; }
+.map-fx__focus i:nth-child(4){ bottom:0; right:0; border-left:none;  border-top:none; }
+.map-fx.fx-focus .map-fx__focus{
+  animation:mapfx-focus-in 1.1s ease-out;
+}
+
+/* ── loader chip ───────────────────── */
+.map-fx__loader{
+  position:absolute; top:14px; left:50%; transform:translate(-50%, -10px);
+  display:inline-flex; align-items:center; gap:.45rem;
+  padding:.32rem .75rem .32rem .5rem; border-radius:999px;
+  background:rgba(28,23,48,.82); color:#fff;
+  font-size:.74rem; font-weight:600; letter-spacing:.01em;
+  box-shadow:0 4px 16px rgba(0,0,0,.28);
+  backdrop-filter:blur(4px);
+  opacity:0; transition:opacity .2s ease, transform .2s ease;
+}
+[data-theme="dark"] .map-fx__loader{ background:rgba(0,0,0,.78); }
+.map-fx.fx-loading .map-fx__loader{
+  opacity:1; transform:translate(-50%, 0);
+}
+.map-fx__spinner{
+  width:13px; height:13px; flex:none; border-radius:50%;
+  border:2px solid rgba(255,255,255,.28); border-top-color:var(--gold, #f5c518);
+  animation:mapfx-spin .7s linear infinite;
+}
+/* The spinner only needs to exist while we are actually loading. */
+.map-fx:not(.fx-loading) .map-fx__spinner{ animation:none; }
+
+/* ── dim pulse behind the whole map on a fresh search ──────────────── */
+/* A single, very soft brightness lift, driven by the same fx-searching
+   class. filter is used (not opacity) so the pins stay crisp underneath. */
+.map-fx.fx-searching::before{
+  content:''; position:absolute; inset:0;
+  background:radial-gradient(circle at 50% 50%, rgba(124,92,255,.10) 0%, rgba(124,92,255,0) 60%);
+  animation:mapfx-focus-in 1.25s ease-out;
+}
+
+/* ── PIN LIFE: drop-in, settle, and a standing subtle breathe ───────── */
+/* Markers are plain Leaflet markers (so the rotate plugin's anchor maths
+   keeps working), which means we animate the ICON node Leaflet creates.
+   A wrapper-free approach is on purpose: a custom divIcon would break the
+   teardrop anchor on a rotated map, so we never replace the marker. */
+@keyframes map-pin-drop{
+  0%  { transform:translateY(-26px) scale(.55); opacity:0; }
+  55% { transform:translateY(0) scale(1.12); opacity:1; }
+  75% { transform:translateY(-4px) scale(.97); }
+  100%{ transform:translateY(0) scale(1); opacity:1; }
+}
+.map-pin-enter .leaflet-marker-icon{
+  animation:map-pin-drop .55s cubic-bezier(.34,1.4,.5,1) both;
+  /* Staggered by js/listings.js via --pin-delay, so pins ROLL OUT across
+     the map instead of all landing on the same frame. */
+  animation-delay:var(--pin-delay, 0s);
+  transform-origin:50% 100%;
+  will-change:transform, opacity;
+}
+
+/* Halo rendered as a ::after on the icon so it tracks the pin exactly. */
+@keyframes map-pin-halo{
+  0%  { transform:scale(.4); opacity:.55; }
+  70% { opacity:.12; }
+  100%{ transform:scale(2.4); opacity:0; }
+}
+.leaflet-marker-icon.map-pin-halo::after{
+  content:''; position:absolute; left:50%; top:100%;
+  width:26px; height:26px; margin:-13px 0 0 -13px;
+  border-radius:50%; border:2px solid var(--primary);
+  pointer-events:none; animation:map-pin-halo .8s ease-out;
+}
+
+/* The persistent breathing pulse: a pin the user just acted on keeps a
+   slow, calm halo so the eye can find it again after a re-render. */
+@keyframes map-pin-breathe{
+  0%,100%{ transform:scale(.55); opacity:.45; }
+  50%    { transform:scale(1.5); opacity:0; }
+}
+.leaflet-marker-icon.map-pin-live::before{
+  content:''; position:absolute; left:50%; top:100%;
+  width:30px; height:30px; margin:-15px 0 0 -15px;
+  border-radius:50%; background:rgba(124,92,255,.35);
+  pointer-events:none;
+  animation:map-pin-breathe 2s ease-in-out infinite;
+}
+/* A pin whose popup is open reads as "selected": lifted a touch and warm. */
+#mapSearch .leaflet-marker-icon.map-pin-active{
+  filter:drop-shadow(0 4px 6px rgba(0,0,0,.35)) hue-rotate(-8deg) saturate(1.25);
+}
+
+/* ── TRACE LINE LIFE ───────────────── */
+/* The route is drawn as two stacked polylines (a white casing and a teal
+   core, see drawTracePath). Animating dash-offset on the core makes the
+   line read as flowing traffic in the room → base direction. */
+@keyframes map-trace-flow{
+  to{ stroke-dashoffset:-46; }
+}
+.map-trace-flow{
+  stroke-dasharray:14 9 !important;
+  animation:map-trace-flow 1.1s linear infinite;
+}
+/* A second, slower glow underneath the casing gives the line a lit feel. */
+@keyframes map-trace-glow{
+  0%,100%{ opacity:.25; }
+  50%    { opacity:.6; }
+}
+.map-trace-glow{
+  animation:map-trace-glow 2.2s ease-in-out infinite;
+}
+/* End anchors pop in so the two endpoints are found instantly. */
+@keyframes map-trace-anchor{
+  0%  { r:1; opacity:0; }
+  60% { r:9; opacity:.5; }
+  100%{ r:6; opacity:0; }
+}
+.map-trace-anchor-ping{
+  animation:map-trace-anchor .9s ease-out 2;
+}
+
+/* ── VIGNETTE while the map is busy ────────────────── */
+/* A gentle inward darkening that focuses the eye on the middle of the map
+   while results are landing. Very low contrast on purpose. */
+#mapWrap.map-busy #mapSearch::after{
+  content:''; position:absolute; inset:0; z-index:9; pointer-events:none;
+  border-radius:var(--radius-sm);
+  background:radial-gradient(circle at 50% 50%, rgba(0,0,0,0) 55%, rgba(0,0,0,.16) 100%);
+  animation:map-fx-vignette .5s ease-out both;
+}
+@keyframes map-fx-vignette{ from{ opacity:0; } to{ opacity:1; } }
+#mapWrap.map-fullscreen-on.map-busy #mapSearch::after{ border-radius:0; }
+
+/* Mobile: keep the effects lighter — small screens pay more for them. */
+@media (max-width:640px){
+  .map-fx__loader{ font-size:.68rem; padding:.28rem .65rem .28rem .45rem; }
+  .map-fx__focus{ inset:8px; }
+  .map-pin-enter .leaflet-marker-icon{ animation-duration:.45s; }
+}
+/* Touch devices already animate plenty during a pan; skip the standing
+   breathing halo there so it never competes with gestures. */
+@media (pointer:coarse){
+  .leaflet-marker-icon.map-pin-live::before{ animation:none; opacity:0; }
+}
 /* Keep map popup cards compact, modern, and perfectly aligned */
 #mapSearch .leaflet-popup-content-wrapper{
   padding:0;

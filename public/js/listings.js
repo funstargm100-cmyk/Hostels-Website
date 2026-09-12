@@ -145,6 +145,9 @@ function getFilters() {
 async function loadListings() {
   const grid = document.getElementById('listingsGrid');
   renderSkeletons(grid, 6);
+  // On the map, start the live layer: the scan sweep + spinner chip tell the
+  // user the map is fetching rather than frozen on the old pins.
+  if (currentView === 'map') mapFxFreshSearch();
   const params = new URLSearchParams();
   const filters = getFilters();
   Object.entries(filters).forEach(([k, v]) => { if (v) params.set(k, v); });
@@ -152,6 +155,10 @@ async function loadListings() {
   try {
     const data = await api.get('/api/listings?' + params.toString());
     lastFetchedListings = data.listings;
+    // The results are in — end the sweep and play the scan for the new pins.
+    // "Search this area" gets the tighter radar pulse instead, since the user
+    // is already looking at the right patch of map.
+    if (currentView === 'map') mapFxResults(pendingMapAreaSearch ? 'area' : 'search');
     document.getElementById('resultsCount').textContent = `${data.total} room${data.total !== 1 ? 's' : ''} found`;
 
     if (!data.listings.length) {
@@ -182,6 +189,7 @@ async function loadListings() {
     }
     renderPagination(data.page, data.pages);
   } catch (e) {
+    mapFxLoading(false);
     document.getElementById('resultsCount').textContent = 'Could not load rooms';
     grid.innerHTML = `<p class="text-muted">Failed to load rooms: ${e.message}</p>`;
   }
@@ -283,6 +291,9 @@ let mapInstance = null;
 let mapMarkersLayer = null;
 let mapTraceLayer = null; // holds the road trace line from a room to the seeker's base
 let traceRequestToken = 0; // bumped per trace so a slow route response can't draw stale
+// Clears the "pins are dropping in" class on the map container once the last
+// staggered pin has landed (see renderMapListings).
+let pinEnterTimer = null;
 let lastFetchedListings = [];
 // True while WE move the camera (fitBounds/flyTo), so the moveend/zoomend
 // handlers can tell our programmatic moves apart from a genuine user pan/zoom.
@@ -585,6 +596,11 @@ function ensureMap() {
     // map from tools). Harmless in production and far easier than reverse-
     // engineering internal Leaflet state from the DOM.
     window.__mapInstance = mapInstance;
+    // Mirror the live map onto the global Leaflet namespace for tooling/QA. The
+    // scripts that drive the map (and any future debugging) reach for `L` off
+    // the window, so keep it pointing at the real Leaflet rather than the
+    // incidental global the CDN bundle leaves behind.
+    window.L = L;
   }
   // The container may have been hidden (display:none) until now — Leaflet
   // computes bounds against the CURRENT container size, so it MUST be resized
@@ -612,11 +628,14 @@ function escapeHtml(s) {
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
-// Show / hide the "No rooms found" notice centred on the map.
+// Show / hide the "No rooms found" notice centred on the map. Appearing /
+// disappearing is animated (map-empty-in / map-empty-out in style.css) so the
+// notice slides in instead of punching into place.
 function setMapEmptyState(on) {
   const el = document.getElementById('mapEmptyState');
   if (!el) return;
   el.style.display = on ? 'block' : 'none';
+  el.classList.toggle('map-empty-in', !!on);
   if (on && typeof lucide !== 'undefined') lucide.createIcons({ nodes: [el] });
 }
 
@@ -630,6 +649,7 @@ function renderMapListings(fitToResults = true) {
   const map = ensureMap();
   if (!map) return;
   mapMarkersLayer.clearLayers();
+  clearTraceLine();
   setMapEmptyState(false);
   if (!lastFetchedListings.length) {
     // A search/filter with no matches: wipe the stale pins so nothing on the
@@ -640,7 +660,19 @@ function renderMapListings(fitToResults = true) {
     }
     return;
   }
+  // Pins are about to be re-plotted, so the whole set drops in again. The class
+  // is put on the map container (not each icon) so a single animation-delay per
+  // pin — set below — rolls the pins out across the map.
+  const mapContainer = mapInstance && mapInstance.getContainer();
+  if (mapContainer) mapContainer.classList.add('map-pin-enter');
+  clearTimeout(pinEnterTimer);
+  pinEnterTimer = setTimeout(() => {
+    if (mapContainer) mapContainer.classList.remove('map-pin-enter');
+  }, 2000);
   const pts = [];
+  // Each pin lands a beat after the one before it, capped so a large result set
+  // does not finish animating seconds after the user has started reading.
+  let pinIndex = 0;
   lastFetchedListings.forEach(l => {
     const lat = parseFloat(l.display_lat), lng = parseFloat(l.display_lng);
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
@@ -719,6 +751,9 @@ function renderMapListings(fitToResults = true) {
     marker.on('popupopen', (e) => {
       const el = e.popup.getElement();
       if (el && typeof lucide !== 'undefined') lucide.createIcons();
+      // Mark the acting pin: a slow breathing halo + a lifted glyph, so the room
+      // the user is reading stays findable while the card is open.
+      markActivePin(marker);
       // The plugin only re-anchors popups during zoom-animated moves; nudge once
       // now so the very first frame is already in the right place.
       requestAnimationFrame(() => {
@@ -736,8 +771,20 @@ function renderMapListings(fitToResults = true) {
       drawTraceToBase(marker);
       openPopupMarker = marker;
     });
-    marker.on('popupclose', () => { clearTraceLine(); tracedMarker = null; openPopupMarker = null; });
+    marker.on('popupclose', () => {
+      clearTraceLine(); tracedMarker = null; openPopupMarker = null;
+      markActivePin(null);
+    });
     marker.addTo(mapMarkersLayer);
+    // Stagger this pin's drop-in, then (once it exists in the DOM) give the
+    // user the little halo that marks it as freshly placed.
+    const delay = Math.min(pinIndex++ * 45, 900);
+    const icon = marker.getElement && marker.getElement();
+    if (icon) {
+      icon.style.setProperty('--pin-delay', delay + 'ms');
+      icon.classList.add('map-pin-halo');
+      setTimeout(() => icon.classList.remove('map-pin-halo'), delay + 900);
+    }
   });
   if (pts.length && fitToResults && Date.now() >= introFlyUntil) {
     fitBoundsGuarded(L.latLngBounds(pts).pad(0.25), { maxZoom: 15 });
@@ -1028,6 +1075,88 @@ window.searchThisArea = searchThisArea;
 window.recenterMap = recenterMap;
 window.toggleMapFullscreen = toggleMapFullscreen;
 
+// ─── MAP SCREEN EFFECTS ───────────────────────
+// The browse map should read as a LIVE surface, not a static picture. This
+// little state machine drives the overlay layer in listings.html (see the
+// LIVING MAP block in css/style.css for what each class actually draws):
+//
+//   mapFxLoading()   — sweeping scan bar + spinner chip while results load.
+//   mapFxSearch(kind)— expanding rings for a search/filter; a radar pulse for
+//                      "Search this area"; the two are mutually exclusive.
+//
+// Everything here is presentation only: it never touches the camera, the
+// markers or the data, so a paused/ignored effect can never break the map.
+let fxTimer = null;          // clears the transient one-shot effects
+let fxSearchToken = 0;       // supersedes a running search effect
+function mapFxEl() { return document.getElementById('mapFx'); }
+
+// The tiny status chip on the overlay ("Loading rooms…", "Scanning area…").
+function setMapFxLabel(text) {
+  const el = document.getElementById('mapLabel');
+  if (el) el.textContent = text;
+}
+
+function mapFxLoading(on) {
+  const fx = mapFxEl();
+  const wrap = document.getElementById('mapWrap');
+  if (fx) fx.classList.toggle('fx-loading', !!on);
+  // The vignette lives on #mapSearch::after (see style.css) so it can never
+  // fight Leaflet's pane stack for a z-index slot inside the map.
+  if (wrap) wrap.classList.toggle('map-busy', !!on);
+  if (on) setMapFxLabel('Loading rooms…');
+}
+
+// Play the one-shot search effect. `kind`:
+//   'search' — a fresh search / filter: rings expand from the centre and the
+//              map briefly "locks on".
+//   'area'   — "Search this area": a single radar pulse, because the user is
+//              already looking at the right place.
+function mapFxSearch(kind = 'search') {
+  clearTimeout(fxTimer);
+  mapFxLoading(false);
+  const fx = mapFxEl();
+  if (!fx) return;
+  // Drop any previous one-shot before starting the next, or the classes pile
+  // up and the second search looks like it never played.
+  fx.classList.remove('fx-searching', 'fx-focus', 'fx-area-search');
+  setMapFxLabel(kind === 'area' ? 'Scanning this area…' : 'Scanning rooms…');
+  // Force a reflow so removing and re-adding the class in the same tick still
+  // restarts the keyframes (the classic "repeat animation does not replay").
+  void fx.offsetWidth;
+  const token = ++fxSearchToken;
+  if (kind === 'area') {
+    fx.classList.add('fx-area-search');
+    fxTimer = setTimeout(() => { if (token === fxSearchToken) fx.classList.remove('fx-area-search'); }, 2000);
+    return;
+  }
+  fx.classList.add('fx-searching', 'fx-focus');
+  fxTimer = setTimeout(() => {
+    if (token !== fxSearchToken) return;
+    fx.classList.remove('fx-searching', 'fx-focus');
+  }, 1400);
+}
+
+// A fresh search or filter: sweep while we wait, then a scan when it lands.
+function mapFxFreshSearch() { mapFxLoading(true); }
+
+// Mark the pin the user is actually acting on. Leaflet keeps a stable DOM node
+// per marker (until the set is re-plotted), so the classes survive pans, zooms
+// and rotations — they only vanish when the pin itself does.
+let activePinnedIcon = null;
+function markActivePin(marker) {
+  if (activePinnedIcon) {
+    activePinnedIcon.classList.remove('map-pin-live', 'map-pin-active');
+    activePinnedIcon = null;
+  }
+  const icon = marker && marker.getElement && marker.getElement();
+  if (!icon) return;
+  icon.classList.add('map-pin-live', 'map-pin-active');
+  activePinnedIcon = icon;
+}
+
+// The result landed: stop the loader and play the "new pins" beat.
+function mapFxResults(kind = 'search') { mapFxSearch(kind); }
+
 // ─── BASE ↔ ROOM TRACE LINE ───────────────────
 // When a popup opens, draw a line from the pinned room to the seeker's daily
 // base. We ask the server for a road-following route (OSRM) so the trace follows
@@ -1035,17 +1164,72 @@ window.toggleMapFullscreen = toggleMapFullscreen;
 // back to a straight dashed line so the relationship is still visible.
 function clearTraceLine() {
   if (mapTraceLayer) mapTraceLayer.clearLayers();
+  clearTimeout(tracePulseTimer);
 }
 
 // Draw the polylines + end anchors for a given set of [lat,lng] points.
+//
+// Three stacked strokes, outside in:
+//   • a white casing      — separates the route from the tiles underneath,
+//   • a soft teal glow    — gives the line a lit, "live" feel (map-trace-glow),
+//   • an animated core    — dashes that FLOW in the room → base direction
+//                           (map-trace-flow), so the line reads as a route you
+//                           could travel rather than a static annotation.
 function drawTracePath(points, isRoad) {
   L.polyline(points, {
     color: '#ffffff', weight: isRoad ? 7 : 5, opacity: isRoad ? 0.85 : 0.7, lineCap: 'round'
   }).addTo(mapTraceLayer);
+  // Glow sits UNDER the core and is drawn with a fat, blurred stroke.
+  L.polyline(points, {
+    color: '#38d0de', weight: isRoad ? 10 : 8, opacity: .3, lineCap: 'round',
+    className: 'map-trace-glow'
+  }).addTo(mapTraceLayer);
   L.polyline(points, {
     color: '#0e7490', weight: isRoad ? 4 : 2.5, opacity: 1,
-    dashArray: isRoad ? null : '8 8', lineCap: 'round'
+    lineCap: 'round',
+    // The core ALWAYS animates. A road route already reads as a road, so its
+    // flow is a little tighter; the straight fallback keeps bigger gaps so the
+    // dashes stay legible.
+    dashArray: isRoad ? '16 10' : '8 8',
+    className: 'map-trace-flow'
   }).addTo(mapTraceLayer);
+  // A travelling pulse: a short bright dash that runs the route on a loop,
+  // which makes the direction unmistakable at a glance.
+  startTracePulse(points);
+}
+
+// The travelling pulse is a polyline that nags Leaflet into redrawing its dash
+// offset. Leaflet's SVG renderer does not re-render on its own, so we nudge the
+// dash offset each tick and let CSS handle the smooth interpolation between.
+let tracePulseTimer = null;
+function startTracePulse(points) {
+  clearTimeout(tracePulseTimer);
+  if (!mapTraceLayer || !Array.isArray(points) || points.length < 2) return;
+  const pulse = L.polyline(points, {
+    color: '#ffffff', weight: 3, opacity: .9, lineCap: 'round',
+    dashArray: '2 240'
+  }).addTo(mapTraceLayer);
+  let offset = 0;
+  const step = () => {
+    offset -= 6; // negative = travel in the points' order (room → base)
+    const el = pulse.getElement && pulse.getElement();
+    if (!el) return;
+    el.style.strokeDashoffset = String(offset);
+    // Looping the offset over the dash period keeps the numbers small and the
+    // motion perfectly seamless (the pattern repeats every 242 units).
+    if (offset < -242) offset = 0;
+    tracePulseTimer = setTimeout(step, 90);
+  };
+  tracePulseTimer = setTimeout(step, 90);
+}
+
+// End anchors get a one-off "ping" so the eye is drawn to both ends. The ping
+// is a CSS animation on the circleMarker's path (see map-trace-anchor-ping).
+function pingTraceAnchor(layer) {
+  const el = layer && layer.getElement && layer.getElement();
+  if (!el) return;
+  el.classList.add('map-trace-anchor-ping');
+  setTimeout(() => el.classList.remove('map-trace-anchor-ping'), 1900);
 }
 
 function addTraceArrows() {
@@ -1073,12 +1257,16 @@ async function drawTraceToBase(marker) {
   // trace into view only when an end is actually off-screen.
 
   // Anchor each end so the line reads as a connection between two places.
-  L.circleMarker(base, {
+  // Each anchor is pinged once on creation, so both ends announce themselves
+  // instead of the user having to hunt for where the line stops.
+  const baseAnchor = L.circleMarker(base, {
     radius: 6, color: '#fff', weight: 2, fillColor: '#2563eb', fillOpacity: 1
   }).bindTooltip('Your base location').addTo(mapTraceLayer);
-  L.circleMarker(room, {
+  const roomAnchor = L.circleMarker(room, {
     radius: 5, color: '#fff', weight: 2, fillColor: '#0e7490', fillOpacity: 1
   }).bindTooltip('Room (approximate)').addTo(mapTraceLayer);
+  pingTraceAnchor(baseAnchor);
+  pingTraceAnchor(roomAnchor);
 
   // Stamp the request so a slow response for a popup the seeker already closed
   // (or replaced) cannot draw a stale route over the current one.
@@ -1140,15 +1328,28 @@ function setView(v) {
     // again. ensureMap() plays it once the container is measured, and the
     // introFlyUntil window stops result-framing from cutting the flight short.
     pendingIntroFly = true;
+    // Entering the map is itself a "fresh search": a scan sweep plays over it so
+    // the switch reads as the map coming alive, not a static panel appearing.
+    mapFxFreshSearch();
     // If data hasn't arrived yet (user clicked Map immediately), load it —
     // loadListings() renders the map once the rooms come back.
-    if (lastFetchedListings.length) renderMapListings(true);
-    else loadListings();
+    if (lastFetchedListings.length) {
+      renderMapListings(true);
+      // The intro fly-in lasts ~2.2s; hold the scan until it has landed, or the
+      // effect plays over a moving camera and reads as noise.
+      setTimeout(() => { if (currentView === 'map') mapFxResults('search'); }, 900);
+    } else {
+      loadListings();
+    }
   } else {
     // Leaving the map drops any area search and Near Base so the grid shows the
     // full result set again, the way Google Maps keeps list and map scopes
     // independent.
     setMapEmptyState(false);
+    // Stop any running effect: the overlays are hidden with the map, but a live
+    // timer would still be ticking against a hidden container.
+    mapFxLoading(false);
+    clearTimeout(fxTimer);
     if (nearMeKm) { nearMeLat = null; nearMeLng = null; nearMeKm = null; }
     mapAreaScope = null;
     setNearMeBtnState(document.getElementById('nearMeBtn'), false);

@@ -136,6 +136,34 @@
       <div class="grid-2" id="listingsGrid"></div>
       <div id="mapWrap" style="display:none">
         <div id="mapSearch"></div>
+
+        <!-- ── LIVING MAP FX ───────────────────────────────
+             A single overlay layer, pointer-events:none, that gives the map a
+             sense of being alive. Each piece is driven by a CSS class added in
+             js/listings.js (see the MAP SCREEN EFFECTS section):
+               · .fx-loading      — sweeping radar/scan line while results load
+               · .fx-searching    — expanding scan rings on a search / filter
+               · .fx-area-search  — radar pulse for "Search this area"
+               · .fx-focus        — a brief spotlight on the searched area
+             Kept in its own layer so nothing here can ever eat a map gesture. -->
+        <div id="mapFx" class="map-fx" aria-hidden="true">
+          <!-- Scan sweep: a soft light bar that glides across the map. -->
+          <div class="map-fx__sweep"></div>
+          <!-- Expanding rings, centred on the map, for a fresh search. -->
+          <div class="map-fx__rings">
+            <span></span><span></span><span></span>
+          </div>
+          <!-- Radar pulse used when the viewport itself is re-queried. -->
+          <div class="map-fx__radar"><span></span></div>
+          <!-- Corner brackets that lock onto the searched area. -->
+          <div class="map-fx__focus"><i></i><i></i><i></i><i></i></div>
+          <!-- Loader chip: tells the user the map is fetching, not frozen. -->
+          <div class="map-fx__loader">
+            <span class="map-fx__spinner"></span>
+            <span class="map-fx__label" id="mapLabel">Loading rooms…</span>
+          </div>
+        </div>
+
         <div id="mapSidebar" class="card" style="display:none;position:absolute;left:12px;bottom:12px;z-index:900;width:280px;padding:.9rem"></div>
 
         <!-- Empty state: shown when a search/filter returns no rooms, so the map
