@@ -141,15 +141,6 @@ CREATE TABLE IF NOT EXISTS notifications (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE TABLE IF NOT EXISTS follows (
-  id SERIAL PRIMARY KEY,
-  follower_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  ad_poster_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE (follower_id, ad_poster_id),
-  CHECK (follower_id <> ad_poster_id)
-);
-
 -- Auto-update updated_at trigger
 CREATE OR REPLACE FUNCTION update_updated_at()
 RETURNS TRIGGER AS $$

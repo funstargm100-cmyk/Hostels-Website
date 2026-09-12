@@ -80,10 +80,6 @@ const copy = {
   payoutConfirmed: (amount) => ({
     title: 'Your payout was processed',
     message: `Your payout of GHS ${amount} has been processed.`
-  }),
-  newListingFromFollowed: (poster, title) => ({
-    title: `${poster} posted a new room`,
-    message: `${poster} just listed a new room: "${title}". Check it out!`
   })
 };
 
@@ -99,7 +95,6 @@ const templates = {
   interestReceived: (listing) => wrap(copy.interestReceived(listing)),
   requestUpdate: (status, listing) => wrap(copy.requestUpdate(status, listing)),
   payoutConfirmed: (amount) => wrap(copy.payoutConfirmed(amount)),
-  newListingFromFollowed: (poster, title) => wrap(copy.newListingFromFollowed(poster, title)),
   resetPassword: (link) => `<p>We received a request to reset your Roomy password.</p><p><a href="${link}">Click here to choose a new password</a>. This link expires in 1 hour.</p><p>If you didn't request this, you can safely ignore this email — your password won't change.</p>`
 };
 
