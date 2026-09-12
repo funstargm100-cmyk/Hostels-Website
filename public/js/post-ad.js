@@ -198,6 +198,18 @@ function movePhoto(from, to) {
   renderPhotoPreview();
 }
 
+// Tap-to-tap swaps the two photos (positions exchange, everything else stays).
+// Drag-and-drop keeps its shift behaviour; only the tap path swaps.
+function swapPhotos(a, b) {
+  if (a === null || b === null || a === b) return;
+  if (a < 0 || b < 0 || a >= selectedFiles.length || b >= selectedFiles.length) return;
+  [selectedFiles[a], selectedFiles[b]] = [selectedFiles[b], selectedFiles[a]];
+  dragIndex = null;
+  tapIndex = null;
+  renderPhotoPreview();
+}
+window.swapPhotos = swapPhotos; // exposed for QA
+
 let tapIndex = null;
 let tapStart = null;
 
@@ -225,7 +237,7 @@ function handleTileTap(e, i) {
     showToast('Now tap another photo to place this one there', 'info');
     return;
   }
-  if (tapIndex !== i) movePhoto(tapIndex, i);
+  if (tapIndex !== i) swapPhotos(tapIndex, i);
   tapIndex = null;
   tiles.forEach(t => t.classList.remove('tap-selected'));
 }

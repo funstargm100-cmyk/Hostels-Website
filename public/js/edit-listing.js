@@ -267,7 +267,7 @@ function handlePhotoTap(index) {
       t.classList.toggle('selected', Number(t.dataset.index) === index));
     return;
   }
-  if (selectedPhotoIndex !== index) movePhoto(selectedPhotoIndex, index);
+  if (selectedPhotoIndex !== index) swapPhotos(selectedPhotoIndex, index);
   selectedPhotoIndex = null;
   wrap.querySelectorAll('.photo-tile').forEach(t => t.classList.remove('selected'));
 }
@@ -283,6 +283,18 @@ function movePhoto(from, to) {
 }
 
 window.movePhoto = movePhoto; // exposed so the drag/tap logic is testable
+
+// Tap-to-tap swaps the two photos (positions exchange, everything else stays).
+// Drag-and-drop keeps its shift behaviour; only the tap path swaps.
+function swapPhotos(a, b) {
+  if (a === null || b === null || Number.isNaN(a) || Number.isNaN(b) || a === b) return;
+  if (a < 0 || b < 0 || a >= photoItems.length || b >= photoItems.length) return;
+  [photoItems[a], photoItems[b]] = [photoItems[b], photoItems[a]];
+  showPhotoError('');
+  renderPhotoGrid();
+  updatePhotoCount();
+}
+window.swapPhotos = swapPhotos; // exposed for QA
 function handleNewPhotoSelect(files) {
   const incoming = Array.from(files);
   const room = MAX_PHOTOS - totalPhotoCount();

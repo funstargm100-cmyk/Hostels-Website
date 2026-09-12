@@ -103,11 +103,27 @@ export default async function run(page) {
       toast: !!document.querySelector('.toast'),
     }));
 
-    // Drag photo 5 (index 4) onto photo 1 (index 0)
+    // Drag photo 5 (index 4) onto the first position (drag = shift, unchanged)
     await page.dragAndDrop('#photoPreview [data-index="4"]', '#photoPreview [data-index="0"]');
     await page.waitForTimeout(300);
     out.afterDrag5Onto1 = await readColors();
     out.evAfterDrag2 = await page.evaluate(() => window._ev);
+
+    // ── Tap-tap must SWAP now ──
+    // Reset to a known order via two swaps back: current [m,g,b,r,y].
+    // Tap 5 (magenta, idx0) then 2 (green, idx1) -> swap -> [g,m,b,r,y]
+    const tap = async (idx) => {
+      const t = await page.$(`#photoPreview [data-index="${idx}"]`);
+      const b = await t.boundingBox();
+      await page.mouse.click(b.x + b.width / 2, b.y + b.height / 2);
+      await page.waitForTimeout(300);
+    };
+    await tap(0); await tap(1);
+    out.afterSwap5Onto2 = await readColors();
+
+    // Tap 1 (now index 0) then 4 (now index 3) -> swap -> [r,m,b,g,y]
+    await tap(0); await tap(3);
+    out.afterSwap1Then4 = await readColors();
 
     return out;
   } finally {
