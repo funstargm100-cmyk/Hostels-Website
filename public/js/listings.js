@@ -264,6 +264,11 @@ let suppressMoveEvent = false;
 // Map rotation lock state for the bottom-left rotation knob. UNLOCKED by default
 // on both desktop and mobile; clicking the knob toggles it.
 let mapRotationLocked = false;
+// Opening cinematic: fly from the zoomed-out country view down to Sunyani when
+// the map is first created. `pendingIntroFly` arms it in the L.map init block;
+// `introFlyUntil` suppresses result-framing (fitBounds) while it plays.
+let pendingIntroFly = false;
+let introFlyUntil = 0;
 // True between movestart/zoomstart and their end events — a marker click during
 // that window is deferred rather than lost.
 let mapBusy = false;
@@ -304,7 +309,9 @@ function ensureMap() {
       rotateControl: false
     }).setView([7.3349, -2.3268], 6); // start zoomed-out over Sunyani
     // Smooth opening move: glide from the country-level view down to Sunyani.
-    flyToGuarded([7.3349, -2.3268], 12, 2.2);
+    // Deferred to the END of ensureMap (after invalidateSize) — starting it
+    // here gets interrupted by the size re-measure below.
+    pendingIntroFly = true;
     // Leaflet's map-drag handler listens on the whole container and, with the
     // DEFAULT 3px clickTolerance, treats a few pixels of mouse wobble as a pan.
     // A real mouse click almost always moves 2-4px between press and release, so
@@ -543,6 +550,15 @@ function ensureMap() {
   // markers appear missing. Invalidate now and once more after a repaint tick.
   mapInstance.invalidateSize();
   setTimeout(() => mapInstance && mapInstance.invalidateSize(), 80);
+  // Play the opening cinematic here, once the container has a real size — an
+  // interrupted/overridden flyTo was why the map never landed on Sunyani. While
+  // it plays, renderMapListings() skips its own fitBounds so results can't yank
+  // the camera away mid-flight.
+  if (pendingIntroFly) {
+    pendingIntroFly = false;
+    introFlyUntil = Date.now() + 2800;
+    flyToGuarded([7.3349, -2.3268], 12, 2.2); // Sunyani
+  }
   return mapInstance;
 }
 
@@ -656,7 +672,7 @@ function renderMapListings(fitToResults = true) {
     marker.on('popupclose', clearTraceLine);
     marker.addTo(mapMarkersLayer);
   });
-  if (pts.length && fitToResults) {
+  if (pts.length && fitToResults && Date.now() >= introFlyUntil) {
     fitBoundsGuarded(L.latLngBounds(pts).pad(0.25), { maxZoom: 15 });
     // NOTE: the seeker's base is drawn by drawTraceToBase() on popup open, so no
     // standalone base marker is added here. Once the trace is cleared the base
