@@ -5,6 +5,13 @@ let nearMeLng = null;
 // Radius (km) for the proximity filter. "Near Me" leaves it null (backend default
 // 5km); "Search this area" sets it to the radius covering the current viewport.
 let nearMeKm = null;
+// Scope of the last "Search this area" click, kept SEPARATE from nearMe*: it
+// used to live in the same variables and silently kept constraining every later
+// filter/search to the old viewport — which read as "filters don't work on the
+// map". Near Base is a deliberate user filter and survives; the area scope is
+// just a consequence of where the user happened to pan, so applyFilters() drops
+// it the moment the user applies any explicit filter.
+let mapAreaScope = null;
 // Set when the current fetch was triggered by "Search this area", so the map
 // renders the new pins WITHOUT reframing the camera the user just positioned.
 let pendingMapAreaSearch = false;
@@ -125,6 +132,12 @@ function getFilters() {
     // "Near Me" uses a fixed 5km radius; "Search this area" sets nearMeKm to the
     // radius that covers the current viewport.
     f.near_km = nearMeKm || 5;
+  } else if (mapAreaScope) {
+    // Viewport scope from "Search this area". Only active until the user applies
+    // an explicit filter — applyFilters() clears it (see below).
+    f.near_lat = mapAreaScope.lat;
+    f.near_lng = mapAreaScope.lng;
+    f.near_km = mapAreaScope.km;
   }
   return f;
 }
@@ -184,7 +197,12 @@ function goPage(p) { currentPage = p; loadListings(); window.scrollTo({ top: 0, 
 // so it clears the "user has positioned the map" latch. Pagination deliberately
 // does not call this: paging keeps the view the user chose.
 function beginFreshSearch() { userHasMovedMap = false; pendingMapAreaSearch = false; }
-function applyFilters() { currentPage = 1; beginFreshSearch(); loadListings(); closeFilters(); }
+function applyFilters(fromAreaSearch = false) {
+  // An explicit filter (panel Apply, toolbar search, sort, Near Base) supersedes
+  // any "Search this area" viewport scope. Only the pill's own re-fetch keeps it.
+  if (!fromAreaSearch) mapAreaScope = null;
+  currentPage = 1; beginFreshSearch(); loadListings(); closeFilters();
+}
 function clearFilters() {
   document.getElementById('searchLocation').value = '';
   const toolbarInput = document.getElementById('toolbarSearch');
@@ -201,6 +219,7 @@ function clearFilters() {
   document.getElementById('bathroomFilter').value = '';
   document.getElementById('sortSelect').value = '';
   nearMeLat = null; nearMeLng = null; nearMeKm = null;
+  mapAreaScope = null;
   const btn = document.getElementById('nearMeBtn');
   setNearMeBtnState(btn, false);
   applyFilters();
@@ -847,10 +866,10 @@ function searchThisArea() {
   // Radius = distance to the farthest corner (metres -> km), the smallest circle
   // that still contains the whole visible rectangle.
   const radiusKm = Math.max(0.5, center.distanceTo(b.getNorthEast()) / 1000);
-  nearMeLat = center.lat;
-  nearMeLng = center.lng;
-  nearMeKm = radiusKm;
-  applyFilters();
+  mapAreaScope = { lat: center.lat, lng: center.lng, km: radiusKm };
+  // Pass true so this pill-driven re-fetch keeps its own area scope (applyFilters
+  // clears it for any user-initiated filter).
+  applyFilters(true);
 }
 
 // Re-center on the results (or the seeker's base), the crosshair button every
@@ -1092,9 +1111,12 @@ function setView(v) {
     if (lastFetchedListings.length) renderMapListings(true);
     else loadListings();
   } else {
-    // Leaving the map drops any area search so the grid shows the full result
-    // set again, the way Google Maps keeps list and map scopes independent.
+    // Leaving the map drops any area search and Near Base so the grid shows the
+    // full result set again, the way Google Maps keeps list and map scopes
+    // independent.
     if (nearMeKm) { nearMeLat = null; nearMeLng = null; nearMeKm = null; }
+    mapAreaScope = null;
+    setNearMeBtnState(document.getElementById('nearMeBtn'), false);
     // Never leave the page stuck in fullscreen map mode when the map itself is
     // being switched away — the grid must be reachable.
     const fsWrap = document.getElementById('mapWrap');
