@@ -917,7 +917,10 @@ function renderMapListings(fitToResults = true) {
   // after the map was first created.
   renderBaseMarker();
   if (pts.length && fitToResults && Date.now() >= introFlyUntil) {
-    fitBoundsGuarded(L.latLngBounds(pts).pad(0.25), { maxZoom: 15 });
+    // Tight padding (8%, down from 25%) so the results fill the frame instead of
+    // sitting in a wide sea of empty map. maxZoom 17 lets a clustered set be
+    // framed closely rather than stopping at a middling 15.
+    fitBoundsGuarded(L.latLngBounds(pts).pad(0.08), { maxZoom: 17 });
   }
 }
 
@@ -1094,9 +1097,14 @@ function searchThisArea() {
   pendingMapAreaSearch = true;
   const b = mapInstance.getBounds();
   const center = b.getCenter();
-  // Radius = distance to the farthest corner (metres -> km), the smallest circle
-  // that still contains the whole visible rectangle.
-  const radiusKm = Math.max(0.5, center.distanceTo(b.getNorthEast()) / 1000);
+  // Radius: a TIGHT area around the centre of the view, not the whole visible
+  // rectangle. Using the distance to the NE corner (the full diagonal) made the
+  // search far wider than what the user was looking at — it swept rooms well off
+  // every edge. Half the diagonal already contains the entire viewport, so we
+  // take a fraction of that (AREA_RADIUS_FACTOR) for a closer, more deliberate
+  // "search what's around here" scope.
+  const AREA_RADIUS_FACTOR = 0.6;
+  const radiusKm = Math.max(0.3, (center.distanceTo(b.getNorthEast()) / 1000) * AREA_RADIUS_FACTOR);
   mapAreaScope = { lat: center.lat, lng: center.lng, km: radiusKm };
   // Pass true so this pill-driven re-fetch keeps its own area scope (applyFilters
   // clears it for any user-initiated filter).
@@ -1115,7 +1123,8 @@ function recenterMap() {
     .map(l => [parseFloat(l.display_lat), parseFloat(l.display_lng)])
     .filter(([a, b]) => Number.isFinite(a) && Number.isFinite(b));
   if (pts.length) {
-    fitBoundsGuarded(L.latLngBounds(pts).pad(0.25), { maxZoom: 15, animate: true });
+    // Same tight framing as the results fit (see renderMapListings).
+    fitBoundsGuarded(L.latLngBounds(pts).pad(0.08), { maxZoom: 17, animate: true });
   } else {
     flyToGuarded([7.3349, -2.3268], 12); // Sunyani default
   }
