@@ -951,6 +951,11 @@ body.map-fullscreen-active .filters-panel.open{ transform:translateX(0); }
 .dropzone{ border:2px dashed var(--border); border-radius:var(--radius); padding:2.6rem 1rem; text-align:center; cursor:pointer; transition:border-color .2s ease, background .2s ease; }
 .dropzone:hover,.dropzone.drag{ border-color:var(--primary); background:var(--primary-light); }
 .photo-preview{ display:grid; grid-template-columns:repeat(4,1fr); gap:.6rem; margin-top:1rem; }
+/* mini dropzone tile shown inside the preview grid once photos exist */
+.dropzone.mini{ padding:1.4rem .4rem; display:flex; flex-direction:column; align-items:center; justify-content:center; aspect-ratio:1; gap:.25rem; }
+.dropzone.mini i{ width:22px !important; height:22px !important; }
+.dropzone.mini p{ font-size:.72rem; margin:0 !important; line-height:1.2; }
+#dropzoneSlot:empty{ display:none; }
 @media (max-width:600px){ .photo-preview{ grid-template-columns:repeat(3,1fr); } }
 
 /* ── Cover-photo section (post-ad step 1) ── */

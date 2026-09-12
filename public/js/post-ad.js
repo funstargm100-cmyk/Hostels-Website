@@ -149,12 +149,21 @@ function handleDrop(e) {
 
 function renderPhotoPreview() {
   const preview = document.getElementById('photoPreview');
+  const dz = document.getElementById('dropzone');
   preview.innerHTML = selectedFiles.map((f, i) => `
     <div style="position:relative;border-radius:var(--radius-sm);overflow:hidden;aspect-ratio:1">
       <img src="${URL.createObjectURL(f)}" style="width:100%;height:100%;object-fit:cover" />
       ${i === 0 ? '<span style="position:absolute;bottom:0;left:0;right:0;background:rgba(59,130,246,0.85);color:#fff;font-size:0.65rem;text-align:center;padding:2px">Room / Feature</span>' : ''}
       <button onclick="removePhoto(${i})" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,0.6);color:#fff;border:none;border-radius:50%;width:20px;height:20px;font-size:0.7rem;cursor:pointer">✕</button>
     </div>`).join('');
+  // Once photos exist, shrink the upload box into a small tile at the end of the grid.
+  if (selectedFiles.length > 0) {
+    dz.classList.add('mini');
+    preview.appendChild(dz);
+  } else {
+    dz.classList.remove('mini');
+    document.getElementById('dropzoneSlot').appendChild(dz);
+  }
 }
 
 function removePhoto(index) {

@@ -80,12 +80,14 @@
           <p class="text-muted" style="font-size:.82rem;margin-bottom:.8rem">
             Show seekers the inside: the room itself, beds, kitchen, bathroom, compound, etc.
           </p>
-          <div class="dropzone" id="dropzone" onclick="document.getElementById('fileInput').click()" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="this.classList.remove('drag');handleDrop(event)">
-            <i data-lucide="image-plus" style="width:32px;height:32px;color:var(--text-muted)"></i>
-            <p class="mt-2" style="margin-bottom:0">Tap to upload or drag photos here</p>
-          </div>
           <input type="file" id="fileInput" name="images" accept="image/*" multiple hidden onchange="handlePhotoSelect(this.files)" />
           <div class="photo-preview" id="photoPreview"></div>
+          <div id="dropzoneSlot">
+            <div class="dropzone" id="dropzone" onclick="document.getElementById('fileInput').click()" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="this.classList.remove('drag');handleDrop(event)">
+              <i data-lucide="image-plus" style="width:32px;height:32px;color:var(--text-muted)"></i>
+              <p class="mt-2" style="margin-bottom:0">Tap to upload or drag photos here</p>
+            </div>
+          </div>
         </div>
 
         <div class="alert alert-danger" id="step1Error" style="display:none"></div>
