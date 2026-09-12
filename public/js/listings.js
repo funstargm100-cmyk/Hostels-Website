@@ -1149,7 +1149,7 @@ function mapFxLoading(on) {
   // The vignette lives on #mapSearch::after (see style.css) so it can never
   // fight Leaflet's pane stack for a z-index slot inside the map.
   if (wrap) wrap.classList.toggle('map-busy', !!on);
-  if (on) setMapFxLabel('Loading rooms…');
+  if (on) setMapFxLabel('Scanning area…');
 }
 
 // Play the one-shot search effect. `kind`:
@@ -1164,7 +1164,7 @@ function mapFxSearch(kind = 'search') {
   // Drop any previous one-shot before starting the next, or the classes pile up
   // and the second search looks like it never played.
   fx.classList.remove('fx-searching', 'fx-area-search');
-  setMapFxLabel(kind === 'area' ? 'Scanning this area…' : 'Scanning rooms…');
+  setMapFxLabel(kind === 'area' ? 'Scanning this area…' : 'Scanning area…');
 
   // Force a reflow so removing and re-adding the class in the same tick still
   // restarts the keyframes (the classic "repeat animation does not replay").
