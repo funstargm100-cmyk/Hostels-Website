@@ -257,16 +257,35 @@ function clearFilters() {
   applyFilters(keepArea);
 }
 
-// "Search other locations" — the escape hatch from an empty area. Drops the
-// viewport scope (and any Near Base) so the next fetch returns rooms everywhere,
-// then frames the camera on whatever comes back.
-function searchOtherLocations() {
-  mapAreaScope = null;
+// "Expand search area" — the escape hatch from an empty area. Each click grows
+// the SAME viewport scope outward (same centre, larger radius) and re-searches,
+// so the map keeps widening around where the user was looking until it finds a
+// nearby patch that HAS rooms. It does not jump straight to "everywhere": the
+// user asked for here, and one tap should look a little further, not the whole
+// country.
+let areaExpandSteps = 0;          // how many times the current scope has grown
+const AREA_EXPAND_FACTOR = 1.8;   // radius multiplier per click
+const AREA_EXPAND_MAX_KM = 250;   // beyond this, stop growing (≈ whole region)
+function expandSearchArea() {
+  // If there is no area scope to grow (empty state reached some other way),
+  // start one around the current view so the button always makes progress.
+  if (!mapAreaScope || !mapInstance) {
+    if (!mapInstance) return;
+    const c = mapInstance.getBounds().getCenter();
+    mapAreaScope = { lat: c.lat, lng: c.lng, km: 5 };
+    areaExpandSteps = 0;
+  }
+  mapAreaScope.km = Math.min(mapAreaScope.km * AREA_EXPAND_FACTOR, AREA_EXPAND_MAX_KM);
+  areaExpandSteps++;
+  // Near Base is a different scope and would override this one — drop it so the
+  // expansion is what actually gets searched.
   nearMeLat = null; nearMeLng = null; nearMeKm = null;
   setNearMeBtnState(document.getElementById('nearMeBtn'), false);
   hideSearchAreaPill();
-  // A plain fresh search: let loadListings frame the camera on the full results.
-  applyFilters();
+  // Keep the area scope (pass true) and let loadListings frame the camera on the
+  // results when it finds some, so the user SEES where the rooms turned up.
+  pendingMapAreaSearch = false;
+  applyFilters(true);
 }
 
 function filterNearMe() {
@@ -687,7 +706,7 @@ function hasActiveFilters() {
 //   • filters active -> "No rooms found": offer "Clear filters" (the area scope is
 //     KEPT, so clearing re-searches the same patch rather than zooming out).
 //   • no filters, area scope -> "No rooms available in this area": offer
-//     "Search other locations" (drops the area scope and shows everything).
+//     "Expand search area" (grows the scope outward and re-searches hereabouts).
 function renderMapEmptyState() {
   const title = document.getElementById('mapEmptyTitle');
   const text = document.getElementById('mapEmptyText');
@@ -700,9 +719,9 @@ function renderMapEmptyState() {
     action.setAttribute('onclick', 'clearFilters()');
   } else {
     title.textContent = 'No rooms available in this area';
-    text.textContent = 'There are no rooms around here yet. Try searching other locations.';
-    action.textContent = 'Search other locations';
-    action.setAttribute('onclick', 'searchOtherLocations()');
+    text.textContent = 'There are no rooms right around here. Expand the search area to look further out.';
+    action.textContent = 'Expand search area';
+    action.setAttribute('onclick', 'expandSearchArea()');
   }
 }
 
@@ -747,7 +766,7 @@ function renderMapListings(fitToResults = true) {
     // Do NOT zoom out while an area scope is active: the user asked for THIS
     // patch, and yanking the camera back to the whole country reads as the map
     // ignoring them. They stay put and use the empty state's action instead —
-    // "Clear filters" (re-search here) or "Search other locations" (leave).
+    // "Clear filters" (re-search here) or "Expand search area" (grow the scope).
     if (fitToResults && !mapAreaScope) {
       setMapViewGuarded([5.6037, -0.1870], 12);
     }
@@ -1106,6 +1125,9 @@ function searchThisArea() {
   const AREA_RADIUS_FACTOR = 0.6;
   const radiusKm = Math.max(0.3, (center.distanceTo(b.getNorthEast()) / 1000) * AREA_RADIUS_FACTOR);
   mapAreaScope = { lat: center.lat, lng: center.lng, km: radiusKm };
+  // A brand-new area search resets the expansion counter, so "Expand search area"
+  // starts growing from THIS scope rather than inheriting an old one.
+  areaExpandSteps = 0;
   // Pass true so this pill-driven re-fetch keeps its own area scope (applyFilters
   // clears it for any user-initiated filter).
   applyFilters(true);
@@ -1217,7 +1239,7 @@ function toggleMapFullscreen() {
 // Exposed for the inline onclick handlers in listings.html (the file is a classic
 // script, so these are already global — made explicit here for clarity/robustness).
 window.searchThisArea = searchThisArea;
-window.searchOtherLocations = searchOtherLocations;
+window.expandSearchArea = expandSearchArea;
 window.recenterMap = recenterMap;
 window.toggleMapFullscreen = toggleMapFullscreen;
 
