@@ -818,6 +818,13 @@ function renderMapListings(fitToResults = true) {
       // The label reveal is staggered to match, so the map fills in as a
       // sequence — pin, then its name — instead of everything snapping at once.
       icon.style.setProperty('--label-delay', (delay + PIN_DROP_MS) + 'ms');
+      // Radar: a persistent sweep + emitting rings around each pin. Offsetting
+      // each pin's radar by the SAME stagger it dropped with keeps the map from
+      // pulsing in lockstep — a wall of synchronized rings reads as a glitch,
+      // whereas drifting ones read as independent contacts. The delay is kept
+      // small (never more than one ring cycle) so nothing waits visibly long.
+      icon.classList.add('map-pin-radar');
+      icon.style.setProperty('--radar-delay', (delay % 2400) + 'ms');
       setTimeout(() => icon.classList.add('map-pin-halo'), delay + PIN_DROP_MS);
       setTimeout(() => icon.classList.remove('map-pin-halo'), delay + PIN_DROP_MS + 900);
     }
