@@ -147,14 +147,89 @@ function handleDrop(e) {
   handlePhotoSelect(e.dataTransfer.files);
 }
 
+let dragIndex = null;
+
+function handleTileDragStart(e, i) {
+  dragIndex = i;
+  e.dataTransfer.effectAllowed = 'move';
+  try { e.dataTransfer.setData('text/plain', String(i)); } catch (_) {}
+}
+
+function handleTileDragEnd(e) {
+  // Clear any leftover outline if the drag was cancelled (dropped outside)
+  document.querySelectorAll('#photoPreview [data-index]').forEach(t => (t.style.outline = ''));
+  dragIndex = null;
+}
+
+function handleTileDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  e.currentTarget.style.outline = '2px dashed var(--primary, #3b82f6)';
+}
+
+function handleTileDragLeave(e) {
+  e.currentTarget.style.outline = '';
+}
+
+function handleTileDrop(e, i) {
+  e.preventDefault();
+  e.stopPropagation();
+  e.currentTarget.style.outline = '';
+  if (dragIndex === null || dragIndex === i) { dragIndex = null; return; }
+  movePhoto(i, dragIndex);
+}
+
+// Reliable reordering: move a photo onto another position, used by BOTH
+// drag-drop and the tap fallback (tap one photo, then tap another to place
+// it there) — HTML5 drag doesn't work on touch screens, so tap keeps mobile usable.
+function movePhoto(from, to) {
+  if (from === null || to === null || from === to) return;
+  if (from < 0 || to < 0 || from >= selectedFiles.length || to >= selectedFiles.length) return;
+  const [moved] = selectedFiles.splice(from, 1);
+  selectedFiles.splice(to, 0, moved);
+  dragIndex = null;
+  tapIndex = null;
+  renderPhotoPreview();
+}
+
+let tapIndex = null;
+let tapStart = null;
+
+function handleTilePointerDown(e, i) {
+  // Remember where the press started so a drag (finger/mouse moves away)
+  // is never mistaken for a tap
+  tapStart = { x: e.clientX, y: e.clientY, index: i };
+}
+
+function handleTileTap(e, i) {
+  // Ignore taps that are really drags, and taps that started on the remove button
+  if (tapStart && tapStart.index === i &&
+      Math.hypot(e.clientX - tapStart.x, e.clientY - tapStart.y) > 10) return;
+  tapStart = null;
+  if (e.target.closest('button')) return;
+
+  const tiles = document.querySelectorAll('#photoPreview [data-index]');
+  if (tapIndex === null) {
+    tapIndex = i;
+    tiles.forEach(t => t.classList.toggle('tap-selected', Number(t.dataset.index) === i));
+    showToast('Now tap another photo to place this one there', 'info');
+    return;
+  }
+  if (tapIndex !== i) movePhoto(tapIndex, i);
+  tapIndex = null;
+  tiles.forEach(t => t.classList.remove('tap-selected'));
+}
+
 function renderPhotoPreview() {
   const preview = document.getElementById('photoPreview');
   const dz = document.getElementById('dropzone');
   preview.innerHTML = selectedFiles.map((f, i) => `
-    <div style="position:relative;border-radius:var(--radius-sm);overflow:hidden;aspect-ratio:1">
-      <img src="${URL.createObjectURL(f)}" style="width:100%;height:100%;object-fit:cover" />
-      ${i === 0 ? '<span style="position:absolute;bottom:0;left:0;right:0;background:rgba(59,130,246,0.85);color:#fff;font-size:0.65rem;text-align:center;padding:2px">Room / Feature</span>' : ''}
-      <button onclick="removePhoto(${i})" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,0.6);color:#fff;border:none;border-radius:50%;width:20px;height:20px;font-size:0.7rem;cursor:pointer">✕</button>
+    <div data-index="${i}" draggable="true" title="Drag to reorder — or tap two photos to swap"
+      ondragstart="handleTileDragStart(event, ${i})" ondragover="handleTileDragOver(event)" ondragleave="handleTileDragLeave(event)" ondrop="handleTileDrop(event, ${i})" ondragend="handleTileDragEnd(event)"
+      onpointerdown="handleTilePointerDown(event, ${i})" onpointerup="handleTileTap(event, ${i})"
+      style="position:relative;border-radius:var(--radius-sm);overflow:hidden;aspect-ratio:1;cursor:grab">
+      <img src="${URL.createObjectURL(f)}" style="width:100%;height:100%;object-fit:cover;pointer-events:none" />
+      <button onclick="event.stopPropagation();removePhoto(${i})" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,0.6);color:#fff;border:none;border-radius:50%;width:20px;height:20px;font-size:0.7rem;cursor:pointer">✕</button>
     </div>`).join('');
   // Once photos exist, shrink the upload box into a small tile at the end of the grid.
   if (selectedFiles.length > 0) {

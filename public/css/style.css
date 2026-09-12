@@ -956,6 +956,8 @@ body.map-fullscreen-active .filters-panel.open{ transform:translateX(0); }
 .dropzone.mini i{ width:22px !important; height:22px !important; }
 .dropzone.mini p{ font-size:.72rem; margin:0 !important; line-height:1.2; }
 #dropzoneSlot:empty{ display:none; }
+/* highlight for the tap-to-reorder fallback (drag doesn't work on touch) */
+.photo-preview [data-index].tap-selected{ outline:2px dashed var(--primary); outline-offset:2px; opacity:.85; }
 @media (max-width:600px){ .photo-preview{ grid-template-columns:repeat(3,1fr); } }
 
 /* ── Cover-photo section (post-ad step 1) ── */

@@ -74,11 +74,12 @@
         <div class="mt-3">
           <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.4rem">
             <i data-lucide="images" style="width:18px;height:18px;color:var(--primary)"></i>
-            <strong style="font-size:.95rem">More photos — rooms &amp; features</strong>
+            <strong style="font-size:.95rem">More photos</strong>
             <span class="text-muted" style="font-size:.75rem">(optional, up to 9)</span>
           </div>
           <p class="text-muted" style="font-size:.82rem;margin-bottom:.8rem">
-            Show seekers the inside: the room itself, beds, kitchen, bathroom, compound, etc.
+            Show seekers the inside: the room itself, beds, kitchen, bathroom, compound, etc.<br />
+            <strong>Tip:</strong> drag a photo onto another to reorder, or tap one then tap another to swap them. The first photo becomes the main room photo.
           </p>
           <input type="file" id="fileInput" name="images" accept="image/*" multiple hidden onchange="handlePhotoSelect(this.files)" />
           <div class="photo-preview" id="photoPreview"></div>
