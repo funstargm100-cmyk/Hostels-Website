@@ -176,7 +176,7 @@ function handleTileDrop(e, i) {
   e.stopPropagation();
   e.currentTarget.style.outline = '';
   if (dragIndex === null || dragIndex === i) { dragIndex = null; return; }
-  movePhoto(i, dragIndex);
+  movePhoto(dragIndex, i);
 }
 
 // Reliable reordering: move a photo onto another position, used by BOTH
