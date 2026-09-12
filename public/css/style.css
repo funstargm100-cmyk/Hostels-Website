@@ -794,6 +794,12 @@ body.map-fullscreen-active .filters-panel.open{ transform:translateX(0); }
 .detail-layout{ display:grid; grid-template-columns:1.55fr 1fr; gap:2.4rem; align-items:start; }
 @media (max-width:940px){ .detail-layout{ grid-template-columns:1fr; } }
 .gallery-main{ position:relative; border-radius:var(--radius); overflow:hidden; aspect-ratio:16/10; background:#000; max-width:100%; }
+/* The detail page renders the main photo directly inside .gallery-main (no .gallery-track
+   wrapper), so scope the fit rules to ANY img inside the frame. Without this, tall/narrow
+   or very wide photos blow past the 16/10 frame or render at native aspect ratio. */
+.gallery-main img{
+  width:100%; height:100%; object-fit:cover; cursor:zoom-in; display:block;
+}
 .gallery-track{ display:flex; height:100%; transition:transform .35s ease; }
 .gallery-track img{ min-width:100%; height:100%; object-fit:cover; cursor:zoom-in; }
 .gallery-nav{ position:absolute; top:50%; transform:translateY(-50%); background:rgba(0,0,0,.45); color:#fff; border:none; width:38px; height:38px; border-radius:50%; font-size:1.3rem; cursor:pointer; }
