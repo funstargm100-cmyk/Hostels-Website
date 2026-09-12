@@ -196,7 +196,10 @@ async function loadListings() {
     // here is what flung the pins back across the screen and read as "markers
     // moved far from their original location".
     if (currentView === 'map') {
-      renderMapListings(!pendingMapAreaSearch && !userHasMovedMap);
+      // areaHoldView: the expand loop has already framed the FIRST patch with a
+      // room, and is doing extra widening passes — do NOT re-frame those, or the
+      // camera would chase the growing radius away from that first patch.
+      renderMapListings(!pendingMapAreaSearch && !userHasMovedMap && !areaHoldView);
       pendingMapAreaSearch = false;
     }
     renderPagination(data.page, data.pages);
@@ -264,8 +267,14 @@ function clearFilters() {
 // finds are genuinely nearby rather than the whole country.
 let areaExpandSteps = 0;          // how many times the current scope has grown
 let areaExpanding = false;        // true while the auto-expand loop is running
+// Once the expansion FINDS rooms, it keeps widening for a few more steps to pull
+// in neighbouring area results — but the camera must stay on the FIRST patch where
+// a room appeared, so this flag tells renderMapListings not to re-frame.
+let areaHoldView = false;
 const AREA_EXPAND_FACTOR = 1.8;   // radius multiplier per step
 const AREA_EXPAND_MAX_KM = 500;   // give up past this (no rooms anywhere near)
+// How many EXTRA expansions to run after the first hit, to gather nearby rooms.
+const AREA_EXTRA_EXPANDS = 3;
 // Small pause between steps so the loader chip is visible and the expanding
 // radius reads as a deliberate search rather than a single flicker.
 const AREA_EXPAND_STEP_MS = 450;
@@ -290,9 +299,18 @@ async function expandSearchArea() {
   areaExpanding = true;
   mapFxLoading(true);
 
+  // extraLeft counts the widening passes still to run AFTER the first hit. While
+  // it is > 0 the camera is held on the first-find patch (areaHoldView), so the
+  // wider passes only ADD results to the map without moving the view.
+  let found = false;
+  let extraLeft = 0;
   try {
-    // Keep widening until rooms appear or we hit the ceiling.
+    // Keep widening until rooms appear, then exactly AREA_EXTRA_EXPANDS further
+    // passes to pull in the neighbouring area's rooms — or until we hit the ceiling.
     while (mapAreaScope.km < AREA_EXPAND_MAX_KM) {
+      // Once we have found rooms, stop as soon as the extra passes are used up.
+      // Checked BEFORE the fetch so we run exactly AREA_EXTRA_EXPANDS extra ones.
+      if (found && extraLeft <= 0) break;
       mapAreaScope.km = Math.min(mapAreaScope.km * AREA_EXPAND_FACTOR, AREA_EXPAND_MAX_KM);
       areaExpandSteps++;
       // A fresh search: clears the user-panned latch so loadListings frames the
@@ -300,16 +318,39 @@ async function expandSearchArea() {
       currentPage = 1;
       beginFreshSearch();
       await loadListings();
-      if (lastFetchedListings.length) break; // found rooms — stop expanding
-      // Nothing yet: keep the loader chip AND the growth message on screen while
-      // we wait, then widen again. The label is set AFTER the fetch because
-      // loadListings -> mapFxResults rewrites it to a generic "Scanning…".
-      mapFxLoading(true);
-      setMapFxLabel(`Expanding search area… (${Math.round(mapAreaScope.km)} km)`);
+
+      if (lastFetchedListings.length) {
+        if (!found) {
+          // FIRST hit: this fetch just framed the camera on the patch that has
+          // rooms. From here on, hold that view and widen a few more times so
+          // nearby areas' rooms come onto the map too.
+          found = true;
+          areaHoldView = true;
+          extraLeft = AREA_EXTRA_EXPANDS;
+        } else {
+          extraLeft--; // one extra widening pass consumed
+        }
+      } else if (found) {
+        // Already found rooms at a smaller radius and a wider pass came back empty
+        // (the radius jumped past everything) — stop; the previous set stands.
+        break;
+      }
+
+      if (!found) {
+        // Nothing yet: keep the loader chip AND the growth message on screen while
+        // we wait, then widen again. The label is set AFTER the fetch because
+        // loadListings -> mapFxResults rewrites it to a generic "Scanning…".
+        mapFxLoading(true);
+        setMapFxLabel(`Expanding search area… (${Math.round(mapAreaScope.km)} km)`);
+      } else {
+        mapFxLoading(true);
+        setMapFxLabel(`Found rooms — widening for nearby… (${Math.round(mapAreaScope.km)} km)`);
+      }
       await new Promise((r) => setTimeout(r, AREA_EXPAND_STEP_MS));
     }
   } finally {
     areaExpanding = false;
+    areaHoldView = false;
     mapFxLoading(false);
     // If the loop ran out of radius with still nothing, the empty state was
     // suppressed throughout. Show it now so the user is told, and so the button
