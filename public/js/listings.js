@@ -257,35 +257,65 @@ function clearFilters() {
   applyFilters(keepArea);
 }
 
-// "Expand search area" — the escape hatch from an empty area. Each click grows
-// the SAME viewport scope outward (same centre, larger radius) and re-searches,
-// so the map keeps widening around where the user was looking until it finds a
-// nearby patch that HAS rooms. It does not jump straight to "everywhere": the
-// user asked for here, and one tap should look a little further, not the whole
-// country.
+// "Expand search area" — the escape hatch from an empty area. ONE tap keeps
+// growing the SAME viewport scope outward (same centre, larger radius) and
+// re-searching on its own, without further clicks, until it finds a patch that
+// HAS rooms. The map stays anchored where the user was looking, so the rooms it
+// finds are genuinely nearby rather than the whole country.
 let areaExpandSteps = 0;          // how many times the current scope has grown
-const AREA_EXPAND_FACTOR = 1.8;   // radius multiplier per click
-const AREA_EXPAND_MAX_KM = 250;   // beyond this, stop growing (≈ whole region)
-function expandSearchArea() {
+let areaExpanding = false;        // true while the auto-expand loop is running
+const AREA_EXPAND_FACTOR = 1.8;   // radius multiplier per step
+const AREA_EXPAND_MAX_KM = 500;   // give up past this (no rooms anywhere near)
+// Small pause between steps so the loader chip is visible and the expanding
+// radius reads as a deliberate search rather than a single flicker.
+const AREA_EXPAND_STEP_MS = 450;
+
+async function expandSearchArea() {
+  if (areaExpanding) return; // a run is already in flight
+  if (!mapInstance) return;
   // If there is no area scope to grow (empty state reached some other way),
   // start one around the current view so the button always makes progress.
-  if (!mapAreaScope || !mapInstance) {
-    if (!mapInstance) return;
+  if (!mapAreaScope) {
     const c = mapInstance.getBounds().getCenter();
     mapAreaScope = { lat: c.lat, lng: c.lng, km: 5 };
     areaExpandSteps = 0;
   }
-  mapAreaScope.km = Math.min(mapAreaScope.km * AREA_EXPAND_FACTOR, AREA_EXPAND_MAX_KM);
-  areaExpandSteps++;
   // Near Base is a different scope and would override this one — drop it so the
   // expansion is what actually gets searched.
   nearMeLat = null; nearMeLng = null; nearMeKm = null;
   setNearMeBtnState(document.getElementById('nearMeBtn'), false);
   hideSearchAreaPill();
-  // Keep the area scope (pass true) and let loadListings frame the camera on the
-  // results when it finds some, so the user SEES where the rooms turned up.
+  // Keep the area scope (pass true) so applyFilters does not wipe it.
   pendingMapAreaSearch = false;
-  applyFilters(true);
+  areaExpanding = true;
+  mapFxLoading(true);
+
+  try {
+    // Keep widening until rooms appear or we hit the ceiling.
+    while (mapAreaScope.km < AREA_EXPAND_MAX_KM) {
+      mapAreaScope.km = Math.min(mapAreaScope.km * AREA_EXPAND_FACTOR, AREA_EXPAND_MAX_KM);
+      areaExpandSteps++;
+      // A fresh search: clears the user-panned latch so loadListings frames the
+      // results once they arrive, letting the user SEE where the rooms turned up.
+      currentPage = 1;
+      beginFreshSearch();
+      await loadListings();
+      if (lastFetchedListings.length) break; // found rooms — stop expanding
+      // Nothing yet: keep the loader chip AND the growth message on screen while
+      // we wait, then widen again. The label is set AFTER the fetch because
+      // loadListings -> mapFxResults rewrites it to a generic "Scanning…".
+      mapFxLoading(true);
+      setMapFxLabel(`Expanding search area… (${Math.round(mapAreaScope.km)} km)`);
+      await new Promise((r) => setTimeout(r, AREA_EXPAND_STEP_MS));
+    }
+  } finally {
+    areaExpanding = false;
+    mapFxLoading(false);
+    // If the loop ran out of radius with still nothing, the empty state was
+    // suppressed throughout. Show it now so the user is told, and so the button
+    // remains available to try again (it will restart from the current radius).
+    if (!lastFetchedListings.length && currentView === 'map') setMapEmptyState(true);
+  }
 }
 
 function filterNearMe() {
@@ -706,7 +736,7 @@ function hasActiveFilters() {
 //   • filters active -> "No rooms found": offer "Clear filters" (the area scope is
 //     KEPT, so clearing re-searches the same patch rather than zooming out).
 //   • no filters, area scope -> "No rooms available in this area": offer
-//     "Expand search area" (grows the scope outward and re-searches hereabouts).
+//     "Expand search area" (one tap auto-widens the scope until rooms appear).
 function renderMapEmptyState() {
   const title = document.getElementById('mapEmptyTitle');
   const text = document.getElementById('mapEmptyText');
@@ -719,7 +749,7 @@ function renderMapEmptyState() {
     action.setAttribute('onclick', 'clearFilters()');
   } else {
     title.textContent = 'No rooms available in this area';
-    text.textContent = 'There are no rooms right around here. Expand the search area to look further out.';
+    text.textContent = 'There are no rooms right around here. Tap below and we will widen the search outwards until we find some.';
     action.textContent = 'Expand search area';
     action.setAttribute('onclick', 'expandSearchArea()');
   }
@@ -731,6 +761,10 @@ function renderMapEmptyState() {
 function setMapEmptyState(on) {
   const el = document.getElementById('mapEmptyState');
   if (!el) return;
+  // While the auto-expand loop is running, suppress the empty state: each empty
+  // intermediate fetch would otherwise flash "No rooms available" on and off as
+  // the radius grows. The loader chip carries the status instead.
+  if (on && areaExpanding) { el.style.display = 'none'; el.classList.remove('map-empty-in'); return; }
   if (on) renderMapEmptyState();
   el.style.display = on ? 'block' : 'none';
   el.classList.toggle('map-empty-in', !!on);
