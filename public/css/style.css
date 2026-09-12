@@ -568,21 +568,6 @@ textarea{ resize:vertical; min-height:110px; }
 .map-reset:active{ transform:scale(.94) rotate(-30deg); }
 .map-reset svg, .map-reset i{ width:18px; height:18px; }
 [data-theme="dark"] .map-reset{ background:rgba(31,27,44,.96); border-color:rgba(255,255,255,.14); }
-.map-reset[aria-pressed="true"]{ color:var(--primary); border-color:var(--primary); }
-
-/* 3D-like tilt: all map panes are moved into this wrapper (see toggleMap3D in
-   js/listings.js) and the wrapper gets perspective + rotateX. The wrapper itself
-   must not intercept pointer events, or the pins underneath would go dead. */
-#mapSearch .pane-tilt-3d{
-  pointer-events:none;
-  transform-origin:50% 80%;
-  transition:transform .45s ease;
-  will-change:transform;
-  backface-visibility:hidden;
-}
-#mapSearch .pane-tilt-3d.tilted{
-  transform:perspective(900px) rotateX(35deg);
-}
 
 /* Fullscreen mode: #mapWrap escapes its column and covers the viewport. Using
    position:fixed keeps Google Maps' feel — the page behind is untouched and the

@@ -853,57 +853,20 @@ function recenterMap() {
   }
 }
 
-// ─── 3D-LIKE VIEW (pitch) ───────────────────────────
-// Leaflet has no native camera pitch, but a CSS 3D transform can fake it well
-// enough to feel like Google Maps' tilt. All of the map's PANES are moved into
-// a single wrapper div which is tilted with perspective + rotateX(35deg):
-//   • The map CONTAINER (#mapSearch) is NOT transformed, so Leaflet's own
-//     client→latlng math, drag deltas and hit-testing math stay exact.
-//   • The browser transforms hit-testing along with rendering, so pins are
-//     still clickable exactly where they appear on the tilted plane.
-//   • Popups/markers/tooltips are inside the wrapper too, so they tilt WITH
-//     the map instead of floating flat above it.
-// The toggle resets the bearing to north and re-frames the results first, so
-// entering/leaving 3D starts from a clean camera.
-let mapTiltOn = false;
-function ensure3DWrapper() {
-  if (!mapInstance) return null;
-  const mapPane = mapInstance.getPane('mapPane');
-  let wrap = mapPane.querySelector(':scope > .pane-tilt-3d');
-  if (!wrap) {
-    wrap = document.createElement('div');
-    wrap.className = 'pane-tilt-3d';
-    wrap.style.position = 'absolute';
-    wrap.style.inset = '0';
-    // Move every pane (tiles, markers, popups, traces…) into the wrapper.
-    // appendChild MOVES existing nodes, so all of Leaflet's cached pane
-    // references and event listeners stay valid.
-    Array.from(mapPane.children).forEach(ch => wrap.appendChild(ch));
-    mapPane.appendChild(wrap);
-  }
-  return wrap;
-}
-function toggleMap3D() {
+// One-click camera reset: bearing back to north, then re-frame the results
+// bounding box (which also re-centers and re-zooms). Undoes any rotation,
+// panning and zooming the user has done.
+function resetMapView() {
   if (!mapInstance) return;
-  const wrap = ensure3DWrapper();
-  if (!wrap) return;
-  mapTiltOn = !mapTiltOn;
-  wrap.classList.toggle('tilted', mapTiltOn);
-  // Tilt happens FROM the current camera: no bearing reset and no re-frame.
-  // Resetting zoom/bearing made it feel like a zoom-out instead of a pitch.
-  // The bearing rotation (leafet-rotate) is applied to the panes INSIDE the
-  // tilted wrapper, so the two transforms compose correctly — the map spins
-  // within the tilted plane and both effects stay in sync.
-  const btn = document.getElementById('mapResetBtn');
-  if (btn) {
-    btn.setAttribute('aria-pressed', String(mapTiltOn));
-    btn.title = mapTiltOn ? 'Switch back to flat view' : 'Pan map by 35 degrees (3D view)';
-    btn.innerHTML = `<i data-lucide="${mapTiltOn ? 'square-stack' : 'rotate-ccw'}"></i>`;
-    if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [btn] });
+  if (typeof mapInstance.setBearing === 'function') {
+    suppressMoveEvent = true;
+    mapInstance.setBearing(0);
+    suppressMoveEvent = false;
   }
-  showToast(mapTiltOn ? '3D view on — map tilted 35°' : 'Back to flat view', 'info', 1500);
+  recenterMap();
+  showToast('View reset', 'info', 1400);
 }
-window.toggleMap3D = toggleMap3D;
+window.resetMapView = resetMapView;
 
 // ─── FULLSCREEN MAP ───────────────────────────
 // Expand the map to fill the whole viewport and back. Implemented as a CSS class
