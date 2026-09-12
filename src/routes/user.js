@@ -2,6 +2,8 @@ const router = require('express').Router();
 const bcrypt = require('bcryptjs');
 const db = require('../utils/db');
 const { requireAuth } = require('../middleware/auth');
+// Seekers' daily base is fixed to UENR and cannot be edited.
+const { SEEKER_BASE } = require('../utils/seekerBase');
 
 // Geocode a free-text base address (Ghana-biased, like /api/geo/search). Returns
 // {lat,lng} or null — never throws, so a Nominatim outage can't fail the profile
@@ -56,6 +58,9 @@ router.put('/profile', requireAuth, async (req, res) => {
   if (normPhone && !PHONE_RE.test(normPhone)) return res.status(400).json({ error: 'Please enter a valid phone number (9–15 digits)' });
   // Location (workplace/school base) only applies to seekers. For owners/agents
   // the column is simply left untouched, whatever the client sends.
+  // SEEKERS: the base is now LOCKED to UENR (Sunyani) — any base_location /
+  // base_lat / base_lng the client sends is ignored, so the base can never be
+  // edited from the profile form.
   const isSeeker = req.session.user.role === 'seeker';
   try {
     // Reject a clash with any OTHER account before updating.
@@ -65,19 +70,16 @@ router.put('/profile', requireAuth, async (req, res) => {
       if (row.email === normEmail) return res.status(409).json({ error: 'That email is already used by another account' });
       if (normPhone && row.phone === normPhone) return res.status(409).json({ error: 'That phone number is already used by another account' });
     }
-    // Keep stored coordinates in sync when the seeker edits their base location:
-    // if coordinates are provided use them; otherwise GEOCODE the new address so
-    // the base keeps working. (Previously a text-only save nulled the coords,
-    // which silently killed the distance line and the map's base↔room trace on
-    // every profile edit.) If geocoding fails the coords are cleared, as before.
-    let lat = base_lat !== undefined && base_lat !== null && base_lat !== '' ? parseFloat(base_lat) : null;
-    let lng = base_lng !== undefined && base_lng !== null && base_lng !== '' ? parseFloat(base_lng) : null;
-    const addressChanged = (base_location || '').trim() !== '';
-    if (isSeeker && addressChanged && (lat === null || lng === null)) {
-      const geo = await geocodeBase(base_location);
-      if (geo) { lat = geo.lat; lng = geo.lng; }
+    // Seekers: the base is fixed — force the UENR values and ignore the client's
+    // base fields entirely. Owners/agents: no base at all, leave untouched.
+    let lat = null, lng = null, baseLocation = null, addressChanged = false;
+    if (isSeeker) {
+      lat = SEEKER_BASE.lat;
+      lng = SEEKER_BASE.lng;
+      baseLocation = SEEKER_BASE.location;
+      addressChanged = true;
     }
-    const coordClause = isSeeker && addressChanged
+    const coordClause = addressChanged
         ? 'base_lat=$7, base_lng=$8'
         : 'base_lat = CASE WHEN $6 AND $4 IS DISTINCT FROM base_location THEN NULL ELSE base_lat END, base_lng = CASE WHEN $6 AND $4 IS DISTINCT FROM base_location THEN NULL ELSE base_lng END';
     const result = await db.query(
@@ -86,7 +88,7 @@ router.put('/profile', requireAuth, async (req, res) => {
               ${coordClause}
        WHERE id=$5
        RETURNING id, uuid, name, email, phone, role, is_verified, is_kyc_verified, wallet_balance, avatar, base_location, base_lat, base_lng, created_at`,
-      [name.trim(), normEmail, normPhone || null, (base_location || '').trim() || null, req.session.user.id, isSeeker, lat, lng]);
+      [name.trim(), normEmail, normPhone || null, baseLocation, req.session.user.id, addressChanged, lat, lng]);
     res.json({ message: 'Profile updated', user: result.rows[0] });
   } catch (err) {
     if (err.code === '23505') return res.status(409).json({ error: 'That email or phone number is already in use' });

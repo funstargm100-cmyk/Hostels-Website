@@ -1,11 +1,12 @@
-// ─── SIGNUP WIZARD ────────────────────────────────────────────────────────────
-// Step 1: choose role → seeker path: map (base location) → details
-//                        → owner path: details
+﻿// ─── SIGNUP WIZARD ────────────────────────────────────────────────────────
+// Seekers no longer pick a daily base: every seeker's base is fixed to UENR
+// (Sunyani), set server-side at signup (see src/utils/seekerBase.js). So the
+// seeker path is just two steps: role → details. The old base-location map
+// step and its search/pin code were removed.
+// Step 1: choose role → both paths: details
 let suRole = null;
-let suMap = null;
-let suMarker = null;
 
-const suSteps = ['suStep1', 'suSeekerMap', 'seekerDetailsForm', 'signupForm'];
+const suSteps = ['suStep1', 'seekerDetailsForm', 'signupForm'];
 
 function suShow(id) {
   suSteps.forEach(s => {
@@ -18,12 +19,9 @@ function suShow(id) {
   if (id === 'suStep1') {
     title.textContent = 'Create your account';
     sub.textContent = 'First — what brings you to Roomy?';
-  } else if (id === 'suSeekerMap') {
-    title.textContent = 'Your daily base';
-    sub.textContent = 'Step 2 of 3 — pin your school or workplace';
   } else if (id === 'seekerDetailsForm') {
     title.textContent = 'Your details';
-    sub.textContent = 'Step 3 of 3 — almost done';
+    sub.textContent = 'Step 2 of 2 — almost done';
   } else {
     title.textContent = 'Your details';
     sub.textContent = 'Tell us a bit about yourself';
@@ -37,174 +35,17 @@ function suErr(msg) {
   el.style.display = 'block';
 }
 
-// Role selection (step 1)
+// Role selection (step 1). Seekers go straight to details — no base map step;
+// their daily base is fixed to UENR server-side.
 document.querySelectorAll('.su-role-card').forEach(card => {
   card.addEventListener('click', () => {
     suRole = card.dataset.role;
-    if (suRole === 'seeker') {
-      suShow('suSeekerMap');
-      setTimeout(suInitMap, 60); // let the container become visible first
-    } else {
-      suShow('signupForm');
-    }
+    suShow(suRole === 'seeker' ? 'seekerDetailsForm' : 'signupForm');
   });
 });
 
-function suPrev() {
-  if (suRole === 'seeker' && document.getElementById('suSeekerMap').style.display !== 'none') suShow('suStep1');
-  else if (suRole === 'seeker') suShow('suSeekerMap');
-  else suShow('suStep1');
-}
+function suPrev() { suShow('suStep1'); }
 
-// ─── MAP (LEAFLET) ────────────────────────────────────────────────────────────
-function suInitMap() {
-  if (suMap) { suMap.invalidateSize(); return; }
-  const defaultLat = 5.6037; // Accra, Ghana
-  const defaultLng = -0.1870;
-
-  suMap = L.map('suMap').setView([defaultLat, defaultLng], 13);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-    maxZoom: 19
-  }).addTo(suMap);
-
-  const lat = document.getElementById('suBaseLat').value;
-  const lng = document.getElementById('suBaseLng').value;
-  if (lat && lng) {
-    suPlacePin(parseFloat(lat), parseFloat(lng), false);
-    suMap.setView([parseFloat(lat), parseFloat(lng)], 16);
-  }
-
-  suMap.on('click', (e) => suPlacePin(e.latlng.lat, e.latlng.lng, true));
-}
-
-function suPlacePin(lat, lng, reverseGeocode) {
-  if (suMarker) suMap.removeLayer(suMarker);
-  suMarker = L.marker([lat, lng], { draggable: true }).addTo(suMap);
-  suMarker.bindPopup('My base').openPopup();
-  suMarker.on('dragend', (e) => {
-    const pos = e.target.getLatLng();
-    suSetLocation(pos.lat, pos.lng, true);
-  });
-  suSetLocation(lat, lng, reverseGeocode);
-}
-
-function suSetLocation(lat, lng, reverseGeocode) {
-  document.getElementById('suBaseLat').value = lat.toFixed(7);
-  document.getElementById('suBaseLng').value = lng.toFixed(7);
-  const status = document.getElementById('suPinStatus');
-  status.textContent = 'Pin set at ' + lat.toFixed(5) + ', ' + lng.toFixed(5);
-  if (reverseGeocode) suReverseGeocode(lat, lng);
-}
-
-async function suReverseGeocode(lat, lng) {
-  const status = document.getElementById('suPinStatus');
-  status.textContent = 'Looking up address...';
-  try {
-    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1`, {
-      headers: { 'Accept-Language': 'en' }
-    });
-    const data = await res.json();
-    if (data.display_name) {
-      document.getElementById('suBaseLocation').value = data.display_name;
-      status.textContent = data.display_name.split(',').slice(0, 3).join(', ');
-    }
-  } catch {
-    // keep coords-only status
-  }
-}
-
-function suGetMyLocation() {
-  if (!navigator.geolocation) return showToast('Geolocation not supported', 'error');
-  document.getElementById('suPinStatus').textContent = 'Getting your location...';
-  navigator.geolocation.getCurrentPosition(pos => {
-    const { latitude: lat, longitude: lng } = pos.coords;
-    if (!suMap) suInitMap();
-    suMap.setView([lat, lng], 17);
-    suPlacePin(lat, lng, true);
-  }, () => showToast('Could not get location. Please pin manually.', 'error'));
-}
-
-// ─── PLACE SEARCH (popular chips + autocomplete via /api/geo) ─────────────────
-let suSearchTimer = null;
-
-async function suLoadPopular() {
-  try {
-    const { places } = await api.get('/api/geo/popular');
-    const wrap = document.getElementById('suPopularChips');
-    wrap.innerHTML = places.map((p, i) =>
-      `<button type="button" class="su-chip" data-i="${i}">${p.emoji} ${p.label}</button>`).join('');
-    wrap.querySelectorAll('.su-chip').forEach(btn => {
-      btn.addEventListener('click', () => suSearchAndPin(places[+btn.dataset.i].query));
-    });
-  } catch { /* chips are optional — ignore */ }
-}
-
-async function suSearchAndPin(query) {
-  const status = document.getElementById('suPinStatus');
-  status.textContent = 'Searching "' + query + '"…';
-  try {
-    const { results } = await api.get('/api/geo/search?q=' + encodeURIComponent(query));
-    if (!results.length) { status.textContent = 'No match found — try tapping the map.'; return; }
-    const r = results[0];
-    if (!suMap) suInitMap();
-    suMap.setView([r.lat, r.lng], 16);
-    suPlacePin(r.lat, r.lng, false);
-    document.getElementById('suBaseLocation').value = r.display;
-    document.getElementById('suPinStatus').textContent = r.name + (r.detail ? ' — ' + r.detail : '');
-  } catch {
-    status.textContent = 'Search failed — try tapping the map.';
-  }
-}
-
-document.getElementById('suPlaceSearch').addEventListener('input', (e) => {
-  const q = e.target.value.trim();
-  const box = document.getElementById('suSearchResults');
-  clearTimeout(suSearchTimer);
-  if (q.length < 3) { box.style.display = 'none'; box.innerHTML = ''; return; }
-  suSearchTimer = setTimeout(async () => {
-    box.innerHTML = '<div class="su-search-item muted">Searching…</div>';
-    box.style.display = '';
-    try {
-      const { results } = await api.get('/api/geo/search?q=' + encodeURIComponent(q));
-      if (!results.length) { box.innerHTML = '<div class="su-search-item muted">No matches</div>'; return; }
-      box.innerHTML = results.map((r, i) => `
-        <button type="button" class="su-search-item" data-i="${i}">
-          <strong>${r.name}</strong>${r.detail ? `<span class="muted"> · ${r.detail}</span>` : ''}
-        </button>`).join('');
-      box.querySelectorAll('.su-search-item').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const r = results[+btn.dataset.i];
-          if (!suMap) suInitMap();
-          suMap.setView([r.lat, r.lng], 16);
-          suPlacePin(r.lat, r.lng, false);
-          document.getElementById('suBaseLocation').value = r.display;
-          document.getElementById('suPinStatus').textContent = r.name + (r.detail ? ' — ' + r.detail : '');
-          box.style.display = 'none';
-          e.target.value = r.name;
-        });
-      });
-    } catch {
-      box.innerHTML = '<div class="su-search-item muted">Search unavailable — pin the map instead</div>';
-    }
-  }, 350); // debounce
-});
-
-document.addEventListener('click', (e) => {
-  const box = document.getElementById('suSearchResults');
-  if (box && !e.target.closest('.su-search-wrap')) box.style.display = 'none';
-});
-
-suLoadPopular();
-
-// Continue from map step → details
-document.getElementById('suMapNextBtn').addEventListener('click', () => {
-  if (!document.getElementById('suBaseLat').value) {
-    suErr('Please pin your school or workplace on the map first.');
-    return;
-  }
-  suShow('seekerDetailsForm');
-});
 
 // ─── SUBMIT (both paths) ──────────────────────────────────────────────────────
 async function suSubmit(btnId, fields) {
@@ -221,12 +62,10 @@ async function suSubmit(btnId, fields) {
   if (!/^\+?[0-9]{9,15}$/.test(phoneDigits)) { suErr('Please enter a valid phone number (9–15 digits).'); return; }
   if (!password) { suErr('Please choose a password.'); return; }
   if (password.length < 6) { suErr('Password must be at least 6 characters.'); return; }
-  if (suRole === 'seeker' && !document.getElementById('suBaseLat').value) {
-    suErr('Please pin your school or workplace on the map first.');
-    return;
-  }
   btn.disabled = true; btn.classList.add('btn-loading');
   try {
+    // NOTE: no base fields here — the seeker's daily base is fixed to UENR and
+    // set by the server (src/utils/seekerBase.js). Anything sent is ignored.
     const body = {
       name,
       email,
@@ -234,11 +73,6 @@ async function suSubmit(btnId, fields) {
       password,
       role: suRole
     };
-    if (suRole === 'seeker') {
-      body.base_location = document.getElementById('suBaseLocation').value || 'Pinned location';
-      body.base_lat = document.getElementById('suBaseLat').value;
-      body.base_lng = document.getElementById('suBaseLng').value;
-    }
     const res = await api.post('/api/auth/signup', body);
     // Account created — send the user straight to the verification step.
     const emailQ = email || '';

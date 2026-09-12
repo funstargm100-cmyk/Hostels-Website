@@ -17,6 +17,9 @@ const signToken = (user) => jwt.sign(
   { expiresIn: '7d' }
 );
 
+// Every seeker's daily base is fixed to UENR (Sunyani) — see src/utils/seekerBase.js.
+const { SEEKER_BASE } = require('../utils/seekerBase');
+
 // POST /api/auth/signup
 router.post('/signup', async (req, res) => {
   const { name, email, phone, password, role, base_location, base_lat, base_lng } = req.body;
@@ -24,7 +27,10 @@ router.post('/signup', async (req, res) => {
     return res.status(400).json({ error: 'All fields are required: name, email, phone, password' });
   if (!name.trim())
     return res.status(400).json({ error: 'Please enter your full name' });
-  if (!['seeker', 'owner'].includes(role))
+  // NOTE: agent and owner are the same ROLE in the product — the signup UI only
+  // offers seeker/owner. 'agent' stays accepted here for legacy accounts so they
+  // can keep logging in; they are treated as owners everywhere else.
+  if (!['seeker', 'owner', 'agent'].includes(role))
     return res.status(400).json({ error: 'Invalid role' });
 
   // Contact validation — if a contact is provided it must be a REAL email or phone,
@@ -42,9 +48,9 @@ router.post('/signup', async (req, res) => {
     return res.status(400).json({ error: 'Password must be at least 6 characters' });
   if (name.trim().length < 2)
     return res.status(400).json({ error: 'Please enter your full name' });
-  // Seekers should provide their workplace/school base (lat/lng or at least a text)
-  if (role === 'seeker' && !base_location)
-    return res.status(400).json({ error: 'Please pin your workplace or school location' });
+  // The seeker's daily base is no longer chosen by the user — every seeker bases
+  // out of UENR (see src/utils/seekerBase.js). Anything the client sends for
+  // base_location/base_lat/base_lng is ignored.
 
   const normEmail = email ? email.trim().toLowerCase() : null;
   try {
@@ -74,14 +80,16 @@ router.post('/signup', async (req, res) => {
 
     const lat = base_lat !== undefined && base_lat !== null && base_lat !== '' ? parseFloat(base_lat) : null;
     const lng = base_lng !== undefined && base_lng !== null && base_lng !== '' ? parseFloat(base_lng) : null;
+    // Seekers are pinned to UENR regardless of what was sent.
+    const seekerBase = role === 'seeker' ? SEEKER_BASE : null;
 
     const result = await db.query(
       `INSERT INTO users (name, email, phone, password_hash, role, otp_code, otp_expires_at, base_location, base_lat, base_lng, account_group)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING uuid`,
       [name.trim(), normEmail, normPhone || null, hash, role, otp, otpExpiry,
-       role === 'seeker' ? base_location : null,
-       role === 'seeker' && Number.isFinite(lat) ? lat : null,
-       role === 'seeker' && Number.isFinite(lng) ? lng : null,
+       seekerBase ? seekerBase.location : null,
+       seekerBase ? seekerBase.lat : null,
+       seekerBase ? seekerBase.lng : null,
        account_group]
     );
     const uuid = result.rows[0].uuid;

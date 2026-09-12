@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Create account — Roomy</title>
 <link rel="stylesheet" href="/css/style.css" />
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
 <body>
 
@@ -48,28 +47,9 @@
       </div>
     </div>
 
-    <!-- SEEKER PATH: step 2 = base location map -->
-    <div class="su-step" id="suSeekerMap" style="display:none">
-      <p style="font-size:.92rem;margin-top:-.6rem">Where do you spend most of your day — school or work? We'll use this to find rooms nearby.</p>
-      <div class="su-search-wrap">
-        <input type="text" id="suPlaceSearch" autocomplete="off" placeholder="Search a school, bank, restaurant, area…" />
-        <div class="su-search-results" id="suSearchResults" style="display:none"></div>
-      </div>
-      <div class="su-chips" id="suPopularChips"></div>
-      <div style="display:flex;gap:.7rem;align-items:center;margin:.4rem 0 .2rem">
-        <button type="button" class="btn btn-outline btn-sm" onclick="suGetMyLocation()"><i data-lucide="locate-fixed"></i> Use my current location</button>
-        <span style="font-size:.78rem" class="text-muted">or tap the map below</span>
-      </div>
-      <div id="suMap"></div>
-      <p class="text-muted" style="font-size:.8rem" id="suPinStatus">No pin set yet — tap the map to drop a pin.</p>
-      <input type="hidden" id="suBaseLat" />
-      <input type="hidden" id="suBaseLng" />
-      <input type="hidden" id="suBaseLocation" />
-      <div style="display:flex;gap:.7rem;margin-top:1rem">
-        <button type="button" class="btn btn-outline" onclick="suPrev()"><i data-lucide="arrow-left"></i> Back</button>
-        <button type="button" class="btn btn-primary btn-lg" style="flex:1" id="suMapNextBtn">Continue</button>
-      </div>
-    </div>
+    <!-- SEEKER PATH: the base-location map step was removed — every seeker's
+         daily base is fixed to UENR (Sunyani) and set server-side, so seekers
+         go straight from role choice to the details form. -->
 
     <!-- SEEKER PATH: step 3 = account details -->
     <form id="seekerDetailsForm" class="su-step" style="display:none">
@@ -137,7 +117,6 @@
 <nav class="footer-nav" id="footerNav"></nav>
 
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js" defer></script>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
 <script src="/js/app.js" defer></script>
 <script src="/js/footernav.js" defer></script>
 <script src="/js/animations.js" defer></script>

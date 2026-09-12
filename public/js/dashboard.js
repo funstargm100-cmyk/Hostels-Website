@@ -322,8 +322,8 @@ async function loadAccount() {
     const { user } = await api.get('/api/user/profile');
     profileData = user;
     const memberSince = new Date(user.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
-    // Location is a seeker-only concept — it is the workplace/school base used to
-    // find rooms nearby. Owners have no base_location, so don't offer the field.
+    // The seeker's daily base is FIXED to UENR — shown read-only, never editable.
+    // Owners have no base_location at all.
     const showLocation = !isOwnerRole(user.role);
     el.innerHTML = `
       <div class="account-grid">
@@ -333,7 +333,7 @@ async function loadAccount() {
             <div class="form-group"><label for="acctName">Full name</label><input id="acctName" value="${escAttr(user.name)}" required /></div>
             <div class="form-group"><label for="acctEmail">Email</label><input id="acctEmail" type="email" value="${escAttr(user.email || '')}" required /></div>
             <div class="form-group"><label for="acctPhone">Phone</label><input id="acctPhone" type="tel" value="${escAttr(user.phone || '')}" /></div>
-            ${showLocation ? `<div class="form-group"><label for="acctLocation">Location</label><input id="acctLocation" value="${escAttr(user.base_location || '')}" placeholder="e.g. Kumasi, Ashanti" /><span class="field-hint">The address you gave at signup — helps us show rooms near you.</span></div>` : ''}
+            ${showLocation ? `<div class="form-group"><label>Base location (fixed)</label><input value="${escAttr(user.base_location || 'UENR, Sunyani')}" disabled /><span class="field-hint">Every seeker's daily base is set to UENR and cannot be changed.</span></div>` : ''}
             <button class="btn btn-primary" type="submit">Save changes</button>
           </form>
         </div>
@@ -382,9 +382,9 @@ async function onAccountSave(ev) {
     name: document.getElementById('acctName').value.trim(),
     email: document.getElementById('acctEmail').value.trim(),
     phone: document.getElementById('acctPhone').value.trim()
+    // No base_location here: the seeker's daily base is locked to UENR and the
+    // server ignores any base fields the client sends.
   };
-  const locEl = document.getElementById('acctLocation');
-  if (locEl) payload.base_location = locEl.value.trim();
   btn.disabled = true;
   try {
     const { user } = await api.put('/api/user/profile', payload);
