@@ -665,11 +665,10 @@ body.map-fullscreen-active .filters-panel.open{ transform:translateX(0); }
 #mapSearch .map-price-pin.price-high{ background:var(--brick, #C1633A); }
 
 /* ══════
-   LIVING MAP — SCREEN EFFECTS, PIN + TRACE ANIMATIONS
-   Everything below makes the browse map feel like a live surface rather
-   than a static picture: a sweep while rooms load, expanding scan rings on
-   a search, a radar pulse for "Search this area", pins that drop and settle
-   with a halo, and a trace line that flows between base and room.
+   MAP — SCREEN EFFECT, PIN + TRACE ANIMATIONS
+   The browse map keeps a single screen effect: the top-to-bottom radar brush
+   (a scanner bar sweeping down the tiles) over a vintage dim. Pins drop in,
+   and a trace line flows between base and room.
 
    Rules of the road for this block (the map is gesture-heavy, so be careful):
      1. Every overlay is pointer-events:none — nothing may swallow a pan,
@@ -701,70 +700,46 @@ body.map-fullscreen-active .filters-panel.open{ transform:translateX(0); }
 /* Fullscreen map: the wrap is edge-to-edge, so drop the rounded corners. */
 #mapWrap.map-fullscreen-on .map-fx{ border-radius:0; }
 
-/* ── darkening veil ── */
-/* A LIGHT tint that adds contrast for the green without hiding the map.
+/* ── vintage dim ── */
+/* A warm, aged tint that settles over the tiles while the map is busy.
 
-   This layer took several attempts to get right, and the first versions were
-   badly wrong: they used a near-opaque rgba(2,12,8,.92) plate, which simply
-   ERASED the map — including the room pins — for most of the effect. Obscuring
-   the results the user just searched for is worse than having no effect at all.
-
-   The correction is to stop trying to make the map dark and instead let the map
-   stay legible while green light plays over it. The tint below only takes the
-   brightest edge off the tiles so the glyphs and the wave stand out, and it is
-   held to a low ceiling. */
+   Held to a low ceiling on purpose: the map must stay legible underneath it,
+   because it is the very results the user just searched for. The tint only
+   takes the brightest edge off the tiles so the frame reads as an old display,
+   without erasing the pins and labels. Edge-weighted: strongest at the
+   periphery, nearly absent in the centre where the results sit. */
 @keyframes mapfx-veil{
   0%  { opacity:0; }
-  /* Brief peak, then out. Measured: at full strength this tint takes the map
-     from ~220 average brightness to ~128 — a 42% drop, which is a heavy cast on
-     an OSM basemap. Halved here so the map keeps its own light while the green
-     layers still have enough contrast to read. */
-  12% { opacity:.62; }
-  40% { opacity:.40; }
-  62% { opacity:.20; }
+  10% { opacity:.50; }
+  70% { opacity:.44; }
   100%{ opacity:0; }
 }
 .map-fx__veil{
   position:absolute; inset:0; opacity:0;
-  /* Teal-black, edge-weighted: strongest at the periphery where the CRT bloom
-     wants it, nearly absent in the centre where the pins and labels are. */
+  /* Sepia-leaning brown-black rather than pure black: a vintage cast needs a
+     little warmth, not a neutral grey plate. */
   background:radial-gradient(ellipse at 50% 50%,
-    rgba(4,20,14,.20) 0%,
-    rgba(4,22,15,.34) 62%,
-    rgba(3,18,12,.50) 100%);
+    rgba(32,22,10,.18) 0%,
+    rgba(30,20,10,.30) 62%,
+    rgba(24,16,8,.46) 100%);
 }
+.map-fx.fx-loading .map-fx__veil{ animation:mapfx-veil 1.5s ease-in-out infinite; }
 .map-fx.fx-searching .map-fx__veil{ animation:mapfx-veil 1.55s ease-in-out both; }
 .map-fx.fx-area-search .map-fx__veil{ animation:mapfx-veil 1.05s ease-in-out both; }
 
-@keyframes mapfx-spin{ to{ transform:rotate(360deg); } }
 @keyframes mapfx-sweep{
   0%  { transform:translateY(-140%); opacity:0; }
   12% { opacity:.9; }
   88% { opacity:.9; }
   100%{ transform:translateY(560%); opacity:0; }
 }
-/* (mapfx-ring and mapfx-radar were removed: the search rings and the separate
-   "search this area" radar are both replaced by the blurred wave above.) */
-@keyframes mapfx-focus-in{
-  0%  { transform:scale(1.5); opacity:0; }
-  25% { opacity:1; }
-  70% { opacity:1; }
-  100%{ transform:scale(1); opacity:0; }
-}
-@keyframes mapfx-rise{
-  0%  { transform:translateY(10px) scale(.96); opacity:0; }
-  20% { transform:translateY(0)   scale(1);   opacity:1; }
-  85% { opacity:1; }
-  100%{ transform:translateY(-6px) scale(.99); opacity:0; }
-}
 
-/* ── scan sweep (loading) ──────────────────────────── */
-/* A soft horizontal bar of light that travels top → bottom, like a scanner
-   painting the map. Deliberately faint: it should read as "working", not
-   as a decorative stripe over the tiles. */
+/* ── top-to-bottom radar brush ─────────────────────── */
 /* A thin BRIGHT bar with a long soft tail, travelling top → bottom like a HUD
-   read-head. Much narrower and sharper than the old soft glow band: this should
-   read as a scanner tracing the map, which is the instrument being sold. */
+   read-head sweeping the map. This is the ONE moving effect kept on the search
+   screen: it should read as a scanner tracing the map, the instrument being
+   sold. It runs while results load (fx-loading) and while they land
+   (fx-searching / fx-area-search). */
 .map-fx__sweep{
   position:absolute; left:0; right:0; top:0; height:22%;
   opacity:0;
@@ -778,255 +753,17 @@ body.map-fullscreen-active .filters-panel.open{ transform:translateX(0); }
   filter:blur(1px);
   transform:translateY(-140%);
 }
-.map-fx.fx-loading .map-fx__sweep{
+.map-fx.fx-loading .map-fx__sweep,
+.map-fx.fx-searching .map-fx__sweep,
+.map-fx.fx-area-search .map-fx__sweep{
   opacity:1;
   animation:mapfx-sweep 1.5s cubic-bezier(.45,0,.55,1) infinite;
 }
-
-/* ── searching: expanding rings from the centre ────────────────────── */
-/* ── digital rain ── */
-/* Sized and cleared by js/listings.js. At the back of the stack, and invisible
-   except during a search, so it costs nothing when the map is idle. */
-.map-fx__rain{
-  position:absolute; inset:0; width:100%; height:100%;
-  opacity:0; transition:opacity .3s ease;
-  /* NO mix-blend-mode, deliberately. Screen-blending this canvas meant every
-     faded trail pixel ADDED green over the whole map area, not just over the
-     glyphs — the canvas covers the full container, so "screen" washed the entire
-     viewport instead of lighting the characters. Normal blending keeps the glyphs
-     as green strokes on transparent pixels, so the tiles show through and the
-     map stays fully readable while the rain falls over it. */
-}
-/* Visible during BOTH phases: the loading sweep and the search wave. The rain
-   carries the "matrix" identity of the effect, so gating it to only the search
-   phase made the loader look like a different, plainer animation. */
-.map-fx.fx-loading .map-fx__rain,
-.map-fx.fx-searching .map-fx__rain,
-.map-fx.fx-area-search .map-fx__rain{ opacity:1; }
-/* Dimmer while merely loading: the sweep is the primary signal then, and full
-   rain under it is visual noise. It goes to full strength for the search. */
-.map-fx.fx-loading .map-fx__rain{ opacity:.55; }
-
-/* ── THE BLURRED WAVE ── */
-/* Shockwave fronts launched from the map centre. Each is a radial-gradient RING
-   with deliberately wide, soft stops — that gradient falloff is what makes it a
-   blurred wave rather than a hard circle outline — and the whole layer goes
-   through a blur filter on top. They expand well past the viewport, so a front
-   always sweeps fully off the map instead of stopping short. */
-@keyframes mapfx-wave{
-  0%  { transform:scale(.04); opacity:0; }
-  10% { opacity:1; }
-  /* Fades as it travels outward, so by the time the front reaches the map edges
-     it is already spent. Without this the ring arrived at full strength at the
-     border and framed the view in green instead of passing through it. */
-  45% { opacity:.7; }
-  100%{ transform:scale(1); opacity:0; }
-}
-.map-fx__wave{
-  position:absolute; top:50%; left:50%; width:0; height:0;
-  /* Heat haze, not a drawn line. Kept at 7px: enough to soften the rim without
-     smearing it into the washing-out that a heavier blur produced. */
-  filter:blur(7px);
-}
-.map-fx__wave span{
-  position:absolute; top:50%; left:50%;
-  /* Small enough that the ring stays a RING. Measured problem: at 165vmax the
-     disc resolved to 772px inside an 830x504 map, so once the front expanded
-     past ~60% its bright band covered essentially the entire viewport and the
-     map read as a pale flat field. A wave should sweep THROUGH the view, not
-     become it. */
-  width:90vmax; height:90vmax;
-  margin:-45vmax 0 0 -45vmax;
-  border-radius:50%; opacity:0; transform:scale(.04);
-  /* A TIGHT annulus: transparent core, narrow bright rim, transparent outside.
-     The rim is only ~10% of the radius, which is what keeps this reading as a
-     travelling wave instead of a filled disc. Alphas stay moderate because
-     `screen` is additive and the rim covers a large circle at full expansion. */
-  background:radial-gradient(circle,
-    rgba(0,255,140,0) 0 70%,
-    rgba(0,255,140,.28) 78%,
-    rgba(170,255,215,.55) 86%,
-    rgba(0,255,140,.22) 92%,
-    rgba(0,255,140,0) 100%);
-  mix-blend-mode:screen;
-}
-.map-fx.fx-searching .map-fx__wave span,
-.map-fx.fx-area-search .map-fx__wave span{
-  animation:mapfx-wave 1.55s cubic-bezier(.16,.72,.30,1) both;
-}
-/* The offsets make this a TRAVELLING pulse rather than one expanding hoop:
-   three fronts a beat apart read as a continuing wave, which is what the map
-   should feel like while it is fetching. */
-.map-fx.fx-searching .map-fx__wave span:nth-child(2),
-.map-fx.fx-area-search .map-fx__wave span:nth-child(2){ animation-delay:.18s; }
-.map-fx.fx-searching .map-fx__wave span:nth-child(3),
-.map-fx.fx-area-search .map-fx__wave span:nth-child(3){ animation-delay:.36s; }
-/* "Search this area" is a smaller gesture: the wave travels less far and
-   resolves sooner, so it never feels like a full reload. */
-.map-fx.fx-area-search .map-fx__wave{ filter:blur(5px); }
-.map-fx.fx-area-search .map-fx__wave span{ animation-duration:1.25s; }
-
-/* ── chromatic CRT bloom ── */
-/* A green phosphor wash plus magenta/cyan edge fringing. This is the layer that
-   sells "the display is doing something", and it is pure gradient work, so it
-   stays cheap to composite. */
-@keyframes mapfx-bloom{
-  0%  { opacity:0; }
-  /* Measured: at .9 this layer alone accounted for a visible share of the
-     darkening, because screen-blended green over a darkened base reads as a
-     cast, not as light. Held lower and shorter than the veil. */
-  15% { opacity:.55; }
-  /* A flicker at the peak: CRT power sag, like the beam stuttering. */
-  34% { opacity:.22; }
-  38% { opacity:.50; }
-  70% { opacity:.28; }
-  100%{ opacity:0; }
-}
-.map-fx__bloom{
-  position:absolute; inset:0; opacity:0;
-  /* Very restrained, and EDGE-ONLY: fully transparent across the middle 72% so
-     the centre of the map (where the results are) is never tinted. A CRT bloom
-     should be felt at the periphery, never applied across the whole image. */
-  background:
-    radial-gradient(ellipse at 50% 50%, rgba(0,255,140,0) 0%, rgba(0,255,140,0) 72%, rgba(0,255,140,.13) 100%),
-    linear-gradient(90deg, rgba(255,0,140,.05) 0%, rgba(255,0,140,0) 10%),
-    linear-gradient(270deg, rgba(0,200,255,.05) 0%, rgba(0,200,255,0) 10%);
-  mix-blend-mode:screen;
-}
-.map-fx.fx-searching .map-fx__bloom{ animation:mapfx-bloom 1.55s ease-in-out both; }
-.map-fx.fx-area-search .map-fx__bloom{ animation:mapfx-bloom 1.05s ease-in-out both; }
-
-/* ── CRT scanlines ── */
-/* Repeating horizontal lines, always faintly present so the map keeps a screen
-   quality even when idle. A slow drift stops it looking like a static texture
-   stuck to the glass. */
-@keyframes mapfx-scanline-drift{
-  from{ transform:translateY(0); }
-  to  { transform:translateY(4px); }
-}
-/* The lines must be SPARSE and FAINT. An earlier pass used a 1px-on/2px-off
-   gradient at .42 opacity during a search: that is a third of the map covered in
-   half-black lines, which turned the whole surface into grey-green mush and made
-   the pin unreadable. 1px every 4px at a low opacity is texture you notice only
-   when you look for it — which is what a CRT scanline should be. */
-/* On the dark veil the lines can be BOTH sparse and clearly visible: bright
-   green rather than black, so they read as phosphor rows instead of a grey
-   mesh. Sparse spacing still matters — a dense grid would moiré against the
-   glyphs. */
-.map-fx__scanlines{
-  position:absolute; inset:0; opacity:.10;
-  background:repeating-linear-gradient(180deg,
-    rgba(120,255,180,.30) 0 1px,
-    rgba(0,0,0,0) 1px 4px);
-  animation:mapfx-scanline-drift .45s linear infinite;
-}
-.map-fx.fx-searching .map-fx__scanlines{ opacity:.55; }
-.map-fx.fx-area-search .map-fx__scanlines{ opacity:.42; }
-
-/* ── glitch bars ── */
-/* Thin horizontal slices that jump sideways. Short, sharp and low-opacity: a
-   hint of signal tearing, never a broken page. */
-@keyframes mapfx-glitch{
-  0%  { opacity:0; }
-  8%  { opacity:1; transform:translateX(-6%); }
-  16% { opacity:1; transform:translateX(4%); }
-  24% { opacity:.6; transform:translateX(-3%); }
-  40% { opacity:0; transform:translateX(0); }
-  100%{ opacity:0; }
-}
-.map-fx__glitch{ position:absolute; inset:0; opacity:0; }
-.map-fx__glitch span{
-  position:absolute; left:-4%; right:-4%;
-  background:linear-gradient(90deg,
-    rgba(0,255,140,0) 0%,
-    rgba(0,255,140,.55) 18%,
-    rgba(255,255,255,.75) 50%,
-    rgba(0,255,140,.55) 82%,
-    rgba(0,255,140,0) 100%);
-  mix-blend-mode:screen;
-  filter:blur(1px);
-}
-.map-fx__glitch span:nth-child(1){ top:22%; height:2px; }
-.map-fx__glitch span:nth-child(2){ top:48%; height:1px; }
-.map-fx__glitch span:nth-child(3){ top:71%; height:3px; }
-.map-fx.fx-searching .map-fx__glitch,
-.map-fx.fx-area-search .map-fx__glitch{
-  animation:mapfx-glitch 1.55s steps(1, end) both;
-}
-.map-fx.fx-searching .map-fx__glitch span:nth-child(2){ animation-delay:.12s; }
-.map-fx.fx-searching .map-fx__glitch span:nth-child(3){ animation-delay:.26s; }
-
-/* ── HUD readout ── */
-/* Monospaced telemetry in the corner. The text is written by js/listings.js from
-   REAL room counts and area names, so it reads as information, not decoration. */
-.map-fx__hud{
-  position:absolute; left:14px; top:14px;
-  font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size:.66rem; letter-spacing:.09em; text-transform:uppercase;
-  color:rgba(140,255,190,.92);
-  text-shadow:0 0 6px rgba(0,255,140,.7), 0 0 2px rgba(0,0,0,.9);
-  opacity:0; transition:opacity .25s ease; white-space:pre;
-  pointer-events:none; max-width:60%;
-}
-.map-fx.fx-searching .map-fx__hud,
-.map-fx.fx-area-search .map-fx__hud{ opacity:1; }
-@media (max-width:640px){
-  .map-fx__hud{ font-size:.58rem; letter-spacing:.06em; }
+.map-fx.fx-area-search .map-fx__sweep{
+  animation-duration:1.2s;
 }
 
-/* ── "Search this area": a single radar pulse ─────────────────────── */
-/* "Search this area" no longer has its own radar: it shares the blurred wave
-   above (.fx-area-search retunes that wave to be tighter and faster), so the two
-   searches feel like the same instrument at two intensities. */
-
-/* ── focus brackets: the map "locks on" to the searched area ────────── */
-.map-fx__focus{ position:absolute; inset:14px; opacity:0; }
-.map-fx__focus i{
-  position:absolute; width:22px; height:22px;
-  border:2px solid rgba(0,255,140,.85);
-  filter:drop-shadow(0 0 5px rgba(0,255,140,.8));
-}
-.map-fx__focus i:nth-child(1){ top:0; left:0;  border-right:none;  border-bottom:none; }
-.map-fx__focus i:nth-child(2){ top:0; right:0; border-left:none;   border-bottom:none; }
-.map-fx__focus i:nth-child(3){ bottom:0; left:0;  border-right:none; border-top:none; }
-.map-fx__focus i:nth-child(4){ bottom:0; right:0; border-left:none;  border-top:none; }
-.map-fx.fx-focus .map-fx__focus{
-  animation:mapfx-focus-in 1.1s ease-out;
-}
-
-/* ── loader chip ───────────────────── */
-.map-fx__loader{
-  position:absolute; top:14px; left:50%; transform:translate(-50%, -10px);
-  display:inline-flex; align-items:center; gap:.45rem;
-  padding:.32rem .75rem .32rem .5rem; border-radius:999px;
-  background:rgba(28,23,48,.82); color:#fff;
-  font-size:.74rem; font-weight:600; letter-spacing:.01em;
-  box-shadow:0 4px 16px rgba(0,0,0,.28);
-  backdrop-filter:blur(4px);
-  opacity:0; transition:opacity .2s ease, transform .2s ease;
-}
-[data-theme="dark"] .map-fx__loader{ background:rgba(0,0,0,.78); }
-.map-fx.fx-loading .map-fx__loader{
-  opacity:1; transform:translate(-50%, 0);
-}
-.map-fx__spinner{
-  width:13px; height:13px; flex:none; border-radius:50%;
-  border:2px solid rgba(255,255,255,.28); border-top-color:var(--gold, #f5c518);
-  animation:mapfx-spin .7s linear infinite;
-}
-/* The spinner only needs to exist while we are actually loading. */
-.map-fx:not(.fx-loading) .map-fx__spinner{ animation:none; }
-
-/* ── dim pulse behind the whole map on a fresh search ──────────────── */
-/* A single, very soft brightness lift, driven by the same fx-searching
-   class. filter is used (not opacity) so the pins stay crisp underneath. */
-.map-fx.fx-searching::before{
-  content:''; position:absolute; inset:0;
-  background:radial-gradient(circle at 50% 50%, rgba(0,255,140,.12) 0%, rgba(0,255,140,0) 62%);
-  animation:mapfx-focus-in 1.25s ease-out;
-}
-
-/* ── PIN LIFE: drop-in, settle, and a standing subtle breathe ───────── */
+/* ── PIN LIFE: a simple drop-in, then the pin rests ─────────────────── */
 /* Markers are plain Leaflet markers (so the rotate plugin's anchor maths
    keeps working), which means we animate the ICON node Leaflet creates.
    A wrapper-free approach is on purpose: a custom divIcon would break the
@@ -1045,207 +782,9 @@ body.map-fullscreen-active .filters-panel.open{ transform:translateX(0); }
   transform-origin:50% 100%;
   will-change:transform, opacity;
 }
-
-/* Halo rendered as a ::after on the icon so it tracks the pin exactly. */
-@keyframes map-pin-halo{
-  0%  { transform:scale(.4); opacity:.55; }
-  70% { opacity:.12; }
-  100%{ transform:scale(2.4); opacity:0; }
-}
-.leaflet-marker-icon.map-pin-halo::after{
-  content:''; position:absolute; left:50%; top:100%;
-  width:26px; height:26px; margin:-13px 0 0 -13px;
-  border-radius:50%; border:2px solid var(--primary);
-  pointer-events:none; animation:map-pin-halo .8s ease-out;
-}
-
-/* The persistent breathing pulse: a pin the user just acted on keeps a
-   slow, calm halo so the eye can find it again after a re-render. */
-@keyframes map-pin-breathe{
-  0%,100%{ transform:scale(.55); opacity:.45; }
-  50%    { transform:scale(1.5); opacity:0; }
-}
-.leaflet-marker-icon.map-pin-live::before{
-  content:''; position:absolute; left:50%; top:100%;
-  width:30px; height:30px; margin:-15px 0 0 -15px;
-  border-radius:50%; background:rgba(124,92,255,.35);
-  pointer-events:none;
-  animation:map-pin-breathe 2s ease-in-out infinite;
-}
-/* A pin whose popup is open reads as "selected": lifted a touch and warm. */
+/* A pin whose popup is open reads as "selected". */
 #mapSearch .leaflet-marker-icon.map-pin-active{
   filter:drop-shadow(0 4px 6px rgba(0,0,0,.35)) hue-rotate(-8deg) saturate(1.25);
-}
-
-/* Leaflet's own .leaflet-marker-icon rule sets `overflow: clip` (it assumes a
-   marker is a fixed-size image). That clips any pseudo-element that is LARGER
-   than the icon box, which is fatal for the radar: the 132px rings were being
-   cut down to the marker's 25x41 box and only a sliver inside the teardrop was
-   ever painted, so the radar looked like it simply did not exist.
-   Nothing needs to be clipped here — the teardrop is a background-image, so
-   nothing overflows the box except effects we deliberately want to show. */
-#mapSearch .leaflet-marker-icon{ overflow:visible !important; }
-
-/* ── RADAR SWEEP AROUND EACH PIN ────────────────
-   A rotating sweep + outgoing rings centred on every pin, so the pins read as
-   "live" contact points rather than static drop-ins.
-
-   HOW IT IS BUILT — and why it is built this way:
-   Both pseudo-elements on a marker icon are already spoken for:
-     ::before — the .map-pin-live "breathing" halo on the active pin,
-     ::after  — the .map-pin-halo arrival spark.
-   A marker icon is generated by Leaflet and we must not inject children into it
-   (that would break the teardrop's anchor maths on a rotated map), so the radar
-   uses the two slots directly and ARBITRATES with the existing effects:
-     • ::before — the RINGS: four radial-gradients at 40/66/88/106px, painted as
-                  thin coloured bands. Multi-ring with no extra DOM.
-     • ::after  — the BEAM: one conic-gradient wedge, clipped by a radial mask so
-                  it reads as a scanner arc rather than a pie slice.
-   The arrival halo keeps ::after for its brief 900ms life and then hands over
-   (see the note at .map-pin-halo::after below).
-
-   Anchored at 50% 100% so the radar is centred on the pin's TIP — the actual
-   coordinate — rather than the middle of the teardrop glyph. */
-.leaflet-marker-icon.map-pin-radar::before{
-  content:''; position:absolute; left:50%; top:100%;
-  width:132px; height:132px; margin:-66px 0 0 -66px;
-  border-radius:50%; pointer-events:none;
-  /* Painted at z-index 0, NOT -1: Leaflet gives .leaflet-marker-icon its own
-     stacking context, so a negative z-index hoists the radar behind the marker
-     pane and it never shows. At 0 it sits in front of the tiles while the
-     opaque teardrop glyph still covers the middle of the ring for free. */
-  z-index:0;
-  /* Rings: transparent everywhere except four coloured bands.
-     Each band is ~2px thick (e.g. 39px -> 41px) rather than 1px. A 1px band
-     vanishes against OSM tiles, which are themselves thin and busy — the radar
-     has to out-contrast the basemap, not merely exist on it. A wide, very soft
-     halo sits underneath to seat the whole radar on light AND dark tiles. */
-  background-image:
-    radial-gradient(circle, rgba(124,92,255,0) 0 38px, rgba(124,92,255,.95) 39px 41px, rgba(124,92,255,0) 42px),
-    radial-gradient(circle, rgba(255,255,255,0) 0 63px, rgba(255,255,255,.75) 64px 67px, rgba(255,255,255,0) 68px),
-    radial-gradient(circle, rgba(56,208,222,0) 0 86px, rgba(56,208,222,.80) 87px 89px, rgba(56,208,222,0) 90px),
-    radial-gradient(circle, rgba(124,92,255,0) 0 104px, rgba(124,92,255,.55) 105px 107px, rgba(124,92,255,0) 108px),
-    radial-gradient(circle, rgba(124,92,255,.16) 0%, rgba(124,92,255,0) 62%);
-  background-repeat:no-repeat;
-  background-position:center;
-  opacity:0;
-  /* Legibility over a varied basemap: a flat stroke cannot hold contrast on
-     both pale and dark tiles, a shadow can. */
-  filter:drop-shadow(0 0 2px rgba(28,23,48,.75));
-}
-
-/* Rings emit outward on a loop, like a radar pulse leaving the pin. */
-@keyframes map-pin-radar-rings{
-  0%  { transform:scale(.30); opacity:0; }
-  18% { opacity:1; }
-  60% { opacity:.8; }
-  100%{ transform:scale(1); opacity:0; }
-}
-
-/* Rings emit outward on a loop, like a radar pulse leaving the pin.
-   Runs on EVERY radar pin, permanently — the pins should keep breathing for as
-   long as they are on the map, not just while they drop in. */
-.leaflet-marker-icon.map-pin-radar::before{
-  animation:map-pin-radar-rings 2.4s cubic-bezier(.22,.61,.36,1) infinite;
-  animation-delay:var(--radar-delay, 0s);
-  will-change:transform, opacity;
-}
-
-/* The rotating beam itself. Drawn with a conic-gradient so it is a real wedge,
-   then spun with its own keyframes on a catch-all class so it works whether the
-   pin is mid-drop or settled. */
-@keyframes map-pin-radar-sweep{
-  0%  { opacity:0; }
-  18% { opacity:.85; }
-  82% { opacity:.85; }
-  100%{ opacity:0; }
-}
-/* Beam layer: conic wedge, hard leading edge, tapering trail. */
-#mapSearch .leaflet-marker-icon.map-pin-radar::after{
-  content:''; position:absolute; left:50%; top:100%;
-  width:132px; height:132px; margin:-66px 0 0 -66px;
-  border-radius:50%; pointer-events:none; z-index:-1;
-  z-index:0;
-  background:conic-gradient(from 0deg,
-    rgba(56,208,222,.42) 0deg,
-    rgba(56,208,222,.14) 34deg,
-    rgba(56,208,222,0) 70deg,
-    rgba(56,208,222,0) 360deg);
-  /* Clip the wedge to the outer ring so it looks like a scanner, not a pie. */
-  -webkit-mask-image:radial-gradient(circle, transparent 0 34px, #000 36px 104px, transparent 106px);
-  mask-image:radial-gradient(circle, transparent 0 34px, #000 36px 104px, transparent 106px);
-  opacity:0;
-  animation:map-pin-radar-sweep 2.4s ease-in-out infinite,
-            map-pin-radar-spin 3.6s linear infinite;
-  animation-delay:var(--radar-delay, 0s), 0s;
-  will-change:transform, opacity;
-}
-@keyframes map-pin-radar-spin{
-  from{ transform:rotate(0deg); }
-  to  { transform:rotate(360deg); }
-}
-/* CONFLICT: ::after is used by BOTH the arrival halo (.map-pin-halo) and this
-   radar beam. They cannot coexist, so the halo wins for its short 900ms life
-   while the beam is hidden — the pin has just landed, and the halo is the more
-   meaningful signal at that instant. Once the halo class is removed (see the
-   setTimeout in js/listings.js) the beam takes over. */
-.leaflet-marker-icon.map-pin-halo::after{
-  background:none !important;
-  -webkit-mask-image:none !important;
-  mask-image:none !important;
-  border:2px solid var(--primary) !important;
-  animation:map-pin-halo .8s ease-out !important;
-  opacity:1;
-}
-/* Belt and braces: the halo class is removed by a timer, but if a re-render
-   lands mid-halo the class can outlive its pin — so the beam is also forced off
-   for any pin still carrying it. */
-.leaflet-marker-icon.map-pin-radar.map-pin-halo::after{
-  animation:map-pin-halo .8s ease-out !important;
-}
-
-/* A pin being hovered gets a faster, brighter radar — the map answers the
-   cursor, which is what makes it feel responsive rather than decorative. */
-#mapSearch .leaflet-marker-icon.map-pin-radar:hover::before{
-  animation-duration:1.4s;
-}
-#mapSearch .leaflet-marker-icon.map-pin-radar:hover::after{
-  animation-duration:map-pin-radar-sweep 1.4s ease-in-out infinite,
-                    map-pin-radar-spin 2s linear infinite;
-}
-/* The pin being acted on (popup open) keeps the brightest radar, so it stays
-   the focal point even among a map full of sweeping pins. */
-#mapSearch .leaflet-marker-icon.map-pin-radar.map-pin-active::before{
-  animation-duration:1.6s;
-  opacity:1;
-}
-#mapSearch .leaflet-marker-icon.map-pin-radar.map-pin-active::after{
-  background:conic-gradient(from 0deg,
-    rgba(255,255,255,.5) 0deg,
-    rgba(56,208,222,.3) 38deg,
-    rgba(56,208,222,0) 76deg,
-    rgba(56,208,222,0) 360deg);
-}
-
-/* Reduced motion: keep the sci-fi LOOK (scanlines, bloom, HUD) but stop all
-   movement. The wave and the rain are pure motion with no informational value,
-   so they are removed entirely rather than frozen mid-ripple. */
-@media (prefers-reduced-motion:reduce){
-  .map-fx__rain{ display:none; }
-  .map-fx__wave,
-  .map-fx__glitch{ display:none; }
-  .map-fx__scanlines{ animation:none; opacity:.12; }
-  .map-fx.fx-searching .map-fx__bloom,
-  .map-fx.fx-area-search .map-fx__bloom{ animation:none; opacity:.35; }
-}
-
-/* Respect the reduced-motion preference: keep the radar ring visible as a
-   static target ring, but stop everything from moving. */
-@media (prefers-reduced-motion:reduce){
-  .leaflet-marker-icon.map-pin-radar::before{
-    animation:none !important; opacity:.5; transform:scale(1);
-  }
-  .leaflet-marker-icon.map-pin-radar::after{ animation:none !important; opacity:0; }
 }
 
 /* ── TRACE LINE LIFE ───────────────── */
@@ -1277,49 +816,9 @@ body.map-fullscreen-active .filters-panel.open{ transform:translateX(0); }
   animation:map-trace-anchor .9s ease-out 2;
 }
 
-/* ── VIGNETTE while the map is busy ────────────────── */
-/* A gentle inward darkening that focuses the eye on the middle of the map
-   while results are landing. Very low contrast on purpose. */
-#mapWrap.map-busy #mapSearch::after{
-  content:''; position:absolute; inset:0; z-index:9; pointer-events:none;
-  border-radius:var(--radius-sm);
-  background:radial-gradient(circle at 50% 50%, rgba(0,0,0,0) 55%, rgba(0,0,0,.16) 100%);
-  animation:map-fx-vignette .5s ease-out both;
-}
-@keyframes map-fx-vignette{ from{ opacity:0; } to{ opacity:1; } }
-#mapWrap.map-fullscreen-on.map-busy #mapSearch::after{ border-radius:0; }
-
-/* Mobile: keep the effects lighter — small screens pay more for them. */
+/* Mobile: the pin drop is a touch quicker on small screens. */
 @media (max-width:640px){
-  .map-fx__loader{ font-size:.68rem; padding:.28rem .65rem .28rem .45rem; }
-  .map-fx__focus{ inset:8px; }
   .map-pin-enter .leaflet-marker-icon{ animation-duration:.45s; }
-}
-/* Touch devices already animate plenty during a pan; skip the standing
-   breathing halo there so it never competes with gestures. */
-@media (pointer:coarse){
-  .leaflet-marker-icon.map-pin-live::before{ animation:none; opacity:0; }
-}
-
-/* On phones a full-strength radar on EVERY pin is expensive and busy. Shrink it
-   and slow it down so a screen full of pins stays cheap to composite. */
-@media (max-width:640px){
-  .leaflet-marker-icon.map-pin-radar::before,
-  #mapSearch .leaflet-marker-icon.map-pin-radar::after{
-    width:86px; height:86px; margin:-43px 0 0 -43px;
-  }
-  .leaflet-marker-icon.map-pin-radar::before{
-    background-image:
-      radial-gradient(circle, rgba(124,92,255,0) 0 25px, rgba(124,92,255,.5) 25px 26px, rgba(124,92,255,0) 26px),
-      radial-gradient(circle, rgba(56,208,222,0) 0 42px, rgba(56,208,222,.34) 42px 43px, rgba(56,208,222,0) 43px);
-  }
-  #mapSearch .leaflet-marker-icon.map-pin-radar::after{
-    -webkit-mask-image:radial-gradient(circle, transparent 0 22px, #000 24px 68px, transparent 70px);
-    mask-image:radial-gradient(circle, transparent 0 22px, #000 24px 68px, transparent 70px);
-  }
-  .leaflet-marker-icon.map-pin-radar::before{
-    animation-duration:3.2s;
-  }
 }
 /* Keep map popup cards compact, modern, and perfectly aligned */
 #mapSearch .leaflet-popup-content-wrapper{

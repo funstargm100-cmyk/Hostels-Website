@@ -290,7 +290,14 @@ router.get('/:uuid', optionalAuth, async (req, res) => {
 
 // POST /api/listings
 router.post('/', requireAuth, requireRole('owner', 'agent', 'admin'), uploadListingImages, async (req, res) => {
-  const { title, description, occupancy_type, original_price, location_area, location_lat, location_lng, nearest_landmark, gender_preference, move_in_date, water, electricity, security, furnishing, bathroom, kitchen_access, wifi, parking, pet_friendly } = req.body;
+  const { title, description, occupancy_type, original_price, location_area, nearest_landmark, gender_preference, move_in_date, water, electricity, security, furnishing, bathroom, kitchen_access, wifi, parking, pet_friendly } = req.body;
+  // The post-ad wizard names the pin fields lat/lng (see post-ad.html), while the
+  // edit form uses location_lat/location_lng. Accept BOTH spellings: reading only
+  // location_lat/location_lng silently stored NULL for every room posted through
+  // the wizard, so those rooms loaded into the grid but never plotted a map pin
+  // (renderMapListings skips a listing whose coordinates are not finite).
+  const location_lat = req.body.location_lat ?? req.body.lat;
+  const location_lng = req.body.location_lng ?? req.body.lng;
 
   if (!title || !original_price || !location_area || !occupancy_type) return res.status(400).json({ error: 'Missing required fields' });
 
