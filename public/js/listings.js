@@ -126,18 +126,21 @@ function getFilters() {
     page: currentPage,
     limit: 12
   };
-  if (nearMeLat && nearMeLng) {
-    f.near_lat = nearMeLat;
-    f.near_lng = nearMeLng;
-    // "Near Me" uses a fixed 5km radius; "Search this area" sets nearMeKm to the
-    // radius that covers the current viewport.
-    f.near_km = nearMeKm || 5;
-  } else if (mapAreaScope) {
+  // "Search this area" WINS over "Near Base": the viewport scope is the more
+  // specific, more recent instruction, so it is checked first. (searchThisArea()
+  // already clears the Near Base state on activation; this ordering is the
+  // belt-and-braces guarantee that the two scopes can never both apply.)
+  if (mapAreaScope) {
     // Viewport scope from "Search this area". Only active until the user applies
     // an explicit filter — applyFilters() clears it (see below).
     f.near_lat = mapAreaScope.lat;
     f.near_lng = mapAreaScope.lng;
     f.near_km = mapAreaScope.km;
+  } else if (nearMeLat && nearMeLng) {
+    f.near_lat = nearMeLat;
+    f.near_lng = nearMeLng;
+    // "Near Base" uses a fixed 5km radius.
+    f.near_km = nearMeKm || 5;
   }
   return f;
 }
@@ -1021,6 +1024,14 @@ function hideSearchAreaPill() {
 function searchThisArea() {
   if (!mapInstance) return;
   hideSearchAreaPill();
+  // "Search this area" OVERRIDES "Near Base": the user is now asking for exactly
+  // what they can see, so a previously-active Near Base scope must be switched
+  // off. Otherwise both scopes fight — getFilters() used to prefer nearMeLat, so
+  // the area search silently returned Near Base results instead of the viewport.
+  if (nearMeLat || nearMeLng || nearMeKm) {
+    nearMeLat = null; nearMeLng = null; nearMeKm = null;
+    setNearMeBtnState(document.getElementById('nearMeBtn'), false);
+  }
   // Remember that this fetch must NOT reframe the camera (see loadListings).
   pendingMapAreaSearch = true;
   const b = mapInstance.getBounds();
