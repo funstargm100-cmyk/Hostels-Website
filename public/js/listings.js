@@ -170,6 +170,13 @@ async function loadListings() {
       // on this path, so the map must be handled here).
       if (currentView === 'map' && mapInstance) {
         mapMarkersLayer.clearLayers();
+        // Same reason as renderMapListings: the trace and its end anchors belong
+        // to the result set that was just wiped, so they must go with it or they
+        // linger as orphaned dots over an empty map.
+        clearTraceLine();
+        tracedMarker = null;
+        openPopupMarker = null;
+        markActivePin(null);
         setMapEmptyState(true);
       }
       return;
@@ -294,6 +301,10 @@ let traceRequestToken = 0; // bumped per trace so a slow route response can't dr
 // Clears the "pins are dropping in" class on the map container once the last
 // staggered pin has landed (see renderMapListings).
 let pinEnterTimer = null;
+// Clears the label hold that keeps room names hidden until the pins have landed.
+let pinLabelTimer = null;
+// How long a single pin takes to fall in — mirrors map-pin-drop in style.css.
+const PIN_DROP_MS = 550;
 let lastFetchedListings = [];
 // True while WE move the camera (fitBounds/flyTo), so the moveend/zoomend
 // handlers can tell our programmatic moves apart from a genuine user pan/zoom.
@@ -649,7 +660,17 @@ function renderMapListings(fitToResults = true) {
   const map = ensureMap();
   if (!map) return;
   mapMarkersLayer.clearLayers();
+  // Wipe the trace BEFORE the new pins go on. clearTraceLine() removes the route
+  // AND its two end anchors. Those anchors are circleMarkers belonging to the
+  // PREVIOUS result set, so leaving them up meant "Search this area" briefly
+  // showed an orphaned blue/teal dot (the old base + room anchors) floating on
+  // the map with no line attached, before the new pins appeared and it vanished
+  // on the next popup open/close. Also drop the bookkeeping that pointed at the
+  // markers being destroyed, so a later click can't drive a dead marker.
   clearTraceLine();
+  tracedMarker = null;
+  openPopupMarker = null;
+  markActivePin(null);
   setMapEmptyState(false);
   if (!lastFetchedListings.length) {
     // A search/filter with no matches: wipe the stale pins so nothing on the
@@ -664,11 +685,22 @@ function renderMapListings(fitToResults = true) {
   // is put on the map container (not each icon) so a single animation-delay per
   // pin — set below — rolls the pins out across the map.
   const mapContainer = mapInstance && mapInstance.getContainer();
-  if (mapContainer) mapContainer.classList.add('map-pin-enter');
+  if (mapContainer) mapContainer.classList.add('map-pin-enter', 'map-pin-labels-hold');
   clearTimeout(pinEnterTimer);
+  clearTimeout(pinLabelTimer);
+  // Room-name labels are revealed only AFTER the LAST staggered pin has landed
+  // (the stagger is capped at 900ms, the drop takes ~550ms). Showing them with
+  // the pins meant a label appeared next to a pin that was still falling in, so
+  // the map looked like it was mislabelling itself during the animation.
+  const TOTAL_PIN_ENTER_MS = 1500;
   pinEnterTimer = setTimeout(() => {
-    if (mapContainer) mapContainer.classList.remove('map-pin-enter');
-  }, 2000);
+    if (!mapContainer) return;
+    mapContainer.classList.remove('map-pin-enter');
+    // Drop the label hold, which releases the tooltips' reveal transition.
+    pinLabelTimer = setTimeout(() => {
+      mapContainer.classList.remove('map-pin-labels-hold');
+    }, 60);
+  }, TOTAL_PIN_ENTER_MS);
   const pts = [];
   // Each pin lands a beat after the one before it, capped so a large result set
   // does not finish animating seconds after the user has started reading.
@@ -777,13 +809,17 @@ function renderMapListings(fitToResults = true) {
     });
     marker.addTo(mapMarkersLayer);
     // Stagger this pin's drop-in, then (once it exists in the DOM) give the
-    // user the little halo that marks it as freshly placed.
+    // user the little halo that marks it as freshly placed. The halo fires with
+    // the pin's own landing, so it reads as "this one just arrived".
     const delay = Math.min(pinIndex++ * 45, 900);
     const icon = marker.getElement && marker.getElement();
     if (icon) {
       icon.style.setProperty('--pin-delay', delay + 'ms');
-      icon.classList.add('map-pin-halo');
-      setTimeout(() => icon.classList.remove('map-pin-halo'), delay + 900);
+      // The label reveal is staggered to match, so the map fills in as a
+      // sequence — pin, then its name — instead of everything snapping at once.
+      icon.style.setProperty('--label-delay', (delay + PIN_DROP_MS) + 'ms');
+      setTimeout(() => icon.classList.add('map-pin-halo'), delay + PIN_DROP_MS);
+      setTimeout(() => icon.classList.remove('map-pin-halo'), delay + PIN_DROP_MS + 900);
     }
   });
   if (pts.length && fitToResults && Date.now() >= introFlyUntil) {
@@ -1232,6 +1268,23 @@ function pingTraceAnchor(layer) {
   setTimeout(() => el.classList.remove('map-trace-anchor-ping'), 1900);
 }
 
+// Create a trace end anchor that also remembers WHICH trace it belongs to.
+// Leaflet's circleMarker.getElement() returns null until the layer is on the
+// map, so the ping is deferred one frame; and because a slow OSRM response can
+// land after the trace has already been cleared or replaced, the ping checks the
+// token before touching the DOM — otherwise it re-pinged an anchor that had been
+// removed, which is the flicker seen when "Search this area" swapped result sets.
+function addTraceAnchor(latlng, opts, tooltip, traceToken) {
+  const anchor = L.circleMarker(latlng, opts)
+    .bindTooltip(tooltip)
+    .addTo(mapTraceLayer);
+  requestAnimationFrame(() => {
+    if (traceToken !== traceRequestToken) return; // superseded/cleared meanwhile
+    pingTraceAnchor(anchor);
+  });
+  return anchor;
+}
+
 function addTraceArrows() {
   // Arrowheads removed from trace line
 }
@@ -1256,21 +1309,21 @@ async function drawTraceToBase(marker) {
   // reads as "the line was never drawn". So: draw first, then bring the WHOLE
   // trace into view only when an end is actually off-screen.
 
+  // Stamp the request BEFORE any layer is created, so the deferred anchor pings
+  // below can tell whether they are still the current trace. A slow response for
+  // a popup the seeker already closed (or replaced) must not draw a stale route
+  // over the current one.
+  const token = ++traceRequestToken;
+
   // Anchor each end so the line reads as a connection between two places.
   // Each anchor is pinged once on creation, so both ends announce themselves
   // instead of the user having to hunt for where the line stops.
-  const baseAnchor = L.circleMarker(base, {
+  addTraceAnchor(base, {
     radius: 6, color: '#fff', weight: 2, fillColor: '#2563eb', fillOpacity: 1
-  }).bindTooltip('Your base location').addTo(mapTraceLayer);
-  const roomAnchor = L.circleMarker(room, {
+  }, 'Your base location', token);
+  addTraceAnchor(room, {
     radius: 5, color: '#fff', weight: 2, fillColor: '#0e7490', fillOpacity: 1
-  }).bindTooltip('Room (approximate)').addTo(mapTraceLayer);
-  pingTraceAnchor(baseAnchor);
-  pingTraceAnchor(roomAnchor);
-
-  // Stamp the request so a slow response for a popup the seeker already closed
-  // (or replaced) cannot draw a stale route over the current one.
-  const token = ++traceRequestToken;
+  }, 'Room (approximate)', token);
   try {
     // Request the route room → base: OSRM returns geometry in request order,
     // so the polyline and arrows read room → base (the direction the user asked

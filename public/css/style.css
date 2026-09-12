@@ -448,6 +448,28 @@ textarea{ resize:vertical; min-height:110px; }
   /* Never intercept a tap/click: the label sits over the map, and swallowing
      presses here would make the pin beside it un-clickable. */
   pointer-events:none;
+  /* Reveal is a transition, NOT an animation, so it can be HELD back rather
+     than merely delayed: the label sits at opacity 0 until its pin has landed
+     and the hold is dropped (see the map-pin-labels-hold rule below). A
+     transition also survives Leaflet re-positioning the tooltip mid-reveal. */
+  opacity:1;
+  transition:opacity .28s ease, transform .28s cubic-bezier(.34,1.32,.5,1);
+}
+
+/* While the pins are dropping in, every room name is hidden and nudged down.
+   The delay comes from --label-delay, which js/listings.js sets per pin to match
+   that pin's own stagger — so names appear in the same order the pins land.
+   Only applied while .map-pin-enter is on the container, so a NORMAL re-render
+   (a pan, a popup, pagination) never hides labels that are already on screen. */
+.map-pin-enter.map-pin-labels-hold #mapSearch .leaflet-tooltip.map-pin-label{
+  opacity:0;
+  transform:translateY(-6px);
+  transition-delay:var(--label-delay, 0ms);
+}
+/* When the hold is released the per-pin stagger is dropped, so any label the
+   timer outran still appears immediately instead of waiting on a stale delay. */
+.map-pin-enter:not(.map-pin-labels-hold) #mapSearch .leaflet-tooltip.map-pin-label{
+  transition-delay:0ms;
 }
 /* Leaflet draws a little arrow on tooltips; the label reads better without it. */
 #mapSearch .leaflet-tooltip.map-pin-label::before{ display:none; }
