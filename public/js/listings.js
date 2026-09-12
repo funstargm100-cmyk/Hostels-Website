@@ -1254,13 +1254,29 @@ function renderBaseMarker() {
     if (ll && ll.lat === lat && ll.lng === lng) return;
   }
   mapBaseLayer.clearLayers();
-  baseMarker = L.circleMarker([lat, lng], {
-    radius: 7, color: '#ffffff', weight: 2.5,
-    fillColor: '#2563eb', fillOpacity: 1
+  // An HTML divIcon marker — NOT an L.circleMarker.
+  //
+  // A circleMarker is an SVG vector on the overlay pane, and Leaflet animates a
+  // zoom by CSS-scaling that pane. SVG shapes do not survive that: mid fly-in the
+  // 14px base dot was measured at 524x524px, a giant blue disc smearing across the
+  // whole map until the animation settled. An HTML marker is positioned per frame
+  // by Leaflet (one transform on its wrapper) and keeps its true size throughout,
+  // which is why the room pins never had this problem.
+  baseMarker = L.marker([lat, lng], {
+    icon: L.divIcon({
+      className: 'map-base-marker',
+      // 18x18 box for a 14px dot + 2px white ring; anchor at the centre so the
+      // dot sits exactly on the base coordinate.
+      html: '<span class="map-base-marker__dot"></span>',
+      iconSize: [18, 18],
+      iconAnchor: [9, 9]
+    }),
+    interactive: true,
+    keyboard: false
   }).addTo(mapBaseLayer);
   // Permanent tooltip: the base should be self-explanatory without a click.
   baseMarker.bindTooltip('UENR School Park — your base', {
-    permanent: true, direction: 'top', className: 'map-pin-label', offset: [0, -6]
+    permanent: true, direction: 'top', className: 'map-pin-label', offset: [0, -12]
   });
 }
 

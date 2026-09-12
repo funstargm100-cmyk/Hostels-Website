@@ -473,6 +473,19 @@ textarea{ resize:vertical; min-height:110px; }
 }
 /* Leaflet draws a little arrow on tooltips; the label reads better without it. */
 #mapSearch .leaflet-tooltip.map-pin-label::before{ display:none; }
+
+/* ── persistent base marker (UENR School Park) ──
+   An HTML divIcon, deliberately NOT an SVG circleMarker: Leaflet zooms by
+   CSS-scaling the overlay pane, which stretched the SVG base dot to hundreds of
+   pixels mid fly-in. An HTML marker is repositioned per frame and keeps its size. */
+#mapSearch .map-base-marker{ background:none; border:none; }
+#mapSearch .map-base-marker__dot{
+  display:block; width:14px; height:14px; margin:2px;
+  border-radius:50%; background:#2563eb;
+  border:2.5px solid #fff;
+  box-shadow:0 1px 4px rgba(0,0,0,.35);
+  box-sizing:border-box;
+}
 [data-theme="dark"] #mapSearch .leaflet-tooltip.map-pin-label{
   background:rgba(31,27,44,.96); border-color:rgba(255,255,255,.14);
 }
@@ -888,7 +901,7 @@ body.map-fullscreen-active .filters-panel.open{ transform:translateX(0); }
   75% { transform:translateY(-4px) scale(.97); }
   100%{ transform:translateY(0) scale(1); opacity:1; }
 }
-.map-pin-enter .leaflet-marker-icon{
+.map-pin-enter .leaflet-marker-icon:not(.map-base-marker){
   animation:map-pin-drop .55s cubic-bezier(.34,1.4,.5,1) both;
   /* Staggered by js/listings.js via --pin-delay, so pins ROLL OUT across
      the map instead of all landing on the same frame. */
