@@ -198,6 +198,9 @@
 
         <!-- Discoverability: panning now works (and is safe — results reframe only
              on request); zoom and rotation are the other supported gestures. -->
+        <!-- Privacy note: pins are jittered on the server, so they are never the
+             exact room position. Kept next to the hint so it is always visible. -->
+        <div class="map-privacy-note"><i data-lucide="shield"></i> Pin locations are approximate — exact room positions are hidden for privacy</div>
         <div class="map-hint">Drag to pan · scroll/pinch to zoom · drag the compass or ← → to rotate · two-finger twist on mobile</div>
       </div>
       <div class="pagination" id="pagination"></div>

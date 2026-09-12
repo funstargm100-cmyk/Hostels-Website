@@ -467,6 +467,19 @@ textarea{ resize:vertical; min-height:110px; }
   overflow:hidden; text-overflow:ellipsis;
 }
 [data-theme="dark"] .map-hint{ background:rgba(0,0,0,.72); }
+/* Privacy note: sits just above the hint, bottom-left of the map. */
+.map-privacy-note{
+  position:absolute; bottom:40px; left:12px;
+  display:inline-flex; align-items:center; gap:.35rem;
+  background:rgba(28,23,48,.78); color:#fff; font-size:.7rem; font-weight:500;
+  padding:.3rem .6rem; border-radius:999px; pointer-events:none;
+  backdrop-filter:blur(3px); z-index:25; max-width:70%;
+}
+.map-privacy-note svg{ width:13px; height:13px; flex:none; }
+[data-theme="dark"] .map-privacy-note{ background:rgba(0,0,0,.72); }
+@media (max-width:640px){
+  .map-privacy-note{ bottom:34px; font-size:.62rem; max-width:calc(100% - 130px); }
+}
 /* "No rooms found" notice, shown centered on the map when a search/filter
    returns nothing. Overlay, not a marker, so it can never be missed. */
 .map-empty{
@@ -503,7 +516,7 @@ textarea{ resize:vertical; min-height:110px; }
 [data-theme="dark"] .map-pill{ background:rgba(31,27,44,.96); border-color:rgba(255,255,255,.14); }
 /* Re-center crosshair: bottom-right, mirroring Google Maps' location button. */
 .map-recenter{
-  position:absolute; right:12px; bottom:24px; z-index:30;
+  position:absolute; right:12px; bottom:72px; z-index:30;
   width:40px; height:40px; display:inline-flex; align-items:center; justify-content:center;
   background:var(--card-bg); color:var(--text-muted);
   border:1px solid var(--border); border-radius:50%; cursor:pointer;
@@ -515,7 +528,7 @@ textarea{ resize:vertical; min-height:110px; }
 [data-theme="dark"] .map-recenter{ background:rgba(31,27,44,.96); border-color:rgba(255,255,255,.14); }
 /* Fullscreen toggle: sits just above the re-center button. */
 .map-fullscreen{
-  position:absolute; right:12px; bottom:72px; z-index:30;
+  position:absolute; right:12px; bottom:24px; z-index:30;
   width:40px; height:40px; display:inline-flex; align-items:center; justify-content:center;
   background:var(--card-bg); color:var(--text-muted);
   border:1px solid var(--border); border-radius:50%; cursor:pointer;
@@ -618,7 +631,7 @@ body.map-fullscreen-active .filters-panel.open{ transform:translateX(0); }
 @media (max-width:640px){
   #mapWrap .map-hint{ display:none; }
   .map-pill{ font-size:.75rem; padding:.4rem .75rem; }
-  .map-recenter{ bottom:20px; }
+  .map-recenter{ bottom:72px; }
 }
 #mapSearch .map-price-pin.price-low{ background:var(--teal, #0e7490); }
 #mapSearch .map-price-pin.price-high{ background:var(--brick, #C1633A); }

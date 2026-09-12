@@ -409,6 +409,11 @@ function ensureMap() {
         dragging = true; moved = false;
         startBearing = mapInstance.getBearing?.() || 0;
         lastClientX = e.clientX;
+        // CRITICAL: reset the accumulated travel. It used to carry over from the
+        // previous drag, so the FIRST pixel of a new drag applied last drag's
+        // whole distance at once — the map spun wildly before it started
+        // following the mouse.
+        travel = 0;
         knob.setPointerCapture(e.pointerId);
         // Hide the cursor and capture unbounded relative movement for the drag.
         // Must be called from a user-activation event, so pointerdown it is. A
@@ -421,10 +426,21 @@ function ensureMap() {
       });
       knob.addEventListener('pointermove', (e) => {
         if (!dragging) return;
+        // Ignore ALL movement events until the pointer lock is actually engaged.
+        // While the lock is still engaging, browsers emit a large movementX burst
+        // even though the mouse hasn't moved — that burst was clamped to ±60px
+        // and applied as an instant ~12° spin BEFORE the knob responded to the
+        // mouse. Waiting for the real lock (or skipping entirely when pointer
+        // lock is unsupported) guarantees the map only turns once genuine mouse
+        // movement arrives.
+        if (knob.requestPointerLock && !document.pointerLockElement) { lastClientX = e.clientX; return; }
         // movementX is the horizontal delta (always present for mouse events);
         // fall back to clientX differencing if the browser doesn't provide it.
-        const dx = (typeof e.movementX === 'number') ? e.movementX : e.clientX - lastClientX;
+        let dx = (typeof e.movementX === 'number') ? e.movementX : e.clientX - lastClientX;
         lastClientX = e.clientX;
+        // Clamp absurd deltas (pointer-lock engagement glitches, alt-tab) so a
+        // single event can never fling the map.
+        if (dx > 60) dx = 60; else if (dx < -60) dx = -60;
         if (!dx) return;
         moved = moved || Math.abs(dx) > 1;
         // Accumulate the small per-event deltas into total travel, then map
