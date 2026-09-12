@@ -341,61 +341,82 @@ function ensureMap() {
     initRotateKnob();
 
     // ── Rotation knob (bottom-left of the map) ─────────────────────────────
-    // DRAG: pointer movement around the knob's centre sets the map bearing.
+    // DRAG: the map bearing follows horizontal mouse movement (movementX), not
+    // the angle around the knob. While dragging, Pointer Lock hides the cursor
+    // and delivers UNBOUNDED movementX — the pointer can never hit the screen
+    // edge and stop (or jump) mid-drag, which is what made rotation feel
+    // uncontrollable. Vertical movement is ignored (horizontal-axis only).
     // CLICK: a short press with no drag toggles the rotation lock — when locked,
     // dragging the knob (and the ← / → keys) does nothing. Unlocked by default.
     function initRotateKnob() {
       const knob = document.getElementById('mapRotateKnob');
       if (!knob || typeof mapInstance.setBearing !== 'function') return;
-      let dragging = false, moved = false, startBearing = 0, startAngle = 0;
-      const angleAt = (e) => {
-        const r = knob.getBoundingClientRect();
-        const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
-        return Math.atan2(e.clientY - cy, e.clientX - cx) * 180 / Math.PI;
-      };
+      let dragging = false, moved = false, startBearing = 0, bearing = 0;
+      // Degrees of map rotation per pixel of horizontal mouse travel. Small on
+      // purpose: ~3 full screen-widths of drag for a 360° spin feels steady.
+      const DEG_PER_PX = 0.2;
       const setLocked = (locked) => {
         mapRotationLocked = locked;
         knob.dataset.locked = String(locked);
         knob.title = locked ? 'Rotation locked — click to unlock' : 'Drag to rotate — click to lock';
         showToast(locked ? 'Map rotation locked' : 'Map rotation unlocked', 'info', 1600);
       };
+      const applyBearing = (deg) => {
+        bearing = ((deg % 360) + 360) % 360;
+        suppressMoveEvent = true;
+        mapInstance.setBearing(bearing);
+        suppressMoveEvent = false;
+        const icon = knob.querySelector('svg, i');
+        if (icon) icon.style.transform = `rotate(${bearing}deg)`;
+      };
       knob.addEventListener('pointerdown', (e) => {
         if (mapRotationLocked) { e.preventDefault(); return; }
         dragging = true; moved = false;
         startBearing = mapInstance.getBearing?.() || 0;
-        startAngle = angleAt(e);
+        lastClientX = e.clientX;
         knob.setPointerCapture(e.pointerId);
+        // Hide the cursor and capture unbounded relative movement for the drag.
+        // Must be called from a user-activation event, so pointerdown it is. A
+        // quick click releases the lock immediately in endDrag, so the toggle
+        // still works normally.
+        if (knob.requestPointerLock) {
+          try { const p = knob.requestPointerLock(); if (p && p.catch) p.catch(() => {}); } catch { /* unsupported */ }
+        }
         e.preventDefault();
       });
       knob.addEventListener('pointermove', (e) => {
         if (!dragging) return;
-        const delta = angleAt(e) - startAngle;
-        if (Math.abs(delta) < 4 && !moved) return; // dead-zone so a click stays a click
-        moved = true;
-        // Damping: 1px at the knob's edge was producing ~2° of map rotation — far
-        // too twitchy for a mouse. Scale the raw angle down and apply exponential
-        // smoothing so the bearing glides instead of snapping.
-        const target = startBearing - delta * 0.35;
-        const current = mapInstance.getBearing?.() || 0;
-        let smoothed = current + (target - current) * 0.35;
-        smoothed = ((smoothed % 360) + 360) % 360;
-        suppressMoveEvent = true;
-        mapInstance.setBearing(smoothed);
-        suppressMoveEvent = false;
-        const icon = knob.querySelector('svg, i');
-        if (icon) icon.style.transform = `rotate(${smoothed}deg)`;
+        // movementX is the horizontal delta (always present for mouse events);
+        // fall back to clientX differencing if the browser doesn't provide it.
+        const dx = (typeof e.movementX === 'number') ? e.movementX : e.clientX - lastClientX;
+        lastClientX = e.clientX;
+        if (!dx) return;
+        moved = moved || Math.abs(dx) > 1;
+        // Accumulate the small per-event deltas into total travel, then map
+        // travel → bearing at a gentle fixed rate. Horizontal axis ONLY —
+        // movementY is deliberately ignored.
+        travel += dx;
+        applyBearing(startBearing - travel * DEG_PER_PX);
       });
-      const endDrag = () => { dragging = false; };
+      let lastClientX = null, travel = 0;
+      const endDrag = () => {
+        if (!dragging) return;
+        dragging = false;
+        // Release the cursor immediately — a quick click un-locks right away so
+        // the lock/unlock toggle still feels instant.
+        if (document.pointerLockElement) document.exitPointerLock();
+      };
       knob.addEventListener('pointerup', endDrag);
       knob.addEventListener('pointercancel', endDrag);
       knob.addEventListener('click', () => {
         if (moved) { moved = false; return; } // it was a drag, not a click
         setLocked(!mapRotationLocked);
       });
-      // Keep the knob glyph pointing north as the map rotates by any means.
+      // Keep the knob glyph pointing north as the map rotates by any means
+      // (keys, touch twist, reset view).
       mapInstance.on('rotate', () => {
         const icon = knob.querySelector('svg, i');
-        if (icon) icon.style.transform = `rotate(${mapInstance.getBearing?.() || 0}deg)`;
+        if (icon && !dragging) icon.style.transform = `rotate(${mapInstance.getBearing?.() || 0}deg)`;
       });
     }
     // Google-style "Search this area": whenever the USER moves the map (pan or
