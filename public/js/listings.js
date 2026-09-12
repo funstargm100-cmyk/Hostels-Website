@@ -55,8 +55,8 @@ function renderOwnerCard(l) {
         <div style="display:flex;gap:.4rem">
           <a href="/edit-listing?id=${l.uuid}" class="btn btn-outline btn-sm"><i data-lucide="pencil"></i> Edit</a>
           ${l.status === 'active'
-            ? `<button class="btn btn-ghost btn-sm" onclick="deactivateOwnListing('${l.uuid}')">Deactivate</button>`
-            : ''}
+      ? `<button class="btn btn-ghost btn-sm" onclick="deactivateOwnListing('${l.uuid}')">Deactivate</button>`
+      : ''}
         </div>
       </div>
     </div>`;
@@ -299,6 +299,11 @@ document.addEventListener('click', (e) => {
 let mapInstance = null;
 let mapMarkersLayer = null;
 let mapTraceLayer = null; // holds the road trace line from a room to the seeker's base
+// A persistent marker for the seeker's fixed daily base (UENR School Park). It
+// lives in its own layer — NOT mapTraceLayer — so it survives the trace being
+// cleared and is always visible on the map, independent of any open popup.
+let mapBaseLayer = null;
+let baseMarker = null;
 let traceRequestToken = 0; // bumped per trace so a slow route response can't draw stale
 // Clears the "pins are dropping in" class on the map container once the last
 // staggered pin has landed (see renderMapListings).
@@ -383,6 +388,10 @@ function ensureMap() {
     mapMarkersLayer = L.layerGroup().addTo(mapInstance);
     // A single reusable layer for the base↔room trace line, drawn on popup open.
     mapTraceLayer = L.layerGroup().addTo(mapInstance);
+    // Persistent base marker (UENR School Park) in its own layer so it is ALWAYS
+    // on the map, not just while a trace is drawn.
+    mapBaseLayer = L.layerGroup().addTo(mapInstance);
+    renderBaseMarker();
     // Rotate with the ← / → keys once the map has focus. This is an explicit
     // gesture that can never be mistaken for a pan, unlike Shift+drag or a
     // two-finger twist, which is why those two are disabled above.
@@ -444,7 +453,7 @@ function ensureMap() {
         // quick click releases the lock immediately in endDrag, so the toggle
         // still works normally.
         if (knob.requestPointerLock) {
-          try { const p = knob.requestPointerLock(); if (p && p.catch) p.catch(() => {}); } catch { /* unsupported */ }
+          try { const p = knob.requestPointerLock(); if (p && p.catch) p.catch(() => { }); } catch { /* unsupported */ }
         }
         e.preventDefault();
       });
@@ -799,9 +808,20 @@ function renderMapListings(fitToResults = true) {
         }
       });
       // The photo inside the card grows once it loads, which can push a popup
-      // near an edge out of view. Re-fit whenever that happens.
+      // near an edge out of view. Re-fit — but ONLY if the user has not moved the
+      // map in the meantime: a slow image can land seconds after the open, by
+      // which point forcing the card back into view would snap the map under the
+      // user's own pan. Snapshot the centre at open and compare on load.
       const img = el && el.querySelector('img');
-      if (img) img.addEventListener('load', ensurePopupVisible, { once: true });
+      if (img) {
+        const centerAtOpen = mapInstance.getCenter();
+        img.addEventListener('load', () => {
+          if (!mapInstance) return;
+          const now = mapInstance.getCenter();
+          const movedSinceOpen = now.distanceTo(centerAtOpen) > 1; // > 1m ≈ any pan
+          if (!movedSinceOpen) ensurePopupVisible();
+        }, { once: true });
+      }
       drawTraceToBase(marker);
       openPopupMarker = marker;
     });
@@ -831,11 +851,12 @@ function renderMapListings(fitToResults = true) {
       setTimeout(() => icon.classList.remove('map-pin-halo'), delay + PIN_DROP_MS + 900);
     }
   });
+  // The base (UENR School Park) is ALWAYS marked — re-assert it here so it shows
+  // even if the pin render replaced the marker DOM or the base only became known
+  // after the map was first created.
+  renderBaseMarker();
   if (pts.length && fitToResults && Date.now() >= introFlyUntil) {
     fitBoundsGuarded(L.latLngBounds(pts).pad(0.25), { maxZoom: 15 });
-    // NOTE: the seeker's base is drawn by drawTraceToBase() on popup open, so no
-    // standalone base marker is added here. Once the trace is cleared the base
-    // disappears with it, which keeps the default map focused on the rooms.
   }
 }
 
@@ -865,10 +886,11 @@ function deferPopupUpdate() {
     if (popup && popup.isOpen()) {
       popup.update();
       renderPopupIcons();
-      // Rotating or panning can swing a tall popup past an edge even though it fit
-      // when opened, so re-run the same fit that openPopupSafely uses. Skipped
-      // while WE are the ones moving, so our own corrective pan cannot recurse.
-      if (!suppressMoveEvent) ensurePopupVisible();
+      // NOTE: deliberately do NOT re-run ensurePopupVisible() here. The popup is
+      // fitted once when it opens (see openPopupSafely); after that the user is
+      // free to pan the map and let the card travel off-screen if they want. The
+      // old re-fit on every moveend/zoomend yanked the view back the instant they
+      // dragged away from the pin, which is exactly the "popup snaps back" bug.
     }
   });
 }
@@ -1214,6 +1236,34 @@ function clearTraceLine() {
   clearTimeout(tracePulseTimer);
 }
 
+// ─── PERSISTENT BASE MARKER ────────────────────
+// The seeker's daily base (UENR School Park) is ALWAYS marked on the map — it is
+// drawn once the map exists and is never tied to a popup or a trace. A small
+// circle marker with a permanent label keeps it distinct from room pins (which
+// are teardrops) so the base is never mistaken for a listing.
+function renderBaseMarker() {
+  if (!mapBaseLayer || !mapInstance) return;
+  const b = window.__userBaseLoc;
+  // Only draw once the base is known, and only once (redrawing on every call
+  // would stack duplicate markers on top of each other).
+  if (!b || !Number.isFinite(Number(b.lat)) || !Number.isFinite(Number(b.lng))) return;
+  const lat = Number(b.lat), lng = Number(b.lng);
+  if (baseMarker && mapBaseLayer.hasLayer(baseMarker)) {
+    // Already drawn at the same spot — nothing to do.
+    const ll = baseMarker.getLatLng();
+    if (ll && ll.lat === lat && ll.lng === lng) return;
+  }
+  mapBaseLayer.clearLayers();
+  baseMarker = L.circleMarker([lat, lng], {
+    radius: 7, color: '#ffffff', weight: 2.5,
+    fillColor: '#2563eb', fillOpacity: 1
+  }).addTo(mapBaseLayer);
+  // Permanent tooltip: the base should be self-explanatory without a click.
+  baseMarker.bindTooltip('UENR School Park — your base', {
+    permanent: true, direction: 'top', className: 'map-pin-label', offset: [0, -6]
+  });
+}
+
 // Draw the polylines + end anchors for a given set of [lat,lng] points.
 //
 // Three stacked strokes, outside in:
@@ -1361,18 +1411,22 @@ async function drawTraceToBase(marker) {
 }
 
 // If either end of the trace sits outside the current viewport, ease the camera
-// out just far enough to show the whole line — then re-fit the open popup, so
-// bringing the base into view cannot push the popup off-screen. When both ends
-// are already visible (the usual desktop case) this does nothing at all, so the
-// camera is never moved needlessly.
+// out just far enough to show the whole line. When both ends are already visible
+// (the usual desktop case) this does nothing at all, so the camera is never
+// moved needlessly.
+//
+// ONLY runs in TRACE-ONLY mode (popups switched off). With popups ON, reframing
+// the camera the moment a pin is clicked yanks the view out from under the user
+// right as the room card opens — the card can even land off-screen mid-move, and
+// the zoom-out fights the popup's own fit. So while popups are on the trace is
+// drawn but the camera is left exactly where the user put it.
 function revealTraceIfOffscreen(base, room) {
   if (!mapInstance) return;
+  if (popupsEnabled) return; // popups on => never reframe for the trace
   const view = mapInstance.getBounds();
   const offscreen = !view.contains(base) || !view.contains(room);
   if (!offscreen) return;
   fitBoundsGuarded(L.latLngBounds([base, room]).pad(0.25), { maxZoom: 15 });
-  // fitBounds moves the map, which can slide the open popup past an edge.
-  ensurePopupVisible();
 }
 
 function setView(v) {
@@ -1384,6 +1438,9 @@ function setView(v) {
   if (v === 'map') {
     // Entering map view always frames the results and clears any stale pill.
     hideSearchAreaPill();
+    // The base marker can only be drawn once the map exists AND the base is
+    // known; whichever comes second, this call covers the ordering.
+    renderBaseMarker();
     // Clicking "Map" is an explicit "show me the results on the map", so it
     // reframes even if the map had been panned before.
     beginFreshSearch();
@@ -1482,15 +1539,23 @@ if (urlParams.get('occupancy')) {
     // in half on every page load. When a phone hits that limit (or is briefly
     // offline), fall back to the cached user so the trace still has a base —
     // better a slightly stale base than no trace line at all.
+    // The seeker's base is FIXED to UENR School Park, so we always have a known
+    // fallback — this guarantees the base is marked on the map even if the API
+    // call fails or the cache is empty (previously the base could end up unset,
+    // leaving the map with no base marker at all).
+    const UENR_FALLBACK = { lat: 7.3507440, lng: -2.3428065 };
     const base = (verified && verified.base_lat && verified.base_lng)
-      ? { lat: verified.base_lat, lng: verified.base_lng }
+      ? { lat: Number(verified.base_lat), lng: Number(verified.base_lng) }
       : (() => {
-          try {
-            const c = JSON.parse(localStorage.getItem('user') || 'null');
-            return (c && c.base_lat && c.base_lng) ? { lat: c.base_lat, lng: c.base_lng } : null;
-          } catch { return null; }
-        })();
-    if (base) window.__userBaseLoc = base;
+        try {
+          const c = JSON.parse(localStorage.getItem('user') || 'null');
+          return (c && c.base_lat && c.base_lng) ? { lat: Number(c.base_lat), lng: Number(c.base_lng) } : null;
+        } catch { return null; }
+      })() || UENR_FALLBACK;
+    window.__userBaseLoc = base;
+    // Mark the base on the map straight away (no-op until the map is created;
+    // renderMapListings/ensureMap will call this again once it exists).
+    renderBaseMarker();
     loadListings();
   }
 })();
