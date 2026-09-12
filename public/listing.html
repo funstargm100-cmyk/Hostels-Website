@@ -86,28 +86,20 @@
           <span><i data-lucide="users" style="width:14px;height:14px"></i> <span id="interestCount"></span> interested</span>
         </div>
         <div class="poster-card" id="posterCard">
-          <div style="display:flex;align-items:center;gap:.75rem">
-            <a id="ownerAvatarLink" href="#" style="text-decoration:none;flex-shrink:0" title="View all rooms by this poster">
-              <div class="sidebar-avatar" style="width:44px;height:44px;font-size:1rem;cursor:pointer;transition:transform .15s ease" id="ownerAvatar">O</div>
+          <a id="ownerAvatarLink" href="#" class="poster-card-avatar-link" title="View all rooms by this poster">
+            <div class="sidebar-avatar poster-card-avatar" id="ownerAvatar">O</div>
+          </a>
+          <div class="poster-card-name-row">
+            <a id="ownerNameLink" href="#" class="poster-card-name" title="View all rooms by this poster">
+              <span id="ownerName"></span>
             </a>
-            <div style="flex:1;min-width:0">
-              <div style="display:flex;align-items:center;gap:.35rem;flex-wrap:wrap">
-                <a id="ownerNameLink" href="#" style="font-weight:700;font-size:.95rem;color:inherit;text-decoration:none" title="View all rooms by this poster">
-                  <span id="ownerName"></span>
-                </a>
-                <span id="ownerVerifiedBadge"></span>
-              </div>
-              <div class="text-muted" style="font-size:.78rem;display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
-                <span id="ownerRoleLabel">Ad poster</span>
-                <span>•</span>
-                <span id="ownerFollowersCount">0 followers</span>
-              </div>
-            </div>
-            <button type="button" class="btn btn-outline btn-sm" id="ownerFollowBtn" onclick="toggleFollowOwner()" style="padding:.35rem .75rem;font-size:.78rem;display:none" aria-label="Follow poster">
-              <i data-lucide="user-plus" style="width:14px;height:14px"></i>
-              <span id="ownerFollowLabel">Follow</span>
-            </button>
+            <span id="ownerVerifiedBadge"></span>
           </div>
+          <div class="poster-card-followers" id="ownerFollowersCount">0 followers</div>
+          <button type="button" class="btn btn-outline btn-sm poster-card-follow-btn" id="ownerFollowBtn" onclick="toggleFollowOwner()" style="display:none" aria-label="Follow poster">
+            <i data-lucide="user-plus" style="width:14px;height:14px"></i>
+            <span id="ownerFollowLabel">Follow</span>
+          </button>
         </div>
         <!-- Seeker / visitor actions -->
         <div id="seekerActions">

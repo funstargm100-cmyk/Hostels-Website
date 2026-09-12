@@ -218,9 +218,6 @@ function renderPriceBox(l) {
       : '';
   }
 
-  const roleEl = document.getElementById('ownerRoleLabel');
-  if (roleEl) roleEl.textContent = l.owner_role === 'agent' ? 'Agent' : 'Landlord';
-
   updateOwnerFollowersUI(l.owner_followers || 0);
   updateOwnerFollowBtnUI(l);
 }
