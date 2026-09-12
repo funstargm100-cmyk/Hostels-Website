@@ -831,6 +831,22 @@ body.map-fullscreen-active .filters-panel.open{ transform:translateX(0); }
 .amenity-item i,.amenity-item svg{ width:16px; height:16px; color:var(--primary); }
 @media (max-width:600px){ .amenities-grid{ grid-template-columns:repeat(2,1fr); } }
 .price-box{ background:var(--card-bg); border:1px solid var(--border); border-radius:var(--radius); padding:1.5rem; position:sticky; top:90px; min-width:0; max-width:100%; overflow-wrap:anywhere; }
+.poster-card{
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: .85rem;
+  margin-bottom: 1.3rem;
+  transition: border-color .15s ease;
+}
+.poster-card:hover{ border-color: var(--primary); }
+.poster-card #ownerAvatarLink:hover .sidebar-avatar{ transform: scale(1.05); }
+.poster-card #ownerNameLink:hover{ color: var(--primary); }
+#ownerFollowBtn.following{
+  background: var(--teal, #0d9488);
+  color: #fff;
+  border-color: var(--teal, #0d9488);
+}
 @media (max-width:940px){
   .price-box{ position:static; }
   .detail-layout > *{ min-width:0; }

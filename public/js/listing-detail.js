@@ -53,7 +53,13 @@ async function loadListing() {
     // Owners get management actions instead of Request / Favorite. Re-check after
     // initNavAuth refreshes the cached user, so the correct actions always show.
     if (isOwnListing(listing)) setUpOwnerView(listing);
-    initNavAuth().then(() => { if (isOwnListing(currentListing)) setUpOwnerView(currentListing); });
+    initNavAuth().then(() => {
+      if (isOwnListing(currentListing)) {
+        setUpOwnerView(currentListing);
+      }
+      // Re-evaluate follow button visibility/state now that auth is known
+      updateOwnerFollowBtnUI(currentListing);
+    });
     if (typeof lucide !== 'undefined') lucide.createIcons();
   } catch (e) {
     document.getElementById('detailSkeleton').innerHTML = `<div class="alert alert-danger">Failed to load room: ${e.message}</div>`;
@@ -181,12 +187,100 @@ function renderPriceBox(l) {
   document.getElementById('priceMain').textContent = `GHS ${Number(l.price_per_head).toLocaleString()}`;
   document.getElementById('pricePerHead').textContent = 'per person';
   document.getElementById('priceBreakdown').textContent = `${l.occupancy_type}-in-1 room`;
-  document.getElementById('ownerName').innerHTML = l.owner_id
-    ? `<a href="/poster-profile?id=${l.owner_id}" style="color:inherit;text-decoration:none">${l.owner_name || 'Verified Owner'}</a>`
-    : (l.owner_name || 'Verified Owner');
   document.getElementById('viewCount').textContent = l.views_count || 0;
   document.getElementById('interestCount').textContent = l.interest_count || 0;
   if (l.move_in_date) document.getElementById('moveInDate').innerHTML = `<i data-lucide="calendar" style="width:13px;height:13px"></i> Available from: ${new Date(l.move_in_date).toLocaleDateString()}`;
+
+  // Poster card: avatar + name links to profile/all listings, follower count, follow button
+  const posterHref = l.owner_id ? `/poster-profile?id=${l.owner_id}` : '#';
+  const avatarLink = document.getElementById('ownerAvatarLink');
+  const nameLink = document.getElementById('ownerNameLink');
+  if (avatarLink) avatarLink.href = posterHref;
+  if (nameLink) nameLink.href = posterHref;
+
+  const avatarEl = document.getElementById('ownerAvatar');
+  if (avatarEl) {
+    avatarEl.textContent = (l.owner_name || 'O').charAt(0).toUpperCase();
+    if (l.owner_avatar) {
+      avatarEl.style.backgroundImage = `url(${l.owner_avatar})`;
+      avatarEl.style.backgroundSize = 'cover';
+      avatarEl.textContent = '';
+    }
+  }
+
+  const nameEl = document.getElementById('ownerName');
+  if (nameEl) nameEl.textContent = l.owner_name || 'Verified Owner';
+
+  const badgeEl = document.getElementById('ownerVerifiedBadge');
+  if (badgeEl) {
+    badgeEl.innerHTML = l.owner_verified
+      ? '<span class="badge badge-verified" style="font-size:.65rem;padding:.15rem .45rem"><i data-lucide="badge-check" style="width:11px;height:11px"></i> Verified</span>'
+      : '';
+  }
+
+  const roleEl = document.getElementById('ownerRoleLabel');
+  if (roleEl) roleEl.textContent = l.owner_role === 'agent' ? 'Agent' : 'Landlord';
+
+  updateOwnerFollowersUI(l.owner_followers || 0);
+  updateOwnerFollowBtnUI(l);
+}
+
+function updateOwnerFollowersUI(count) {
+  const el = document.getElementById('ownerFollowersCount');
+  if (!el) return;
+  const c = Number(count) || 0;
+  el.textContent = `${c} follower${c === 1 ? '' : 's'}`;
+}
+
+function updateOwnerFollowBtnUI(l) {
+  const btn = document.getElementById('ownerFollowBtn');
+  if (!btn) return;
+
+  // Hide the follow button if it's the user's own listing or no owner
+  if (!l || !l.owner_id || isOwnListing(l)) {
+    btn.style.display = 'none';
+    return;
+  }
+  btn.style.display = 'inline-flex';
+
+  const isFollowing = !!l.is_following_owner;
+  btn.classList.toggle('following', isFollowing);
+  btn.innerHTML = isFollowing
+    ? '<i data-lucide="user-check" style="width:13px;height:13px"></i> <span id="ownerFollowLabel">Following</span>'
+    : '<i data-lucide="user-plus" style="width:13px;height:13px"></i> <span id="ownerFollowLabel">Follow</span>';
+  if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [btn] });
+}
+
+async function toggleFollowOwner() {
+  if (!currentListing || !currentListing.owner_id) return;
+  const user = JSON.parse(localStorage.getItem('user') || 'null');
+  if (!user) {
+    return location.href = '/login?redirect=' + encodeURIComponent(location.pathname + location.search);
+  }
+  if (isOwnListing(currentListing)) {
+    return showToast("You can't follow yourself", 'error');
+  }
+
+  const btn = document.getElementById('ownerFollowBtn');
+  if (btn) btn.disabled = true;
+  try {
+    const { following } = await api.post(`/api/users/${currentListing.owner_id}/follow`);
+    currentListing.is_following_owner = following;
+    const delta = following ? 1 : -1;
+    currentListing.owner_followers = Math.max(0, (currentListing.owner_followers || 0) + delta);
+    updateOwnerFollowBtnUI(currentListing);
+    updateOwnerFollowersUI(currentListing.owner_followers);
+    showToast(
+      following
+        ? `Following ${currentListing.owner_name || 'poster'} — you'll be notified when they post new rooms.`
+        : `Unfollowed ${currentListing.owner_name || 'poster'}.`,
+      'success'
+    );
+  } catch (e) {
+    showToast(e.message, 'error');
+  } finally {
+    if (btn) btn.disabled = false;
+  }
 }
 
 // ─── OWNER VIEW ──────────────────────────────

@@ -211,16 +211,25 @@ router.get('/:uuid', optionalAuth, async (req, res) => {
   try {
     const viewer = req.session.user;
     const result = await db.query(`
-      SELECT l.*, u.name as owner_name, u.is_kyc_verified as owner_verified,
+      SELECT l.*, u.name as owner_name, u.avatar as owner_avatar, u.role as owner_role,
+             u.is_kyc_verified as owner_verified,
+             (SELECT COUNT(*)::int FROM follows WHERE poster_id = l.owner_id) as owner_followers,
              ROUND(AVG(r.rating)::numeric, 1) as avg_rating, COUNT(r.id) as review_count
       FROM listings l
       LEFT JOIN users u ON l.owner_id = u.id
       LEFT JOIN reviews r ON r.listing_id = l.id
       WHERE l.uuid=$1 AND (l.status='active' OR l.owner_id=$2 OR $3=TRUE)
-      GROUP BY l.id, u.name, u.is_kyc_verified`, [req.params.uuid, viewer?.id || null, viewer?.role === 'admin']);
+      GROUP BY l.id, u.name, u.avatar, u.role, u.is_kyc_verified`, [req.params.uuid, viewer?.id || null, viewer?.role === 'admin']);
 
     const listing = result.rows[0];
     if (!listing) return res.status(404).json({ error: 'Listing not found' });
+
+    let isFollowingOwner = false;
+    if (viewer && listing.owner_id) {
+      const fCheck = await db.query('SELECT 1 FROM follows WHERE follower_id=$1 AND poster_id=$2', [viewer.id, listing.owner_id]);
+      isFollowingOwner = fCheck.rows.length > 0;
+    }
+    listing.is_following_owner = isFollowingOwner;
 
     const [images] = await db.query2('SELECT image_path, is_primary FROM listing_images WHERE listing_id=$1 ORDER BY sort_order', [listing.id]);
     const amenitiesRes = await db.query('SELECT * FROM amenities WHERE listing_id=$1', [listing.id]);
