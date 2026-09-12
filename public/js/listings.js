@@ -246,9 +246,26 @@ function clearFilters() {
   document.getElementById('bathroomFilter').value = '';
   document.getElementById('sortSelect').value = '';
   nearMeLat = null; nearMeLng = null; nearMeKm = null;
-  mapAreaScope = null;
   const btn = document.getElementById('nearMeBtn');
   setNearMeBtnState(btn, false);
+  // If the user is looking at a "Search this area" scope, KEEP it: clearing the
+  // filters should re-search the SAME patch, not zoom out to the whole country.
+  // Only a plain (non-area) empty state drops the scope. Pass `true` so
+  // applyFilters does not wipe mapAreaScope.
+  const keepArea = !!mapAreaScope;
+  if (keepArea) pendingMapAreaSearch = true;
+  applyFilters(keepArea);
+}
+
+// "Search other locations" — the escape hatch from an empty area. Drops the
+// viewport scope (and any Near Base) so the next fetch returns rooms everywhere,
+// then frames the camera on whatever comes back.
+function searchOtherLocations() {
+  mapAreaScope = null;
+  nearMeLat = null; nearMeLng = null; nearMeKm = null;
+  setNearMeBtnState(document.getElementById('nearMeBtn'), false);
+  hideSearchAreaPill();
+  // A plain fresh search: let loadListings frame the camera on the full results.
   applyFilters();
 }
 
@@ -653,12 +670,49 @@ function escapeHtml(s) {
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
+// True when any FILTER field is set (search text, price, occupancy, amenities,
+// sort). Used to tell an over-narrow FILTER set apart from a genuinely empty
+// AREA — the two empty states offer different actions.
+function hasActiveFilters() {
+  const val = (id) => { const el = document.getElementById(id); return el ? String(el.value || '').trim() : ''; };
+  const checked = (id) => { const el = document.getElementById(id); return !!(el && el.checked); };
+  const occ = document.querySelector('input[name="occupancy"]:checked');
+  return !!(val('searchLocation') || val('toolbarSearch') || val('minPrice') ||
+    val('maxPrice') || (occ && occ.value) || val('genderFilter') || checked('filterWifi') ||
+    checked('filterParking') || val('waterFilter') || val('electricityFilter') ||
+    val('furnishedFilter') || val('bathroomFilter'));
+}
+
+// Fill the empty-state card for whichever situation emptied the map.
+//   • filters active -> "No rooms found": offer "Clear filters" (the area scope is
+//     KEPT, so clearing re-searches the same patch rather than zooming out).
+//   • no filters, area scope -> "No rooms available in this area": offer
+//     "Search other locations" (drops the area scope and shows everything).
+function renderMapEmptyState() {
+  const title = document.getElementById('mapEmptyTitle');
+  const text = document.getElementById('mapEmptyText');
+  const action = document.getElementById('mapEmptyAction');
+  if (!title || !text || !action) return;
+  if (hasActiveFilters()) {
+    title.textContent = 'No rooms found';
+    text.textContent = 'No rooms match these filters in this area. Clear the filters to search here without them.';
+    action.textContent = 'Clear filters';
+    action.setAttribute('onclick', 'clearFilters()');
+  } else {
+    title.textContent = 'No rooms available in this area';
+    text.textContent = 'There are no rooms around here yet. Try searching other locations.';
+    action.textContent = 'Search other locations';
+    action.setAttribute('onclick', 'searchOtherLocations()');
+  }
+}
+
 // Show / hide the "No rooms found" notice centred on the map. Appearing /
 // disappearing is animated (map-empty-in / map-empty-out in style.css) so the
 // notice slides in instead of punching into place.
 function setMapEmptyState(on) {
   const el = document.getElementById('mapEmptyState');
   if (!el) return;
+  if (on) renderMapEmptyState();
   el.style.display = on ? 'block' : 'none';
   el.classList.toggle('map-empty-in', !!on);
   if (on && typeof lucide !== 'undefined') lucide.createIcons({ nodes: [el] });
@@ -690,7 +744,11 @@ function renderMapListings(fitToResults = true) {
     // A search/filter with no matches: wipe the stale pins so nothing on the
     // map suggests results exist, and tell the user why the map is empty.
     setMapEmptyState(true);
-    if (fitToResults) {
+    // Do NOT zoom out while an area scope is active: the user asked for THIS
+    // patch, and yanking the camera back to the whole country reads as the map
+    // ignoring them. They stay put and use the empty state's action instead —
+    // "Clear filters" (re-search here) or "Search other locations" (leave).
+    if (fitToResults && !mapAreaScope) {
       setMapViewGuarded([5.6037, -0.1870], 12);
     }
     return;
@@ -1150,6 +1208,7 @@ function toggleMapFullscreen() {
 // Exposed for the inline onclick handlers in listings.html (the file is a classic
 // script, so these are already global — made explicit here for clarity/robustness).
 window.searchThisArea = searchThisArea;
+window.searchOtherLocations = searchOtherLocations;
 window.recenterMap = recenterMap;
 window.toggleMapFullscreen = toggleMapFullscreen;
 
