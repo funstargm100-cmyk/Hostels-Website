@@ -302,7 +302,9 @@ function ensureMap() {
       touchRotate: true,
       shiftKeyRotate: false,
       rotateControl: false
-    }).setView([5.6037, -0.1870], 12); // Accra default
+    }).setView([7.3349, -2.3268], 6); // start zoomed-out over Sunyani
+    // Smooth opening move: glide from the country-level view down to Sunyani.
+    flyToGuarded([7.3349, -2.3268], 12, 2.2);
     // Leaflet's map-drag handler listens on the whole container and, with the
     // DEFAULT 3px clickTolerance, treats a few pixels of mouse wobble as a pan.
     // A real mouse click almost always moves 2-4px between press and release, so
@@ -779,12 +781,13 @@ function fitBoundsGuarded(bounds, opts) {
   clearSuppressSoon();
 }
 // Eased pan/zoom ("flyTo"), the animation Google Maps uses when it reframes.
-function flyToGuarded(latlng, zoom) {
+// `duration` in seconds — the opening fly-in uses a longer, more cinematic one.
+function flyToGuarded(latlng, zoom, duration = 0.8) {
   if (!mapInstance) return;
   hideSearchAreaPill();
   setSuppress(true);
-  mapInstance.flyTo(latlng, zoom, { duration: 0.8, easeLinearity: 0.25 });
-  clearSuppressSoon(1200);
+  mapInstance.flyTo(latlng, zoom, { duration, easeLinearity: 0.25 });
+  clearSuppressSoon(Math.max(1200, duration * 1000 + 400));
 }
 // Moves queue up: hold the suppression a beat past the call so the trailing
 // moveend/zoomend from the animation lands inside the window and is ignored.
@@ -846,7 +849,7 @@ function recenterMap() {
   if (pts.length) {
     fitBoundsGuarded(L.latLngBounds(pts).pad(0.25), { maxZoom: 15, animate: true });
   } else {
-    flyToGuarded([5.6037, -0.1870], 12); // Accra default
+    flyToGuarded([7.3349, -2.3268], 12); // Sunyani default
   }
 }
 
@@ -886,15 +889,11 @@ function toggleMap3D() {
   if (!wrap) return;
   mapTiltOn = !mapTiltOn;
   wrap.classList.toggle('tilted', mapTiltOn);
-  if (mapTiltOn) {
-    // A tilt from a rotated/panned camera looks chaotic — clean up first.
-    if (typeof mapInstance.setBearing === 'function') {
-      suppressMoveEvent = true;
-      mapInstance.setBearing(0);
-      suppressMoveEvent = false;
-    }
-    recenterMap();
-  }
+  // Tilt happens FROM the current camera: no bearing reset and no re-frame.
+  // Resetting zoom/bearing made it feel like a zoom-out instead of a pitch.
+  // The bearing rotation (leafet-rotate) is applied to the panes INSIDE the
+  // tilted wrapper, so the two transforms compose correctly — the map spins
+  // within the tilted plane and both effects stay in sync.
   const btn = document.getElementById('mapResetBtn');
   if (btn) {
     btn.setAttribute('aria-pressed', String(mapTiltOn));
