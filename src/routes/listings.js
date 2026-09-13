@@ -320,45 +320,54 @@ router.post('/', requireAuth, requireRole('owner', 'agent', 'admin'), uploadList
   if (!water || !electricity || !furnishing || !bathroom) return res.status(400).json({ error: 'All amenities are required' });
 
   try {
-    // The poster enters the ROOM PRICE (the base). From it we derive, server-side:
-    //   totalRoomPrice = roomPrice + commission        (commission is agents only)
-    //   platformFee    = rate × totalRoomPrice          (5% agent / 7% owner)
-    //   pricePerHead   = (totalRoomPrice + platformFee) / occupancy
-    // `original_price`/`listed_price` hold the room price (what the poster set);
-    // `price_per_head` is the seeker-facing figure and INCLUDES the commission and
-    // the platform fee, split across the room's occupants.
-    // A legacy caller that still sends a room TOTAL via original_price only is
-    // handled by taking that value as the room price directly.
+    // The poster enters the PRICE PER PERSON (P). Occupancy (occ) is how many
+    // people share the room. The platform fee is a PER-PERSON figure.
+    //   AGENT: C = commission per occupant (flat GHS, amount only)
+    //     totalCommission = C × occ
+    //     platformFee     = 5% × (totalCommission + P)
+    //     totalPerPerson  = P + C + platformFee
+    //   OWNER (no commission):
+    //     totalForOcc     = P × occ
+    //     platformFee     = 7% × P
+    //     totalPerPerson  = P + platformFee
+    // We store: original_price/listed_price = the WHOLE ROOM total
+    // (totalPerPerson × occ) — what a full room costs and what payments settle
+    // against; price_per_head = the seeker-facing total per person.
     const occ = parseInt(occupancy_type) || 1;
-    const price = (price_per_head_in !== undefined && price_per_head_in !== '')
+    const pricePerPerson = (price_per_head_in !== undefined && price_per_head_in !== '')
       ? parseFloat(parseFloat(price_per_head_in).toFixed(2))
       : parseFloat(original_price);
+    if (!Number.isFinite(pricePerPerson) || pricePerPerson <= 0) return res.status(400).json({ error: 'A valid price per person is required' });
     const expires_at = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
     // ── Poster type, commission & platform fee ──────────────────────────────
-    // OWNER: room price only, 7% platform fee. AGENT: room price + a commission
-    // (percent of the room total, or a flat GHS amount), 5% fee on the sum.
-    // All of this is computed/validated HERE — the client's numbers are a
-    // convenience for the live preview, never the source of truth.
+    // Computed/validated HERE — the client's numbers are a convenience for the
+    // live preview, never the source of truth.
     const kind = poster_type === 'agent' ? 'agent' : 'owner';
     const feeRate = kind === 'agent' ? 0.05 : 0.07;
     let commType = null;
-    let commValue = null;
-    let commission = 0;
+    let commValue = null;   // commission PER OCCUPANT (GHS), agents only
+    let commission = 0;     // TOTAL commission across all occupants
     if (kind === 'agent') {
-      commType = commission_type === 'amount' ? 'amount' : 'percent';
+      // Commission is a flat GHS amount per occupant (no percentage).
+      commType = 'amount';
       commValue = parseFloat(commission_value);
       if (!Number.isFinite(commValue) || commValue <= 0) {
-        return res.status(400).json({ error: 'An agent commission (percentage or amount) is required.' });
+        return res.status(400).json({ error: 'An agent commission amount (per occupant) is required.' });
       }
       commValue = parseFloat(commValue.toFixed(2));
-      commission = commType === 'amount' ? commValue : parseFloat(((price * commValue) / 100).toFixed(2));
+      commission = parseFloat((commValue * occ).toFixed(2));
     }
-    // "Total room price" = the base price plus any agent commission.
-    const totalRoomPrice = parseFloat((price + commission).toFixed(2));
-    const platformFee = parseFloat((totalRoomPrice * feeRate).toFixed(2));
-    // Per person = (total room price + platform fee) ÷ occupancy.
-    const price_per_head = parseFloat(((totalRoomPrice + platformFee) / occ).toFixed(2));
+    // Platform fee is per person: agent -> 5% of (total commission + per-person
+    // price); owner -> 7% of the per-person price.
+    const feeBasePerPerson = kind === 'agent'
+      ? parseFloat((commission + pricePerPerson).toFixed(2))
+      : pricePerPerson;
+    const platformFee = parseFloat((feeBasePerPerson * feeRate).toFixed(2));
+    const commissionPerPerson = kind === 'agent' ? commValue : 0;
+    // What ONE occupant pays, and the whole room (all occupants).
+    const price_per_head = parseFloat((pricePerPerson + commissionPerPerson + platformFee).toFixed(2));
+    const price = parseFloat((price_per_head * occ).toFixed(2));
     const listed_price = price;
 
   const result = await db.query(

@@ -157,15 +157,18 @@ function validateStep(step) {
 }
 
 // ─── PRICE CALCULATOR ─────────────────────────────────────────────────────────
-// The poster enters the ROOM PRICE (the base). From it:
-//   • total room price = room price + commission   (commission is agents only)
-//   • platform fee     = rate × total room price
-//   • price per person = (total room price + platform fee) ÷ occupancy
+// The poster enters the PRICE PER PERSON (P). Occupancy (occ) is how many people
+// share the room. The platform fee is a PER-PERSON figure in both paths.
 //
-// Platform fee rate depends on HOW they post:
-//   • OWNER  — room price only, no commission.   Fee = 7% of the room price.
-//   • AGENT  — room price + a commission.        Fee = 5% of (price + commission).
-// The commission can be a percentage of the room price or a flat GHS amount.
+// AGENT  — commission is entered as a GHS AMOUNT PER PERSON (C):
+//   • total commission (all occupants) = C × occ
+//   • platform fee                      = 5% × (total commission + P)
+//   • total price per person            = P + C + platform fee
+//
+// OWNER  — no commission:
+//   • total price for (occ)    = P × occ
+//   • platform fee             = 7% × P
+//   • total price per person   = P + platform fee
 const PLATFORM_FEE_RATE = { owner: 0.07, agent: 0.05 };
 
 // Read the current poster type from the radio group ('agent' | 'owner').
@@ -174,7 +177,7 @@ function getPosterType() {
   return el ? el.value : 'owner';
 }
 
-// Agents can pick % or GHS for their commission; owners have no commission.
+// Agents get a commission field; owners have no commission.
 function onPosterTypeChange() {
   const type = getPosterType();
   const isAgent = type === 'agent';
@@ -183,87 +186,91 @@ function onPosterTypeChange() {
   const hint = document.getElementById('posterTypeHint');
   if (hint) {
     hint.textContent = isAgent
-      ? 'Posting as an agent — add your commission on top of the room price; the platform fee is 5% of the total.'
+      ? 'Posting as an agent — your commission is charged per occupant; the platform fee is 5% of the price per person plus the total commission.'
       : 'Posting as the owner of the room — no agent commission, 7% platform fee.';
   }
-  // Keep the placeholder/step sensible when switching units.
-  onCommissionTypeChange();
   calcPrice();
 }
 
-// Swap the commission placeholder when the user switches % ↔ GHS.
-function onCommissionTypeChange() {
-  const typeEl = document.getElementById('adCommissionType');
-  const input = document.getElementById('adCommission');
-  if (!typeEl || !input) return;
-  input.placeholder = typeEl.value === 'amount' ? 'e.g. 500' : 'e.g. 10';
-  calcPrice();
-}
-
-// Compute the commission in GHS from the entered value + unit.
-function computeCommission(roomTotal) {
-  const typeEl = document.getElementById('adCommissionType');
+// The agent's commission, entered as a flat GHS AMOUNT PER PERSON.
+// Returns the per-person amount (0 when empty/invalid).
+function computeCommissionPerPerson() {
   const valEl = document.getElementById('adCommission');
-  const mode = typeEl ? typeEl.value : 'percent';
   const raw = valEl ? parseFloat(valEl.value) : NaN;
-  if (!Number.isFinite(raw) || raw <= 0) return { amount: 0, mode, raw: 0 };
-  const amount = mode === 'amount' ? raw : (roomTotal * raw) / 100;
-  return { amount: parseFloat(amount.toFixed(2)), mode, raw };
+  if (!Number.isFinite(raw) || raw <= 0) return 0;
+  return parseFloat(raw.toFixed(2));
 }
 
 // Build the pricing model from the current form state. Pure — no DOM writes — so
 // calcPrice() and the review summary share identical maths, and the server can
 // mirror it exactly.
 //
-// The poster enters the ROOM PRICE (the base). From it:
-//   totalRoomPrice = price + commission            (owners: no commission)
-//   platformFee    = rate × totalRoomPrice          (5% agent / 7% owner)
-//   pricePerHead   = (totalRoomPrice + platformFee) / occupancy
-// i.e. the per-person figure the seeker sees already includes the commission and
-// the platform fee, split evenly across the occupants of the room.
+//   P   = entered price per person
+//   occ = occupancy
+//   AGENT: C = entered commission per person
+//     totalCommission = C × occ
+//     platformFee     = 5% × (totalCommission + P)
+//     totalPerPerson  = P + C + platformFee
+//   OWNER (no commission):
+//     totalForOcc     = P × occ
+//     platformFee     = 7% × P
+//     totalPerPerson  = P + platformFee
 function computePricing() {
-  const price = parseFloat(document.getElementById('adOriginalPrice').value);
+  const priceInput = parseFloat(document.getElementById('adOriginalPrice').value);
   const occ = parseInt(document.getElementById('adOccupancy').value);
   const posterType = getPosterType();
-  const roomPrice = Number.isFinite(price) ? parseFloat(price.toFixed(2)) : 0;
-  const commission = posterType === 'agent' ? computeCommission(roomPrice) : { amount: 0, mode: null, raw: 0 };
+  const isAgent = posterType === 'agent';
+  const pricePerPerson = Number.isFinite(priceInput) ? parseFloat(priceInput.toFixed(2)) : 0;
   const rate = PLATFORM_FEE_RATE[posterType] || PLATFORM_FEE_RATE.owner;
-  // "Total room price" = the base price plus any agent commission.
-  const totalRoomPrice = parseFloat((roomPrice + commission.amount).toFixed(2));
-  const platformFee = parseFloat((totalRoomPrice * rate).toFixed(2));
-  // Per person = (total room price + platform fee) ÷ occupancy.
-  const pricePerHead = occ > 0 ? parseFloat(((totalRoomPrice + platformFee) / occ).toFixed(2)) : 0;
-  return { price: roomPrice, occ, posterType, roomPrice, commission, rate, totalRoomPrice, platformFee, pricePerHead };
+
+  const commissionPerPerson = isAgent ? computeCommissionPerPerson() : 0;
+  // "Total commission" is the agent's per-occupant commission × occupancy.
+  const totalCommission = isAgent ? parseFloat((commissionPerPerson * (occ || 0)).toFixed(2)) : 0;
+  // Platform fee is a PER-PERSON figure:
+  //   agent -> 5% of (total commission + per-person price)
+  //   owner -> 7% of the per-person price
+  const feeBasePerPerson = isAgent ? parseFloat((totalCommission + pricePerPerson).toFixed(2)) : pricePerPerson;
+  const platformFee = parseFloat((feeBasePerPerson * rate).toFixed(2));
+  // What a single occupant ends up paying.
+  const totalPerPerson = parseFloat((pricePerPerson + commissionPerPerson + platformFee).toFixed(2));
+  // Owner-only display figure: the whole room for all occupants (price × occ).
+  const totalForOcc = parseFloat((pricePerPerson * (occ || 0)).toFixed(2));
+
+  return {
+    posterType, isAgent, occ, rate, pricePerPerson,
+    commissionPerPerson, totalCommission, feeBasePerPerson,
+    platformFee, totalPerPerson, totalForOcc
+  };
 }
 
 function calcPrice() {
   const preview = document.getElementById('pricePreview');
   const p = computePricing();
-  if (!p.price || !p.occ) { preview.style.display = 'none'; return; }
+  if (!p.pricePerPerson || !p.occ) { preview.style.display = 'none'; return; }
   const ghs = (n) => 'GHS ' + Number(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-  // Headline: the per-person figure the seeker will see (now derived, not typed).
-  document.getElementById('prevPerHead').textContent = `${ghs(p.pricePerHead)} / person`;
-  document.getElementById('prevRoomTotal').textContent = `Total price for ${p.occ}-in-1: ${ghs(p.totalRoomPrice)}`;
 
   const commissionRow = document.getElementById('prevCommission');
   const taxableRow = document.getElementById('prevTaxable');
-  if (p.posterType === 'agent') {
-    const label = p.commission.mode === 'amount'
-      ? `Agent commission (flat): ${ghs(p.commission.amount)}`
-      : `Agent commission (${p.commission.raw || 0}%): ${ghs(p.commission.amount)}`;
-    commissionRow.textContent = label;
+  const ownerTotalRow = document.getElementById('prevRoomTotal');
+  if (p.isAgent) {
+    // AGENT: total commission (all occupants) + a per-occupant note.
+    commissionRow.textContent = `Total commission for ${p.occ} occupant${p.occ === 1 ? '' : 's'}: ${ghs(p.totalCommission)}`;
     commissionRow.style.display = 'flex';
-    taxableRow.textContent = `Total room price (price + commission): ${ghs(p.totalRoomPrice)}`;
+    taxableRow.textContent = `Commission per occupant: ${ghs(p.commissionPerPerson)}`;
     taxableRow.style.display = 'flex';
+    ownerTotalRow.style.display = 'none';
   } else {
+    // OWNER: total price for the whole room (price per person × occupancy).
     commissionRow.style.display = 'none';
     taxableRow.style.display = 'none';
+    ownerTotalRow.textContent = `Total price for ${p.occ}-in-1: ${ghs(p.totalForOcc)}`;
+    ownerTotalRow.style.display = 'flex';
   }
 
   const pct = Math.round(p.rate * 100);
   document.getElementById('prevFeeLabel').textContent = `Platform fee (${pct}%)`;
   document.getElementById('prevPlatformFee').textContent = ghs(p.platformFee);
+  document.getElementById('prevPerHead').textContent = `${ghs(p.totalPerPerson)} / person`;
   preview.style.display = 'block';
 }
 
@@ -570,11 +577,13 @@ function buildReviewSummary() {
       ${row('Title', data.get('title') || '—', 'style="font-weight:600;max-width:60%;text-align:right"')}
       ${row('Occupancy', `${p.occ}-in-1`)}
       ${row('Posting as', isAgent ? 'Agent' : 'Owner')}
-      ${row('Room price', ghs(p.roomPrice))}
-      ${isAgent ? row(p.commission.mode === 'amount' ? 'Agent commission (flat)' : `Agent commission (${p.commission.raw || 0}%)`, ghs(p.commission.amount)) : ''}
-      ${row(`Total room price (price + commission)`, ghs(p.totalRoomPrice))}
+      ${row('Price per person', `${ghs(p.pricePerPerson)} / year`)}
+      ${isAgent
+        ? row(`Commission per occupant`, ghs(p.commissionPerPerson))
+          + row(`Total commission (${p.occ} occupant${p.occ === 1 ? '' : 's'})`, ghs(p.totalCommission))
+        : row(`Total price for ${p.occ}-in-1`, ghs(p.totalForOcc))}
       ${row(`Platform fee (${Math.round(p.rate * 100)}%)`, ghs(p.platformFee), 'style="font-weight:700"')}
-      ${row('Price per person', `${ghs(p.pricePerHead)} / year`, 'style="color:var(--primary);font-weight:700"')}
+      ${row('Total price per person', `${ghs(p.totalPerPerson)} / year`, 'style="color:var(--primary);font-weight:700"')}
       ${row('Area', area)}
       ${address ? `<div style="padding:0.5rem 0;border-bottom:1px solid var(--border)"><span class="text-muted">Address</span><br><span style="font-size:0.8rem">${address}</span></div>` : ''}
       <div style="display:flex;justify-content:space-between;padding:0.5rem 0"><span class="text-muted">Photos</span><span>${selectedFiles.length} uploaded</span></div>

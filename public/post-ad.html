@@ -131,14 +131,14 @@
             </select>
           </div>
           <div class="form-group">
-            <label>Room price (GHS/year)</label>
+            <label>Price per person (GHS/year)</label>
             <input type="number" id="adOriginalPrice" name="price_per_head" oninput="calcPrice()" placeholder="e.g. 3500" />
           </div>
         </div>
 
-        <!-- Poster type: an AGENT may add a commission on top of the room price;
-             an OWNER posts the room price alone. The two paths apply different
-             platform fees (5% vs 7%) — see the breakdown below. -->
+        <!-- Poster type: an AGENT adds a per-occupant commission; an OWNER posts
+             the price alone. The two paths apply different platform fees
+             (5% vs 7%) — see the breakdown below. -->
         <div class="form-group">
           <label>Post as</label>
           <div class="poster-type-toggle" role="radiogroup" aria-label="Post as agent or owner">
@@ -156,29 +156,29 @@
           </p>
         </div>
 
-        <!-- Commission: AGENTS ONLY. Either a percentage of the room price or a
-             flat GHS amount. Hidden for owners. -->
+        <!-- Commission: AGENTS ONLY. A flat GHS AMOUNT PER OCCUPANT (no %).
+             Hidden for owners. ->
+             The legacy `commission_type` field is kept as a hidden input so the
+             backend always receives an explicit mode. -->
         <div id="commissionBlock" style="display:none">
-          <div class="form-row">
-            <div class="form-group">
-              <label>Commission</label>
-              <div class="commission-input">
-                <input type="number" id="adCommission" name="commission_value" step="0.01" min="0" oninput="calcPrice()" placeholder="e.g. 10" />
-                <select id="adCommissionType" name="commission_type" onchange="onCommissionTypeChange()">
-                  <option value="percent">%</option>
-                  <option value="amount">GHS</option>
-                </select>
-              </div>
-            </div>
+          <div class="form-group">
+            <label>Commission per occupant (GHS)</label>
+            <input type="number" id="adCommission" name="commission_value" step="0.01" min="0" oninput="calcPrice()" placeholder="e.g. 500" />
+            <input type="hidden" id="adCommissionType" name="commission_type" value="amount" />
+            <p class="text-muted" style="font-size:.75rem;margin-top:.35rem">
+              Charged to each occupant — the total commission is this amount × occupancy.
+            </p>
           </div>
         </div>
 
         <div class="price-preview" id="pricePreview" style="display:none">
-          <div class="row text-muted" id="prevRoomTotal"></div>
+          <!-- AGENT breakdown: total commission (all occupants) + per-occupant hint -->
           <div class="row text-muted" id="prevCommission" style="display:none"></div>
-          <div class="row" id="prevTaxable" style="display:none"></div>
+          <div class="row text-muted" id="prevTaxable" style="display:none"></div>
+          <!-- OWNER breakdown: total price for the whole room -->
+          <div class="row text-muted" id="prevRoomTotal" style="display:none"></div>
           <div class="row"><span id="prevFeeLabel">Platform fee</span><span id="prevPlatformFee" style="color:var(--primary);font-weight:700"></span></div>
-          <div class="row" style="font-weight:700;border-top:1px solid var(--border);margin-top:.35rem;padding-top:.5rem"><span>Price per person</span><span id="prevPerHead"></span></div>
+          <div class="row" style="font-weight:700;border-top:1px solid var(--border);margin-top:.35rem;padding-top:.5rem"><span>Total price per person</span><span id="prevPerHead"></span></div>
         </div>
         <div class="alert alert-danger" id="step3Error" style="display:none"></div>
       </div>
