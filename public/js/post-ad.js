@@ -48,13 +48,20 @@ function validateStep(step) {
   if (errEl) errEl.textContent = '';
 
   if (step === 1) {
+    // A room needs at least TWO photos: the cover (entire building) plus at least
+    // one more. The cover is held separately, so the total is cover + selectedFiles.
     if (!coverFile) { if (errEl) errEl.textContent = 'Please upload a cover photo of the entire building first.'; return false; }
     if (selectedFiles.length > 9) { if (errEl) errEl.textContent = 'Maximum 9 additional photos allowed.'; return false; }
+    if (1 + selectedFiles.length < 2) {
+      if (errEl) errEl.textContent = 'Please upload at least 2 photos in total (the building cover plus at least one more).';
+      return false;
+    }
   }
   if (step === 2) {
     const title = document.getElementById('adTitle').value.trim();
     const desc = document.getElementById('adDescription').value.trim();
     if (!title) { if (errEl) errEl.textContent = 'Title is required.'; return false; }
+    if (!desc) { if (errEl) errEl.textContent = 'Description is required.'; return false; }
     const contactPattern = /(\d[\s\-().]{0,2}){7,}|@\w{3,}|\b(whatsapp|telegram|call me|my number)\b/i;
     if (contactPattern.test(title) || contactPattern.test(desc)) {
       if (errEl) errEl.textContent = 'Remove contact information from title/description.';
@@ -65,6 +72,21 @@ function validateStep(step) {
     if (!document.getElementById('adOccupancy').value) { if (errEl) errEl.textContent = 'Select occupancy type.'; return false; }
     if (!document.getElementById('adOriginalPrice').value) { if (errEl) errEl.textContent = 'Enter a price per person.'; return false; }
   }
+  if (step === 4) {
+    // Amenity selects all start on a real value, so an empty one means the user
+    // went out of their way to unset it — but validate anyway so every field on
+    // the step is genuinely filled.
+    const requiredSelects = [
+      ['edWater', 'Select a water supply.'],
+      ['edElectricity', 'Select an electricity supply.'],
+      ['edFurnishing', 'Select the furnishing.'],
+      ['edBathroom', 'Select the bathroom type.']
+    ];
+    for (const [id, msg] of requiredSelects) {
+      const el = document.getElementById(id);
+      if (!el || !String(el.value || '').trim()) { if (errEl) errEl.textContent = msg; return false; }
+    }
+  }
   if (step === 5) {
     if (!document.getElementById('adLat').value || !document.getElementById('adLng').value) {
       if (errEl) errEl.textContent = 'Please drop a pin on the map to set the location.';
@@ -72,6 +94,10 @@ function validateStep(step) {
     }
     if (!document.getElementById('adLocationArea').value.trim()) {
       if (errEl) errEl.textContent = 'Location area is required.';
+      return false;
+    }
+    if (!document.getElementById('adLandmark').value.trim()) {
+      if (errEl) errEl.textContent = 'Nearest landmark is required.';
       return false;
     }
   }
@@ -378,6 +404,21 @@ document.getElementById('postAdForm').addEventListener('submit', async (e) => {
   const btn = document.getElementById('submitBtn');
   const errEl = document.getElementById('submitError');
   errEl.textContent = '';
+
+  // Final gate: re-run every step's validation so the form cannot be submitted
+  // with anything missing (e.g. jumping straight to Review). On the first failing
+  // step we jump the wizard to it so the user sees exactly what to fix.
+  for (let s = 1; s <= TOTAL_STEPS - 1; s++) {
+    if (!validateStep(s)) {
+      const stepErr = document.getElementById(`step${s}Error`);
+      errEl.textContent = (stepErr && stepErr.textContent) || 'Please complete all fields before submitting.';
+      currentStep = s;
+      updateWizardUI();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+  }
+
   btn.disabled = true; btn.textContent = 'Submitting...';
 
   try {

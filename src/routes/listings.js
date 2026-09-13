@@ -306,7 +306,14 @@ router.post('/', requireAuth, requireRole('owner', 'agent', 'admin'), uploadList
 
   const contentCheck = validateAdContent(title, description);
   if (!contentCheck.isClean) return res.status(400).json({ error: 'Ad contains contact information. Remove it and resubmit.', violations: contentCheck.violations });
-  if (!req.files || !req.files.length) return res.status(400).json({ error: 'At least one image required' });
+  // A listing must carry at least TWO photos (the building cover plus at least one
+  // more) — a single image is not enough to judge a room. Enforced here as well as
+  // in the wizard, so a direct API post cannot slip a one-photo listing through.
+  if (!req.files || req.files.length < 2) return res.status(400).json({ error: 'At least 2 photos are required (the building cover plus at least one more).' });
+  // The rest of the wizard's required fields, enforced server-side too.
+  if (!description || !String(description).trim()) return res.status(400).json({ error: 'Description is required' });
+  if (!nearest_landmark || !String(nearest_landmark).trim()) return res.status(400).json({ error: 'Nearest landmark is required' });
+  if (!water || !electricity || !furnishing || !bathroom) return res.status(400).json({ error: 'All amenities are required' });
 
   try {
     // Price is entered PER PERSON by the poster. original_price (the room total)
