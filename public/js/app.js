@@ -384,6 +384,8 @@ async function initNavAuth() {
     localStorage.setItem('user', JSON.stringify(user));
     setNavAuth(true, user?.role);
     applyRoleToLogo(user?.role);
+    // Make the daily base available to every map on every page (browse, detail).
+    resolveUserBaseLoc(user);
     return user;
   } catch {
     // A transient failure (offline, 429 rate-limit, 5xx) must NOT log the user
@@ -395,6 +397,7 @@ async function initNavAuth() {
     const cached = (() => { try { return JSON.parse(localStorage.getItem('user') || 'null'); } catch { return null; } })();
     setNavAuth(!!(cached && localStorage.getItem('token')), cached?.role);
     applyRoleToLogo(cached?.role || null);
+    resolveUserBaseLoc(cached);
     return cached;
   }
 }
@@ -445,9 +448,38 @@ function applyRoleToLogo(role) {
 window.applyRoleToLogo = applyRoleToLogo;
 
 // ─── DISTANCE FROM DAILY BASE LOCATION ───────────────────────────────────────
-// window.__userBaseLoc is set by listings.js once /api/auth/me returns the
-// seeker's daily base location. When present, cards show straight-line distance
-// with estimated walking / driving times.
+// window.__userBaseLoc holds the seeker's daily base location, resolved once by
+// resolveUserBaseLoc()/initNavAuth so EVERY page (browse, detail, home) can draw
+// the base marker + trace and show distances without re-fetching.
+
+// The seeker's base is FIXED to UENR School Park (see src/utils/seekerBase.js),
+// so we always have a known fallback — the base marker and its trace must still
+// work when /api/auth/me is slow or the visitor is signed out.
+const UENR_BASE_FALLBACK = { lat: 7.3507440, lng: -2.3428065 };
+
+// Resolve the base location from a user object (verified or cached), falling
+// back to UENR. Sets window.__userBaseLoc and returns it.
+function resolveUserBaseLoc(user) {
+  const fromUser = (u) => (u && u.base_lat && u.base_lng)
+    ? { lat: Number(u.base_lat), lng: Number(u.base_lng) } : null;
+  let base = fromUser(user);
+  if (!base) {
+    try { base = fromUser(JSON.parse(localStorage.getItem('user') || 'null')); } catch { base = null; }
+  }
+  if (!base) base = UENR_BASE_FALLBACK;
+  window.__userBaseLoc = base;
+  return base;
+}
+
+// Escape user-supplied text before it goes into an HTML string (titles are
+// user-supplied, so a stray < or & must not become markup). Shared so every page
+// — including the detail map's pin labels — escapes the same way.
+function escapeHtml(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
 function haversineKm(lat1, lng1, lat2, lng2) {
   const R = 6371, dLat = (lat2 - lat1) * Math.PI / 180, dLng = (lng2 - lng1) * Math.PI / 180;
   const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;

@@ -755,13 +755,8 @@ function ensureMap() {
   return mapInstance;
 }
 
-// Escape a listing title before it goes into a marker's HTML label. Titles are
-// user-supplied, so a stray < or & must not become markup.
-function escapeHtml(s) {
-  return String(s)
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-}
+// escapeHtml() lives in app.js (loaded before this file on every page) so the
+// detail-page map labels share the exact same escaping.
 
 // True when any FILTER field is set (search text, price, occupancy, amenities,
 // sort). Used to tell an over-narrow FILTER set apart from a genuinely empty
@@ -1727,27 +1722,15 @@ if (urlParams.get('occupancy')) {
     loadOwnerListingsView();
     if (window.renderFooterNav) window.renderFooterNav();
   } else {
-    // Fetch the seeker's daily base location once — used for distance/time lines
-    // and the base↔room trace. REUSE the fresh user initNavAuth() already fetched
-    // instead of calling /api/auth/me a second time: the auth rate limiter counts
-    // both, and the double call was burning the 20-requests-per-15-minutes budget
-    // in half on every page load. When a phone hits that limit (or is briefly
-    // offline), fall back to the cached user so the trace still has a base —
-    // better a slightly stale base than no trace line at all.
-    // The seeker's base is FIXED to UENR School Park, so we always have a known
-    // fallback — this guarantees the base is marked on the map even if the API
-    // call fails or the cache is empty (previously the base could end up unset,
-    // leaving the map with no base marker at all).
-    const UENR_FALLBACK = { lat: 7.3507440, lng: -2.3428065 };
-    const base = (verified && verified.base_lat && verified.base_lng)
-      ? { lat: Number(verified.base_lat), lng: Number(verified.base_lng) }
-      : (() => {
-        try {
-          const c = JSON.parse(localStorage.getItem('user') || 'null');
-          return (c && c.base_lat && c.base_lng) ? { lat: Number(c.base_lat), lng: Number(c.base_lng) } : null;
-        } catch { return null; }
-      })() || UENR_FALLBACK;
-    window.__userBaseLoc = base;
+    // The seeker's daily base location — used for distance/time lines and the
+    // base↔room trace — is resolved by the shared helper so it is available on
+    // EVERY page, not just here. initNavAuth() has already called it with the
+    // fresh user (no duplicate /api/auth/me request, which used to burn half the
+    // auth rate-limit budget); calling it again here is a cheap idempotent no-op
+    // that also covers the brief window before initNavAuth resolves. The base is
+    // FIXED to UENR School Park, so there is always a known fallback — the base
+    // marker is drawn even if the API call fails or the cache is empty.
+    resolveUserBaseLoc(verified);
     // Mark the base on the map straight away (no-op until the map is created;
     // renderMapListings/ensureMap will call this again once it exists).
     renderBaseMarker();

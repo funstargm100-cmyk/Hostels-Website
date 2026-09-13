@@ -59,14 +59,15 @@
         <div class="mt-3">
           <h3>Location</h3>
           <div id="detail-map"></div>
-          <div class="mt-2" style="display:flex;gap:.6rem;flex-wrap:wrap;align-items:end">
-            <div class="form-group" style="margin-bottom:0;flex:1;min-width:180px">
-              <label>Check distance from</label>
-              <input type="text" id="fromLocation" placeholder='Type "my location"' />
-            </div>
-            <button class="btn btn-outline" onclick="calcDistance()">Calculate</button>
-          </div>
+          <!-- Distance from the seeker's daily base is calculated automatically
+               and shown here (see showBaseDistance in listing-detail.js). The
+               old "check distance from" input was removed — the base is fixed
+               (UENR School Park), so there is nothing for the user to type. -->
           <div id="distanceResult" style="display:none" class="mt-2 text-muted"><span id="distanceText"></span></div>
+          <div class="mt-2 text-muted" style="display:flex;align-items:center;gap:.35rem;font-size:.75rem">
+            <i data-lucide="shield" style="width:13px;height:13px;flex:none"></i>
+            <span>Pin locations are approximate — exact room positions are hidden for privacy</span>
+          </div>
         </div>
 
         <div class="mt-3">

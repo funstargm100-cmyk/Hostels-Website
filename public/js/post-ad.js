@@ -361,7 +361,13 @@ function placePin(lat, lng, reverseGeocode) {
   if (postMarker) postMap.removeLayer(postMarker);
 
   postMarker = L.marker([lat, lng], { draggable: true }).addTo(postMap);
-  postMarker.bindPopup('Hostel location').openPopup();
+  // A permanent label instead of an auto-opening popup: the pin is a location
+  // PICKER, so a bubble that pops up on every click/drag is just noise (the
+  // "Pin set at …" text below already confirms the choice). Same label styling
+  // as the map-search pins, for consistency across the site.
+  postMarker.bindTooltip('Drag to fine-tune the pin', {
+    permanent: true, direction: 'top', className: 'map-pin-label', offset: [0, -12]
+  });
 
   postMarker.on('dragend', (e) => {
     const pos = e.target.getLatLng();

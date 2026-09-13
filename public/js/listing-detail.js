@@ -50,6 +50,8 @@ async function loadListing() {
     renderPriceBox(listing);
     renderReviews(reviews, listing.avg_rating, listing.review_count);
     initMap(listing.display_lat, listing.display_lng, listing.location_area);
+    // Distance from the seeker's daily base — shown automatically, no input.
+    showBaseDistance();
     // Owners get management actions instead of Request / Favorite. Re-check after
     // initNavAuth refreshes the cached user, so the correct actions always show.
     if (isOwnListing(listing)) setUpOwnerView(listing);
@@ -367,26 +369,122 @@ function renderReviews(reviews, avgRating, reviewCount) {
       </div>`).join('');
 }
 
+// Detail-page map.
+//
+// Deliberately a LEAN version of the browse-page map: same Leaflet + OSM tiles,
+// same base-marker dot and the same animated trace line, but scoped to ONE room.
+// It shows ONLY this room's marker and the seeker's daily base — never the other
+// listings — and it opens NO popups: the room is the page you are already on, so
+// a popup would be noise. The trace (room → base) and the distance line tell the
+// whole story without a single click.
+let detailMap = null;
+
 function initMap(lat, lng, area) {
   const mapEl = document.getElementById('detail-map');
+  if (!mapEl) return;
   if (!lat || !lng) {
-    mapEl.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-muted)">${area}</div>`;
+    mapEl.innerHTML = `<div class="detail-map-empty">${area || 'Location not specified'}</div>`;
     return;
   }
-  const map = L.map(mapEl, {
+  const room = L.latLng(Number(lat), Number(lng));
+
+  // Same interaction model as the browse map, minus the pieces that only make
+  // sense for a result set: no scroll-zoom hijack, no rotation, no fullscreen,
+  // no "search this area". Pan + pinch/zoom only.
+  detailMap = L.map(mapEl, {
     scrollWheelZoom: false,
     tap: true,
     zoomSnap: 0.5,
+    zoomControl: false, // placed top-right below, matching the browse map
     inertia: false // reduce jank on low-end mobile devices
-  }).setView([lat, lng], 15);
-  // fix: invalidateSize after render so the map doesn't overflow its container on mobile
-  setTimeout(() => map.invalidateSize(), 200);
+  });
+  L.control.zoom({ position: 'topright' }).addTo(detailMap);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
     maxZoom: 19
-  }).addTo(map);
-  L.circle([lat, lng], { radius: 200, color: '#FF6B6B', fillColor: '#FF6B6B', fillOpacity: 0.15, weight: 2 }).addTo(map)
-    .bindPopup(`${area}<br><small>Approximate area — exact address shared after booking</small>`).openPopup();
+  }).addTo(detailMap);
+  // fix: invalidateSize after render so the map doesn't overflow its container on mobile
+  setTimeout(() => detailMap && detailMap.invalidateSize(), 200);
+
+  // The base is the VIEWER's own daily base (UENR-fixed), not the listing's.
+  const base = (typeof resolveUserBaseLoc === 'function')
+    ? resolveUserBaseLoc() : window.__userBaseLoc;
+
+  // The room pin — the ONLY listing marker on this map. A permanent name label
+  // (same styling as browse pins) so the pin is self-explanatory; NO popup.
+  const roomPin = L.marker(room).addTo(detailMap);
+  roomPin.bindTooltip(escapeHtml((currentListing && currentListing.title) || 'This room'), {
+    permanent: true, direction: 'bottom', className: 'map-pin-label', offset: [0, 6]
+  });
+
+  const layers = [roomPin.getLatLng()];
+
+  // Base marker + trace, exactly like the browse map, when a base is known and
+  // plausibly in the same region (a base 100+ km away is a different area, so a
+  // line between them would be meaningless).
+  const baseOk = base && Number.isFinite(Number(base.lat)) && Number.isFinite(Number(base.lng));
+  const baseLatLng = baseOk ? L.latLng(Number(base.lat), Number(base.lng)) : null;
+  const inRange = baseLatLng && room.distanceTo(baseLatLng) <= 100000;
+
+  if (inRange) {
+    // Persistent base dot (same HTML divIcon as browse — an SVG circleMarker gets
+    // stretched by Leaflet's zoom pane CSS-scaling).
+    L.marker(baseLatLng, {
+      icon: L.divIcon({
+        className: 'map-base-marker',
+        html: '<span class="map-base-marker__dot"></span>',
+        iconSize: [18, 18], iconAnchor: [9, 9]
+      }),
+      interactive: true, keyboard: false
+    }).addTo(detailMap).bindTooltip('UENR School Park — your base', {
+      permanent: true, direction: 'top', className: 'map-pin-label', offset: [0, -12]
+    });
+    layers.push(baseLatLng);
+    drawDetailTrace(room, baseLatLng);
+  }
+
+  // Frame the room (and the base when tracing), then keep them in view on resize.
+  const fit = () => {
+    if (!detailMap) return;
+    if (layers.length > 1) {
+      detailMap.fitBounds(L.latLngBounds(layers).pad(0.28), { maxZoom: 16 });
+    } else {
+      detailMap.setView(room, 15);
+    }
+  };
+  fit();
+  setTimeout(fit, 220);
+}
+
+// Draw the room → base route in the same visual language as the browse map
+// (white casing, teal glow, animated flowing core). Falls back to a straight
+// dashed line when the router has no answer.
+function drawDetailTrace(room, base) {
+  const draw = (points, isRoad) => {
+    if (!detailMap) return;
+    L.polyline(points, { color: '#ffffff', weight: isRoad ? 7 : 5, opacity: isRoad ? 0.85 : 0.7, lineCap: 'round' }).addTo(detailMap);
+    L.polyline(points, { color: '#38d0de', weight: isRoad ? 10 : 8, opacity: .3, lineCap: 'round', className: 'map-trace-glow' }).addTo(detailMap);
+    L.polyline(points, {
+      color: '#0e7490', weight: isRoad ? 4 : 2.5, opacity: 1, lineCap: 'round',
+      dashArray: isRoad ? '16 10' : '8 8', className: 'map-trace-flow'
+    }).addTo(detailMap);
+  };
+  // Anchor both ends so the line clearly connects two places.
+  L.circleMarker(base, { radius: 6, color: '#fff', weight: 2, fillColor: '#2563eb', fillOpacity: 1 })
+    .bindTooltip('Your base location').addTo(detailMap);
+  L.circleMarker(room, { radius: 5, color: '#fff', weight: 2, fillColor: '#0e7490', fillOpacity: 1 })
+    .bindTooltip('Room (approximate)').addTo(detailMap);
+  // Ask the router for the road path (room → base). Straight line on failure.
+  const params = new URLSearchParams({
+    from_lat: room.lat, from_lng: room.lng, to_lat: base.lat, to_lng: base.lng
+  });
+  api.get('/api/geo/route?' + params.toString())
+    .then((data) => {
+      const coords = data && data.route && data.route.coords;
+      if (Array.isArray(coords) && coords.length > 1) draw(coords, true);
+      else draw([room, base], false);
+    })
+    .catch(() => draw([room, base], false));
 }
 
 function openInterestModal() {
@@ -452,28 +550,50 @@ async function toggleFavorite() {
   } catch (e) { showToast(e.message, 'error'); }
 }
 
-async function calcDistance() {
-  const from = document.getElementById('fromLocation').value;
-  if (!from) return showToast('Enter a reference location', 'error');
+// Show how far this room is from the seeker's daily base, automatically — no
+// "check distance from" box to fill in. We prefer the router's ROAD distance
+// (the same /api/geo/route the trace uses) and fall back to the straight-line
+// estimate if the router is unavailable.
+async function showBaseDistance() {
   const resultEl = document.getElementById('distanceResult');
   const textEl = document.getElementById('distanceText');
-  resultEl.style.display = 'none';
-  if (from.toLowerCase().includes('my location') || from.toLowerCase().includes('current')) {
-    navigator.geolocation?.getCurrentPosition(async pos => {
-      await fetchDistance(pos.coords.latitude, pos.coords.longitude, resultEl, textEl);
-    }, () => showToast('Could not get your location', 'error'));
-    return;
-  }
-  showToast('Type "my location" to use GPS, or enter coordinates.', 'info');
-}
+  if (!resultEl || !textEl || !currentListing) return;
+  const lat = parseFloat(currentListing.display_lat);
+  const lng = parseFloat(currentListing.display_lng);
+  // The base is the VIEWER's own daily base (UENR-fixed), not the listing's.
+  const base = (typeof resolveUserBaseLoc === 'function')
+    ? resolveUserBaseLoc() : window.__userBaseLoc;
+  if (!Number.isFinite(lat) || !Number.isFinite(lng) || !base) { resultEl.style.display = 'none'; return; }
+  const baseLat = Number(base.lat), baseLng = Number(base.lng);
+  if (!Number.isFinite(baseLat) || !Number.isFinite(baseLng)) { resultEl.style.display = 'none'; return; }
 
-async function fetchDistance(lat, lng, resultEl, textEl) {
+  const km = haversineKm(baseLat, baseLng, lat, lng);
+  // A base >100 km away is a different region — a distance is meaningless there.
+  if (km > 100) { resultEl.style.display = 'none'; return; }
+  const t = estimateTravel(km);
+  const straight = `${t.dist} from your base \u00b7 ~${t.walk} walk \u00b7 ~${t.drive} drive`;
+
   try {
-    const data = await api.get(`/api/listings/${listingUUID}/distance?from_lat=${lat}&from_lng=${lng}`);
-    textEl.innerHTML = `<i data-lucide="ruler" style="width:14px;height:14px"></i> Approximately ${data.distance_km} km away · ~${data.estimated_travel_minutes} min by road`;
-    if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [textEl] });
-    resultEl.style.display = 'block';
-  } catch (e) { showToast(e.message, 'error'); }
+    const params = new URLSearchParams({
+      from_lat: lat, from_lng: lng, to_lat: baseLat, to_lng: baseLng
+    });
+    const data = await api.get('/api/geo/route?' + params.toString());
+    const route = data && data.route;
+    if (route && route.distance_m) {
+      const roadKm = route.distance_m / 1000;
+      const mins = Math.max(1, Math.round((route.duration_s || 0) / 60));
+      const roadDist = roadKm < 1 ? `${Math.round(roadKm * 1000)} m` : `${roadKm.toFixed(1)} km`;
+      const minsFmt = mins >= 60 ? `${Math.floor(mins / 60)}h ${mins % 60}m` : `${mins} min`;
+      textEl.innerHTML = `<i data-lucide="route" style="width:14px;height:14px"></i> ${roadDist} from your base by road \u00b7 ~${minsFmt} drive`;
+      if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [textEl] });
+      resultEl.style.display = 'block';
+      return;
+    }
+  } catch { /* fall through to the straight-line estimate */ }
+
+  textEl.innerHTML = `<i data-lucide="route" style="width:14px;height:14px"></i> ${straight}`;
+  if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [textEl] });
+  resultEl.style.display = 'block';
 }
 
 loadListing();

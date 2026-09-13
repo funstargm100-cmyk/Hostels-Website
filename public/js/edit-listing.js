@@ -101,7 +101,10 @@ function initEditMap() {
 function placeEditPin(lat, lng, reverseGeocode) {
   if (editMarker) editMap.removeLayer(editMarker);
   editMarker = L.marker([lat, lng], { draggable: true }).addTo(editMap);
-  editMarker.bindPopup('Room location').openPopup();
+  // Permanent label, not an auto-opening popup — see placePin in post-ad.js.
+  editMarker.bindTooltip('Drag to fine-tune the pin', {
+    permanent: true, direction: 'top', className: 'map-pin-label', offset: [0, -12]
+  });
   editMarker.on('dragend', (e) => {
     const pos = e.target.getLatLng();
     setEditLocationFields(pos.lat, pos.lng, true);
