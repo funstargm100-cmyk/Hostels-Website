@@ -391,24 +391,20 @@ function initMap(lat, lng, area) {
   // Same interaction model as the browse map, minus the pieces that only make
   // sense for a result set: no scroll-zoom hijack, no rotation, no fullscreen,
   // no "search this area". Pan + pinch/zoom only.
-  //
-  // Like the browse map, we OPEN zoomed-out over Sunyani (zoom 6, country level)
-  // and then fly in to the room — the same cinematic entrance, so the two maps
-  // behave and feel the same.
   detailMap = L.map(mapEl, {
     scrollWheelZoom: false,
     tap: true,
     zoomSnap: 0.5,
     zoomControl: false, // placed top-right below, matching the browse map
     inertia: false // reduce jank on low-end mobile devices
-  }).setView([7.3349, -2.3268], 6); // start zoomed-out over Sunyani
+  });
   L.control.zoom({ position: 'topright' }).addTo(detailMap);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
     maxZoom: 19
   }).addTo(detailMap);
-  // NOTE: the container-size fix-up (invalidateSize) is handled inside the intro
-  // fly below — running it here as well would race with the fly's own measure.
+  // fix: invalidateSize after render so the map doesn't overflow its container on mobile
+  setTimeout(() => detailMap && detailMap.invalidateSize(), 200);
 
   // The base is the VIEWER's own daily base (UENR-fixed), not the listing's.
   const base = (typeof resolveUserBaseLoc === 'function')
@@ -447,47 +443,17 @@ function initMap(lat, lng, area) {
     drawDetailTrace(room, baseLatLng);
   }
 
-  // Frame the room (and the base when tracing) — the target the intro fly-in
-  // lands on. We compute the centre/zoom ourselves because fitBounds() jumps the
-  // camera instantly; the opening move has to be an eased flyTo (like the browse
-  // map) so it reads as the map coming alive, not a static panel appearing.
-  const frameTarget = () => {
-    if (!detailMap) return null;
+  // Frame the room (and the base when tracing), then keep them in view on resize.
+  const fit = () => {
+    if (!detailMap) return;
     if (layers.length > 1) {
-      const bounds = L.latLngBounds(layers).pad(0.28);
-      const center = bounds.getCenter();
-      // getBoundsZoom asks Leaflet for the tightest zoom that still contains the
-      // bounds at the CURRENT container size, then we clamp it to a sane range.
-      const zoom = Math.min(detailMap.getBoundsZoom(bounds, false), 16);
-      return { center, zoom: Math.max(zoom, 6) };
+      detailMap.fitBounds(L.latLngBounds(layers).pad(0.28), { maxZoom: 16 });
+    } else {
+      detailMap.setView(room, 15);
     }
-    return { center: room, zoom: 15 };
   };
-
-  // Play the opening cinematic once the container has a real measured size.
-  //
-  // Starting the fly BEFORE Leaflet knows the true container size makes it land
-  // at the wrong centre/zoom (the same trap the browse map documents), so we run
-  // it after the deferred invalidateSize — and invalidate once more, since the
-  // container may have been hidden (display:none) until this point.
-  const runIntroFly = () => {
-    if (!detailMap) return;
-    detailMap.invalidateSize();
-    const target = frameTarget();
-    if (!target) return;
-    detailMap.flyTo(target.center, target.zoom, { duration: 2.2, easeLinearity: 0.25 });
-  };
-  // Exposed for QA/troubleshooting, mirroring the browse map's window.__mapInstance.
-  window.__detailMap = detailMap;
-  // Invalidate immediately (corrects the size for the fly maths), play the fly
-  // on the next tick, then re-assert the framing once the animation has settled.
-  detailMap.invalidateSize();
-  setTimeout(runIntroFly, 220);
-  setTimeout(() => {
-    if (!detailMap) return;
-    const target = frameTarget();
-    if (target) detailMap.flyTo(target.center, target.zoom, { duration: 0.6 });
-  }, 2800);
+  fit();
+  setTimeout(fit, 220);
 }
 
 // Draw the room → base route in the same visual language as the browse map

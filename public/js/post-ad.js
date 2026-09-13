@@ -333,26 +333,48 @@ function removePhoto(index) {
 }
 
 // ─── MAP (LEAFLET) ────────────────────────────────────────────────────────────
+// Sunyani centre — the fixed home town for listings, matching the browse page's
+// opening view. The map opens zoomed-out here and flies in, so both maps enter
+// the same way.
+const SUNYANI_CENTER = [7.3349, -2.3268];
+const SUNYANI_ZOOM = 12;
+
 function initPostMap() {
   if (postMap) { postMap.invalidateSize(); return; }
 
-  const defaultLat = 5.6037; // Accra, Ghana
-  const defaultLng = -0.1870;
-
-  postMap = L.map('postMap').setView([defaultLat, defaultLng], 13);
+  // Open zoomed-out over Sunyani (country level), then fly in — the same
+  // cinematic entrance the browse page map uses.
+  postMap = L.map('postMap').setView(SUNYANI_CENTER, 6);
 
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
     maxZoom: 19
   }).addTo(postMap);
 
-  // Restore existing pin if user navigated back
+  // Restore existing pin if user navigated back — flying to the pin instead of
+  // the Sunyani default, so a returning user lands on what they already set.
   const existingLat = document.getElementById('adLat').value;
   const existingLng = document.getElementById('adLng').value;
-  if (existingLat && existingLng) {
+  const hasExisting = existingLat && existingLng;
+  if (hasExisting) {
     placePin(parseFloat(existingLat), parseFloat(existingLng), false);
-    postMap.setView([parseFloat(existingLat), parseFloat(existingLng)], 16);
   }
+
+  // The container may have been hidden while the earlier steps rendered; measure
+  // it BEFORE flying, or flyTo lands off-centre (its maths depends on the
+  // container's real size). invalidateSize now, then play the fly on the next
+  // tick so the size is applied first.
+  const runIntroFly = () => {
+    if (!postMap) return;
+    postMap.invalidateSize();
+    if (hasExisting) {
+      postMap.flyTo([parseFloat(existingLat), parseFloat(existingLng)], 16, { duration: 2.2, easeLinearity: 0.25 });
+    } else {
+      postMap.flyTo(SUNYANI_CENTER, SUNYANI_ZOOM, { duration: 2.2, easeLinearity: 0.25 });
+    }
+  };
+  postMap.invalidateSize();
+  setTimeout(runIntroFly, 220);
 
   postMap.on('click', (e) => placePin(e.latlng.lat, e.latlng.lng, true));
 }
