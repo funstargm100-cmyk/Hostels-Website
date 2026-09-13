@@ -188,7 +188,9 @@ function renderPhotoGrid() {
     return;
   }
   wrap.innerHTML = photoItems.map((item, i) => {
-    const src = item.type === 'existing' ? item.path : item.url;
+    // Newly-chosen files use their in-memory object URL; already-saved photos go
+    // through the shared thumbnail endpoint like every other card-sized image.
+    const src = item.type === 'existing' ? thumbUrl(item.path) : item.url;
     return `<div class="photo-tile" draggable="true" data-key="${item.key}" data-index="${i}" title="Drag to reorder">
       <img src="${src}" alt="Room photo ${i + 1}" loading="lazy" draggable="false" />
       <span class="photo-drag-handle"><i data-lucide="grip-vertical"></i></span>

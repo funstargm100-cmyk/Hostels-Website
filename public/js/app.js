@@ -475,27 +475,37 @@ function renderDistanceLine(l) {
 }
 
 // ─── LISTING CARD RENDERER ────────────────────────────────────────────────────
-// Build a small thumbnail URL for a listing image, served by our own resize
-// endpoint. Used for map POPUPS, which render the card image in a tiny box —
-// there is no point downloading the full-size WebP for that. Returns the
-// original URL unchanged for anything that is not a real listing image (e.g.
-// the local placeholder), so nothing breaks.
+// Build a thumbnail URL for a listing image, served by our own resize
+// endpoint (/api/img/thumb). This is the ONE image every card on the site uses
+// — grid, list, map popup, home rails, favourites, poster profile, owner
+// manager — so we never ship the full-size 1600px WebP just to paint a card.
+// Only the listing DETAIL page opts into the original (see renderListingCard's
+// `full` option). Returns the original URL unchanged for anything that is not a
+// real listing image (e.g. the local placeholder), so nothing breaks.
+//
+// CARD_THUMB_WIDTH is deliberately not tiny: 512px is crisp on the grid (2x
+// DPR on a ~256px card) yet still a fraction of a full image's bytes.
+const CARD_THUMB_WIDTH = 512;
+const POPUP_THUMB_WIDTH = 256;
+
 function thumbUrl(src, width) {
   if (!src) return src;
   // The placeholder is already tiny and lives on our origin — leave it alone.
   if (src.startsWith('/images/')) return src;
-  return `/api/img/thumb?w=${width || 256}&src=${encodeURIComponent(src)}`;
+  return `/api/img/thumb?w=${width || CARD_THUMB_WIDTH}&src=${encodeURIComponent(src)}`;
 }
 
 function renderListingCard(l, options = {}) {
   const isPopup = options && options.isPopup;
+  // `full: true` is detail-style rendering that wants the original image. Every
+  // other caller gets the shared thumbnail.
+  const wantsFull = !!(options && options.full);
   const originalImg = l.primary_image ? l.primary_image : '/images/placeholder.jpg';
-  // Popups load a small thumbnail; grid/list/detail keep the full image.
-  const img = isPopup ? thumbUrl(originalImg, 256) : originalImg;
+  const img = wantsFull ? originalImg : thumbUrl(originalImg, isPopup ? POPUP_THUMB_WIDTH : CARD_THUMB_WIDTH);
   // If the thumbnail fails for any reason, fall back ONCE to the full image,
   // then to the placeholder if that also fails. `data-full` carries the original
   // so the inline handler does not need to embed a URL.
-  const imgOnError = isPopup && img !== originalImg
+  const imgOnError = img !== originalImg
     ? `if(!this.dataset.fellBack){this.dataset.fellBack='1';this.src=this.dataset.full;}else{this.onerror=null;this.src='/images/placeholder.jpg';}`
     : `this.onerror=null;this.src='/images/placeholder.jpg'`;
   const verified = l.owner_verified ? '<span class="badge badge-verified"><i data-lucide="badge-check" style="width:11px;height:11px"></i> Verified</span>' : '';

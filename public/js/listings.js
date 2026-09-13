@@ -35,11 +35,14 @@ const isOwnerView = ownerUser && ['owner', 'agent', 'admin'].includes(ownerUser.
 
 function renderOwnerCard(l) {
   const img = l.primary_image || '/images/placeholder.jpg';
+  // Same shared card thumbnail as everywhere else — the owner manager is a card
+  // grid too, so it must not pull the full-size image.
+  const thumb = thumbUrl(img);
   const statusClass = 'status-' + (l.status || 'pending');
   return `
     <div class="card">
       <div style="position:relative;cursor:pointer" onclick="location.href='/listing?id=${l.uuid}'">
-        <img class="card-img" src="${img}" alt="${l.title}" loading="lazy" onerror="this.onerror=null;this.src='/images/placeholder.jpg'" />
+        <img class="card-img" src="${thumb}" alt="${l.title}" loading="lazy" decoding="async" data-full="${img}" onerror="if(!this.dataset.fellBack){this.dataset.fellBack='1';this.src=this.dataset.full;}else{this.onerror=null;this.src='/images/placeholder.jpg';}" />
         <span class="status-badge ${statusClass}" style="position:absolute;top:.6rem;left:.6rem">${l.status}</span>
       </div>
       <div class="card-body">
