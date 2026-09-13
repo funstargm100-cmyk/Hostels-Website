@@ -167,9 +167,9 @@ function validateStep(step) {
 //
 // OWNER  — no commission:
 //   • total price for (occ)    = P × occ
-//   • platform fee             = 5% × P
+//   • platform fee             = 7% × P
 //   • total price per person   = P + platform fee
-const PLATFORM_FEE_RATE = { owner: 0.05, agent: 0.05 };
+const PLATFORM_FEE_RATE = { owner: 0.07, agent: 0.05 };
 
 // Read the current poster type from the radio group ('agent' | 'owner').
 function getPosterType() {
@@ -213,7 +213,7 @@ function computeCommissionPerPerson() {
 //     totalPerPerson  = P + C + platformFee
 //   OWNER (no commission):
 //     totalForOcc     = P × occ
-//     platformFee     = 5% × P
+//     platformFee     = 7% × P
 //     totalPerPerson  = P + platformFee
 function computePricing() {
   const priceInput = parseFloat(document.getElementById('adOriginalPrice').value);
@@ -226,9 +226,9 @@ function computePricing() {
   const commissionPerPerson = isAgent ? computeCommissionPerPerson() : 0;
   // "Total commission" is the agent's per-occupant commission × occupancy.
   const totalCommission = isAgent ? parseFloat((commissionPerPerson * (occ || 0)).toFixed(2)) : 0;
-  // Platform fee = 5% of the taxable base:
-  //   agent -> (total commission × occupancy) + per-person price
-  //   owner -> the per-person price (no commission)
+  // Platform fee is a PER-PERSON figure:
+  //   agent -> 5% of ((total commission × occupancy) + per-person price)
+  //   owner -> 7% of the per-person price (no commission)
   const feeBasePerPerson = isAgent ? parseFloat(((totalCommission * (occ || 0)) + pricePerPerson).toFixed(2)) : pricePerPerson;
   const platformFee = parseFloat((feeBasePerPerson * rate).toFixed(2));
   // What a single occupant ends up paying.

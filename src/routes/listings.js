@@ -328,7 +328,7 @@ router.post('/', requireAuth, requireRole('owner', 'agent', 'admin'), uploadList
     //     totalPerPerson  = P + C + platformFee
     //   OWNER (no commission):
     //     totalForOcc     = P × occ
-    //     platformFee     = 5% × P
+    //     platformFee     = 7% × P
     //     totalPerPerson  = P + platformFee
     // We store: original_price/listed_price = the WHOLE ROOM total
     // (totalPerPerson × occ) — what a full room costs and what payments settle
@@ -344,7 +344,7 @@ router.post('/', requireAuth, requireRole('owner', 'agent', 'admin'), uploadList
     // Computed/validated HERE — the client's numbers are a convenience for the
     // live preview, never the source of truth.
     const kind = poster_type === 'agent' ? 'agent' : 'owner';
-    const feeRate = 0.05;
+    const feeRate = kind === 'agent' ? 0.05 : 0.07;
     let commType = null;
     let commValue = null;   // commission PER OCCUPANT (GHS), agents only
     let commission = 0;     // TOTAL commission across all occupants
@@ -358,8 +358,8 @@ router.post('/', requireAuth, requireRole('owner', 'agent', 'admin'), uploadList
       commValue = parseFloat(commValue.toFixed(2));
       commission = parseFloat((commValue * occ).toFixed(2));
     }
-    // Platform fee = 5% of the taxable base: agent -> (total commission ×
-    // occupancy) + per-person price; owner -> the per-person price.
+    // Platform fee: agent -> 5% of ((total commission × occupancy) + per-person
+    // price); owner -> 7% of the per-person price.
     const feeBasePerPerson = kind === 'agent'
       ? parseFloat(((commission * occ) + pricePerPerson).toFixed(2))
       : pricePerPerson;
