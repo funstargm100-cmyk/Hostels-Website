@@ -17,6 +17,13 @@ async function checkAuth() {
   if (!user) { location.href = '/login?redirect=/post-ad'; return; }
   if (user.role === 'seeker') {
     document.getElementById('wizardContainer').innerHTML = '<div class="card" style="padding:2rem;text-align:center"><div style="font-size:3rem;margin-bottom:1rem">🚫</div><h2>Owners Only</h2><p class="text-muted mt-1 mb-3">Only owners and agents can post rooms. Sign up with an owner account to list a room.</p><a href="/signup" class="btn btn-primary btn-lg">Create Owner Account</a></div>';
+    return;
+  }
+  // Preselect the poster type that matches the account: an agent account
+  // defaults to "Agent" (commission + 5% fee), everyone else to "Owner".
+  if (user.role === 'agent') {
+    const agentRadio = document.querySelector('input[name="poster_type"][value="agent"]');
+    if (agentRadio) agentRadio.checked = true;
   }
 }
 
@@ -77,6 +84,11 @@ function missingFieldsForStep(step) {
   if (step === 3) {
     if (!val('adOccupancy')) missing.push('Occupancy type');
     if (!val('adOriginalPrice')) missing.push('Price per person');
+    // Agents must state their commission; it feeds the 5% platform-fee base.
+    if (getPosterType() === 'agent') {
+      const c = parseFloat(val('adCommission'));
+      if (!Number.isFinite(c) || c <= 0) missing.push('Agent commission (percentage or amount)');
+    }
   }
   if (step === 4) {
     // Amenity selects all start on a real value, so an empty one means the user
@@ -145,16 +157,100 @@ function validateStep(step) {
 }
 
 // ─── PRICE CALCULATOR ─────────────────────────────────────────────────────────
-// The poster enters the price PER PERSON. The room total is shown for reference
-// as per-person × occupancy (what a full room costs at that rate).
-function calcPrice() {
+// The poster enters the price PER PERSON. The room total is per-person ×
+// occupancy (what a full room costs at that rate).
+//
+// Platform fee depends on HOW they post:
+//   • OWNER  — room price only.            Fee = 7% of the room total.
+//   • AGENT  — room price + a commission.  Fee = 5% of (room total + commission).
+// The commission can be a percentage of the room total or a flat GHS amount.
+const PLATFORM_FEE_RATE = { owner: 0.07, agent: 0.05 };
+
+// Read the current poster type from the radio group ('agent' | 'owner').
+function getPosterType() {
+  const el = document.querySelector('input[name="poster_type"]:checked');
+  return el ? el.value : 'owner';
+}
+
+// Agents can pick % or GHS for their commission; owners have no commission.
+function onPosterTypeChange() {
+  const type = getPosterType();
+  const isAgent = type === 'agent';
+  const block = document.getElementById('commissionBlock');
+  if (block) block.style.display = isAgent ? 'block' : 'none';
+  const hint = document.getElementById('posterTypeHint');
+  if (hint) {
+    hint.textContent = isAgent
+      ? 'Posting as an agent — add your commission on top of the room price; the platform fee is 5% of the total.'
+      : 'Posting as the owner of the room — no agent commission, 7% platform fee.';
+  }
+  // Keep the placeholder/step sensible when switching units.
+  onCommissionTypeChange();
+  calcPrice();
+}
+
+// Swap the commission placeholder when the user switches % ↔ GHS.
+function onCommissionTypeChange() {
+  const typeEl = document.getElementById('adCommissionType');
+  const input = document.getElementById('adCommission');
+  if (!typeEl || !input) return;
+  input.placeholder = typeEl.value === 'amount' ? 'e.g. 500' : 'e.g. 10';
+  calcPrice();
+}
+
+// Compute the commission in GHS from the entered value + unit.
+function computeCommission(roomTotal) {
+  const typeEl = document.getElementById('adCommissionType');
+  const valEl = document.getElementById('adCommission');
+  const mode = typeEl ? typeEl.value : 'percent';
+  const raw = valEl ? parseFloat(valEl.value) : NaN;
+  if (!Number.isFinite(raw) || raw <= 0) return { amount: 0, mode, raw: 0 };
+  const amount = mode === 'amount' ? raw : (roomTotal * raw) / 100;
+  return { amount: parseFloat(amount.toFixed(2)), mode, raw };
+}
+
+// Build the pricing model from the current form state. Pure — no DOM writes — so
+// calcPrice() and the review summary share identical maths, and the server can
+// mirror it exactly.
+function computePricing() {
   const perHead = parseFloat(document.getElementById('adOriginalPrice').value);
   const occ = parseInt(document.getElementById('adOccupancy').value);
+  const posterType = getPosterType();
+  const roomTotal = (perHead && occ) ? parseFloat((perHead * occ).toFixed(2)) : 0;
+  const commission = posterType === 'agent' ? computeCommission(roomTotal) : { amount: 0, mode: null, raw: 0 };
+  const rate = PLATFORM_FEE_RATE[posterType] || PLATFORM_FEE_RATE.owner;
+  const taxableBase = parseFloat((roomTotal + commission.amount).toFixed(2));
+  const platformFee = parseFloat((taxableBase * rate).toFixed(2));
+  return { perHead, occ, posterType, roomTotal, commission, rate, taxableBase, platformFee };
+}
+
+function calcPrice() {
   const preview = document.getElementById('pricePreview');
-  if (!perHead || !occ) { preview.style.display = 'none'; return; }
-  const roomTotal = perHead * occ;
-  document.getElementById('prevPerHead').textContent = `GHS ${perHead.toLocaleString()} / year`;
-  document.getElementById('prevRoomTotal').textContent = `Room total for ${occ}-in-1: GHS ${roomTotal.toLocaleString()}`;
+  const p = computePricing();
+  if (!p.perHead || !p.occ) { preview.style.display = 'none'; return; }
+  const ghs = (n) => 'GHS ' + Number(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  document.getElementById('prevPerHead').textContent = `GHS ${p.perHead.toLocaleString()} / year`;
+  document.getElementById('prevRoomTotal').textContent = `Room total for ${p.occ}-in-1: ${ghs(p.roomTotal)}`;
+
+  const commissionRow = document.getElementById('prevCommission');
+  const taxableRow = document.getElementById('prevTaxable');
+  if (p.posterType === 'agent') {
+    const label = p.commission.mode === 'amount'
+      ? `Agent commission (flat): ${ghs(p.commission.amount)}`
+      : `Agent commission (${p.commission.raw || 0}%): ${ghs(p.commission.amount)}`;
+    commissionRow.textContent = label;
+    commissionRow.style.display = 'flex';
+    taxableRow.textContent = `Total (price + commission): ${ghs(p.taxableBase)}`;
+    taxableRow.style.display = 'flex';
+  } else {
+    commissionRow.style.display = 'none';
+    taxableRow.style.display = 'none';
+  }
+
+  const pct = Math.round(p.rate * 100);
+  document.getElementById('prevFeeLabel').textContent = `Platform fee (${pct}%)`;
+  document.getElementById('prevPlatformFee').textContent = ghs(p.platformFee);
   preview.style.display = 'block';
 }
 
@@ -449,18 +545,24 @@ function getMyLocation() {
 function buildReviewSummary() {
   const form = document.getElementById('postAdForm');
   const data = new FormData(form);
-  const perHead = parseFloat(data.get('price_per_head') || 0);
-  const occ = parseInt(data.get('occupancy_type') || 1);
-  const roomTotal = (perHead * occ).toFixed(2);
+  const p = computePricing();
+  const ghs = (n) => 'GHS ' + Number(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const area = data.get('location_area') || '—';
   const address = data.get('full_address') || '';
+  const isAgent = p.posterType === 'agent';
+  const row = (label, value, opts = '') =>
+    `<div style="display:flex;justify-content:space-between;padding:0.5rem 0;border-bottom:1px solid var(--border)"><span class="text-muted">${label}</span><span ${opts}>${value}</span></div>`;
   document.getElementById('reviewSummary').innerHTML = `
     <div style="display:grid;gap:0.75rem;font-size:0.875rem">
-      <div style="display:flex;justify-content:space-between;padding:0.5rem 0;border-bottom:1px solid var(--border)"><span class="text-muted">Title</span><span style="font-weight:600;max-width:60%;text-align:right">${data.get('title') || '—'}</span></div>
-      <div style="display:flex;justify-content:space-between;padding:0.5rem 0;border-bottom:1px solid var(--border)"><span class="text-muted">Occupancy</span><span>${occ}-in-1</span></div>
-      <div style="display:flex;justify-content:space-between;padding:0.5rem 0;border-bottom:1px solid var(--border)"><span class="text-muted">Price per person</span><span style="color:var(--primary);font-weight:700">GHS ${Number(perHead).toLocaleString()} / year</span></div>
-      <div style="display:flex;justify-content:space-between;padding:0.5rem 0;border-bottom:1px solid var(--border)"><span class="text-muted">Room total (${occ}-in-1)</span><span>GHS ${Number(roomTotal).toLocaleString()}</span></div>
-      <div style="display:flex;justify-content:space-between;padding:0.5rem 0;border-bottom:1px solid var(--border)"><span class="text-muted">Area</span><span>${area}</span></div>
+      ${row('Title', data.get('title') || '—', 'style="font-weight:600;max-width:60%;text-align:right"')}
+      ${row('Occupancy', `${p.occ}-in-1`)}
+      ${row('Posting as', isAgent ? 'Agent' : 'Owner')}
+      ${row('Price per person', `GHS ${Number(p.perHead).toLocaleString()} / year`, 'style="color:var(--primary);font-weight:700"')}
+      ${row(`Room total (${p.occ}-in-1)`, ghs(p.roomTotal))}
+      ${isAgent ? row(p.commission.mode === 'amount' ? 'Agent commission (flat)' : `Agent commission (${p.commission.raw || 0}%)`, ghs(p.commission.amount)) : ''}
+      ${isAgent ? row('Total (price + commission)', ghs(p.taxableBase)) : ''}
+      ${row(`Platform fee (${Math.round(p.rate * 100)}%)`, ghs(p.platformFee), 'style="font-weight:700"')}
+      ${row('Area', area)}
       ${address ? `<div style="padding:0.5rem 0;border-bottom:1px solid var(--border)"><span class="text-muted">Address</span><br><span style="font-size:0.8rem">${address}</span></div>` : ''}
       <div style="display:flex;justify-content:space-between;padding:0.5rem 0"><span class="text-muted">Photos</span><span>${selectedFiles.length} uploaded</span></div>
     </div>`;
@@ -546,5 +648,11 @@ document.getElementById('postAdForm').addEventListener('submit', async (e) => {
   }
 });
 
-checkAuth();
-updateWizardUI();
+(async () => {
+  // Await auth FIRST: it may preselect "Agent" for an agent account, and the
+  // pricing UI must render against that final selection.
+  await checkAuth();
+  updateWizardUI();
+  // Initialise the pricing UI (commission block shown only when posting as agent).
+  onPosterTypeChange();
+})();

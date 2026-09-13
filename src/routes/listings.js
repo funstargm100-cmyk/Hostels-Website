@@ -293,7 +293,7 @@ router.get('/:uuid', optionalAuth, async (req, res) => {
 
 // POST /api/listings
 router.post('/', requireAuth, requireRole('owner', 'agent', 'admin'), uploadListingImages, async (req, res) => {
-  const { title, description, occupancy_type, original_price, price_per_head: price_per_head_in, location_area, nearest_landmark, gender_preference, move_in_date, water, electricity, security, furnishing, bathroom, kitchen_access, wifi, parking, pet_friendly } = req.body;
+  const { title, description, occupancy_type, original_price, price_per_head: price_per_head_in, location_area, nearest_landmark, gender_preference, move_in_date, water, electricity, security, furnishing, bathroom, kitchen_access, wifi, parking, pet_friendly, poster_type, commission_type, commission_value } = req.body;
   // The post-ad wizard names the pin fields lat/lng (see post-ad.html), while the
   // edit form uses location_lat/location_lng. Accept BOTH spellings: reading only
   // location_lat/location_lng silently stored NULL for every room posted through
@@ -336,10 +336,32 @@ router.post('/', requireAuth, requireRole('owner', 'agent', 'admin'), uploadList
     const listed_price = price;
     const expires_at = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
+    // ── Poster type, commission & platform fee ──────────────────────────────
+    // OWNER: room price only, 7% platform fee. AGENT: room price + a commission
+    // (percent of the room total, or a flat GHS amount), 5% fee on the sum.
+    // All of this is computed/validated HERE — the client's numbers are a
+    // convenience for the live preview, never the source of truth.
+    const kind = poster_type === 'agent' ? 'agent' : 'owner';
+    const feeRate = kind === 'agent' ? 0.05 : 0.07;
+    let commType = null;
+    let commValue = null;
+    let commission = 0;
+    if (kind === 'agent') {
+      commType = commission_type === 'amount' ? 'amount' : 'percent';
+      commValue = parseFloat(commission_value);
+      if (!Number.isFinite(commValue) || commValue <= 0) {
+        return res.status(400).json({ error: 'An agent commission (percentage or amount) is required.' });
+      }
+      commValue = parseFloat(commValue.toFixed(2));
+      commission = commType === 'amount' ? commValue : parseFloat(((price * commValue) / 100).toFixed(2));
+    }
+    const taxableBase = parseFloat((price + commission).toFixed(2));
+    const platformFee = parseFloat((taxableBase * feeRate).toFixed(2));
+
   const result = await db.query(
-      `INSERT INTO listings (owner_id, title, description, occupancy_type, original_price, listed_price, price_per_head, location_area, full_address, location_lat, location_lng, nearest_landmark, gender_preference, move_in_date, expires_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING id, uuid`,
-      [req.session.user.id, title, description, occupancy_type, price, listed_price, price_per_head, location_area, req.body.full_address || null, location_lat || null, location_lng || null, nearest_landmark || null, gender_preference || 'mixed', move_in_date || null, expires_at]
+      `INSERT INTO listings (owner_id, title, description, occupancy_type, original_price, listed_price, price_per_head, location_area, full_address, location_lat, location_lng, nearest_landmark, gender_preference, move_in_date, expires_at, poster_type, commission_type, commission_value, platform_fee_rate, platform_fee)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20) RETURNING id, uuid`,
+      [req.session.user.id, title, description, occupancy_type, price, listed_price, price_per_head, location_area, req.body.full_address || null, location_lat || null, location_lng || null, nearest_landmark || null, gender_preference || 'mixed', move_in_date || null, expires_at, kind, commType, commValue, feeRate, platformFee]
     );
     const { id: listingId, uuid } = result.rows[0];
 

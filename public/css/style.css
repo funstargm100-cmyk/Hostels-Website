@@ -1583,6 +1583,27 @@ body.map-fullscreen-active .filters-panel.open{ transform:translateX(0); }
 .photo-add small{ font-size:.75rem; }
 .price-preview{ background:var(--primary-light); border-radius:var(--radius-sm); padding:1rem 1.1rem; margin-top:1rem; font-size:.88rem; }
 .price-preview .row{ display:flex; justify-content:space-between; padding:.25rem 0; }
+/* Poster-type choice (Agent / Owner) — two equal cards, the active one outlined. */
+.poster-type-toggle{ display:grid; grid-template-columns:1fr 1fr; gap:.6rem; margin-top:.35rem; }
+.poster-type-opt{ position:relative; cursor:pointer; }
+.poster-type-opt input{ position:absolute; opacity:0; pointer-events:none; }
+.poster-type-opt span{
+  display:flex; align-items:center; justify-content:center; gap:.4rem;
+  padding:.65rem .8rem; border:1px solid var(--border); border-radius:var(--radius-sm);
+  font-size:.85rem; font-weight:600; color:var(--text-muted); background:var(--card-bg);
+  transition:border-color .15s ease, color .15s ease, background .15s ease;
+}
+.poster-type-opt input:checked + span{
+  border-color:var(--primary); color:var(--primary); background:var(--primary-light);
+}
+.poster-type-opt span i{ width:15px; height:15px; }
+/* Commission: a number field with a %/GHS unit selector attached to its right. */
+.commission-input{ display:flex; gap:.5rem; }
+.commission-input input{ flex:1; min-width:0; }
+.commission-input select{ width:auto; flex:none; }
+@media (max-width:520px){
+  .poster-type-toggle{ grid-template-columns:1fr; }
+}
 #postMap{ height:320px; border-radius:var(--radius-sm); margin:.8rem 0; }
 
 /* ── dashboard / admin shell ─────────────────────────────────────────── */
