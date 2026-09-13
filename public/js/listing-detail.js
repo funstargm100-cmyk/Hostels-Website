@@ -391,13 +391,17 @@ function initMap(lat, lng, area) {
   // Same interaction model as the browse map, minus the pieces that only make
   // sense for a result set: no scroll-zoom hijack, no rotation, no fullscreen,
   // no "search this area". Pan + pinch/zoom only.
+  //
+  // Like the browse map, we OPEN zoomed-out over Sunyani (zoom 6, country level)
+  // and then fly in to the room — the same cinematic entrance, so the two maps
+  // behave and feel the same.
   detailMap = L.map(mapEl, {
     scrollWheelZoom: false,
     tap: true,
     zoomSnap: 0.5,
     zoomControl: false, // placed top-right below, matching the browse map
     inertia: false // reduce jank on low-end mobile devices
-  });
+  }).setView([7.3349, -2.3268], 6); // start zoomed-out over Sunyani
   L.control.zoom({ position: 'topright' }).addTo(detailMap);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
@@ -550,6 +554,11 @@ async function toggleFavorite() {
   } catch (e) { showToast(e.message, 'error'); }
 }
 
+// Format a minute count as "25 min" or "1h 10m".
+function fmtMins(m) {
+  return m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m} min`;
+}
+
 // Show how far this room is from the seeker's daily base, automatically — no
 // "check distance from" box to fill in. We prefer the router's ROAD distance
 // (the same /api/geo/route the trace uses) and fall back to the straight-line
@@ -581,10 +590,13 @@ async function showBaseDistance() {
     const route = data && data.route;
     if (route && route.distance_m) {
       const roadKm = route.distance_m / 1000;
-      const mins = Math.max(1, Math.round((route.duration_s || 0) / 60));
       const roadDist = roadKm < 1 ? `${Math.round(roadKm * 1000)} m` : `${roadKm.toFixed(1)} km`;
-      const minsFmt = mins >= 60 ? `${Math.floor(mins / 60)}h ${mins % 60}m` : `${mins} min`;
-      textEl.innerHTML = `<i data-lucide="route" style="width:14px;height:14px"></i> ${roadDist} from your base by road \u00b7 ~${minsFmt} drive`;
+      // Driving time comes from the router (actual road duration). Walking is
+      // estimated from the SAME road distance at ~5 km/h — the router only
+      // returns car routes, so walking cannot be looked up and must be modelled.
+      const driveMin = Math.max(1, Math.round((route.duration_s || 0) / 60));
+      const walkMin = Math.max(1, Math.round((roadKm / 5) * 60));
+      textEl.innerHTML = `<i data-lucide="route" style="width:14px;height:14px"></i> ${roadDist} from your base by road \u00b7 ~${fmtMins(walkMin)} walk \u00b7 ~${fmtMins(driveMin)} drive`;
       if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [textEl] });
       resultEl.style.display = 'block';
       return;
