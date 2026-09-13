@@ -324,11 +324,11 @@ router.post('/', requireAuth, requireRole('owner', 'agent', 'admin'), uploadList
     // people share the room. The platform fee is a PER-PERSON figure.
     //   AGENT: C = commission per occupant (flat GHS, amount only)
     //     totalCommission = C × occ
-    //     platformFee     = (totalCommission × occ) + P
+    //     platformFee     = 5% × ((totalCommission × occ) + P)
     //     totalPerPerson  = P + C + platformFee
     //   OWNER (no commission):
     //     totalForOcc     = P × occ
-    //     platformFee     = P
+    //     platformFee     = 5% × P
     //     totalPerPerson  = P + platformFee
     // We store: original_price/listed_price = the WHOLE ROOM total
     // (totalPerPerson × occ) — what a full room costs and what payments settle
@@ -344,7 +344,7 @@ router.post('/', requireAuth, requireRole('owner', 'agent', 'admin'), uploadList
     // Computed/validated HERE — the client's numbers are a convenience for the
     // live preview, never the source of truth.
     const kind = poster_type === 'agent' ? 'agent' : 'owner';
-    const feeRate = kind === 'agent' ? 0.05 : 0.07;
+    const feeRate = 0.05;
     let commType = null;
     let commValue = null;   // commission PER OCCUPANT (GHS), agents only
     let commission = 0;     // TOTAL commission across all occupants
@@ -358,12 +358,12 @@ router.post('/', requireAuth, requireRole('owner', 'agent', 'admin'), uploadList
       commValue = parseFloat(commValue.toFixed(2));
       commission = parseFloat((commValue * occ).toFixed(2));
     }
-    // Platform fee is per person: agent -> (total commission × occupancy) +
-    // per-person price; owner -> the per-person price (no commission).
+    // Platform fee = 5% of the taxable base: agent -> (total commission ×
+    // occupancy) + per-person price; owner -> the per-person price.
     const feeBasePerPerson = kind === 'agent'
       ? parseFloat(((commission * occ) + pricePerPerson).toFixed(2))
       : pricePerPerson;
-    const platformFee = parseFloat(feeBasePerPerson.toFixed(2));
+    const platformFee = parseFloat((feeBasePerPerson * feeRate).toFixed(2));
     const commissionPerPerson = kind === 'agent' ? commValue : 0;
     // What ONE occupant pays, and the whole room (all occupants).
     const price_per_head = parseFloat((pricePerPerson + commissionPerPerson + platformFee).toFixed(2));

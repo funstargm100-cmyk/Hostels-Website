@@ -194,13 +194,14 @@ CREATE TABLE IF NOT EXISTS follows (
 CREATE INDEX IF NOT EXISTS follows_poster_idx ON follows (poster_id);
 -- Migration: poster type + commission + platform fee on listings.
 --   poster_type     'agent'  -> may add a commission on top; platform fee is
---                              (total commission × occupancy) + price per person
---                   'owner'  -> room price only; platform fee is the price per
---                              person
+--                              5% of (total commission × occupancy + price per
+--                              person)
+--                   'owner'  -> room price only; platform fee is 5% of the price
+--                              per person
 --   commission_type 'percent' | 'amount' (agents only; NULL for owners)
 --   commission_value the entered commission (percent value, or GHS amount)
---   platform_fee_rate legacy rate column (retained; no longer applied to the fee)
---   platform_fee     the resulting fee in GHS
+--   platform_fee_rate the rate applied (0.05 for both agent and owner)
+--   platform_fee     the resulting fee in GHS (rate × taxable base)
 ALTER TABLE listings ADD COLUMN IF NOT EXISTS poster_type VARCHAR(10) DEFAULT 'owner';
 ALTER TABLE listings ADD COLUMN IF NOT EXISTS commission_type VARCHAR(10);
 ALTER TABLE listings ADD COLUMN IF NOT EXISTS commission_value NUMERIC(12,2);
