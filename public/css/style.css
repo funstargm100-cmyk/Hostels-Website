@@ -1921,3 +1921,107 @@ td{ padding:.8rem 1rem; border-top:1px solid var(--border); vertical-align:top; 
 .user-listing-body{ display:none; }
 .user-listing-group.open .user-listing-body{ display:block; }
 .user-listing-body .table-wrap{ border:none; border-radius:0; }
+/* ══════
+   AD-POSTER PROFILE — responsive header + rooms grid
+   The header was previously laid out with inline flex styles that
+   squeezed the name and follow button together on narrow screens.
+   These classes give it a real layout: a horizontal bar on desktop that
+   STACKS into a centred column on phones, so the avatar, name, meta and
+   follow button each get room to breathe.
+   ══════ */
+.poster-header{
+  display:flex;
+  align-items:center;
+  gap:1rem;
+  flex-wrap:wrap;
+  margin-bottom:1.1rem;
+}
+.poster-header-avatar{
+  width:64px;
+  height:64px;
+  font-size:1.5rem;
+  flex:0 0 auto;
+}
+.poster-header-info{
+  flex:1 1 200px;
+  min-width:0; /* allow long names to wrap instead of overflowing */
+}
+.poster-header-name{
+  font-size:1.6rem;
+  margin:0;
+  line-height:1.2;
+  overflow-wrap:anywhere;
+}
+.poster-header-meta{
+  font-size:.85rem;
+  margin-top:.15rem;
+  display:flex;
+  align-items:center;
+  gap:.4rem;
+  flex-wrap:wrap;
+}
+.poster-header-since{
+  font-size:.8rem;
+  margin-top:.3rem;
+  display:flex;
+  align-items:center;
+  gap:.35rem;
+}
+.poster-header-follow{
+  text-align:center;
+  flex:0 0 auto;
+}
+.poster-header-followers{
+  font-size:.75rem;
+  margin-top:.35rem;
+}
+.poster-rooms-heading{
+  margin:1.1rem 0 .9rem;
+  font-size:1.3rem;
+}
+
+/* ── desktop spacing: give the profile a comfortable top gap ── */
+@media (min-width:641px){
+  .poster-header{ margin-bottom:1.4rem; }
+}
+
+/* ── phone: stack the header, full-width follow button ── */
+@media (max-width:640px){
+  .poster-header{
+    flex-direction:column;
+    align-items:center;
+    text-align:center;
+    gap:.7rem;
+  }
+  .poster-header-avatar{
+    width:80px;
+    height:80px;
+    font-size:2rem;
+  }
+  .poster-header-info{
+    flex:1 1 auto;
+    width:100%;
+  }
+  .poster-header-name{
+    font-size:1.35rem;
+  }
+  .poster-header-meta,
+  .poster-header-since{
+    justify-content:center;
+  }
+  .poster-header-follow{
+    width:100%;
+    margin-top:.2rem;
+  }
+  /* Full-width tap target for the primary action on a phone. */
+  .poster-header-follow .btn{
+    width:100%;
+    justify-content:center;
+    padding:.7rem 1rem;
+  }
+  .poster-rooms-heading{
+    font-size:1.15rem;
+    text-align:center;
+    margin:1.3rem 0 .9rem;
+  }
+}

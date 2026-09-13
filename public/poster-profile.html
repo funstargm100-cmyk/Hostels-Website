@@ -40,22 +40,22 @@
     </div>
 
     <div id="profileContent" style="display:none">
-      <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;margin-bottom:.4rem">
-        <div class="sidebar-avatar" style="width:64px;height:64px;font-size:1.5rem" id="posterAvatar">O</div>
-        <div style="flex:1;min-width:200px">
-          <h1 style="font-size:1.6rem;margin:0" id="posterName"></h1>
-          <div class="text-muted" style="font-size:.85rem" id="posterMeta"></div>
+      <header class="poster-header">
+        <div class="poster-header-avatar sidebar-avatar" id="posterAvatar">O</div>
+        <div class="poster-header-info">
+          <h1 class="poster-header-name" id="posterName"></h1>
+          <div class="poster-header-meta text-muted" id="posterMeta"></div>
+          <div class="poster-header-since text-muted" id="memberSince"></div>
         </div>
-        <div style="text-align:center">
+        <div class="poster-header-follow">
           <button class="btn btn-primary" id="followBtn" onclick="toggleFollow()">
             <i data-lucide="user-plus"></i> <span id="followBtnLabel">Follow</span>
           </button>
-          <div class="text-muted" style="font-size:.75rem;margin-top:.3rem" id="followerCount"></div>
+          <div class="poster-header-followers text-muted" id="followerCount"></div>
         </div>
-      </div>
-      <div class="text-muted" style="margin-bottom:1.5rem" id="memberSince"></div>
+      </header>
 
-      <h2 id="roomsHeading">Rooms by this ad poster</h2>
+      <h2 class="poster-rooms-heading" id="roomsHeading">Rooms by this ad poster</h2>
       <div class="grid-3" id="posterListings"></div>
     </div>
   </div>
