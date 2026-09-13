@@ -119,6 +119,19 @@ input,select,textarea{
 }
 input:focus,select:focus,textarea:focus{ outline:none; border-color:var(--primary); box-shadow:0 0 0 3px var(--primary-light); }
 textarea{ resize:vertical; min-height:110px; }
+/* Password field with a show/hide eye button on the right. The wrapper is the
+   positioning context; the input keeps its normal width and padding, with an
+   extra right-pad so typed text never runs under the button. */
+.password-field{ position:relative; }
+.password-field input{ padding-right:2.9rem; }
+.password-toggle{
+  position:absolute; top:50%; right:.5rem; transform:translateY(-50%);
+  display:flex; align-items:center; justify-content:center;
+  width:34px; height:34px; padding:0; border:none; border-radius:var(--radius-sm);
+  background:transparent; color:var(--text-muted); cursor:pointer;
+}
+.password-toggle:hover{ color:var(--text); background:var(--primary-light); }
+.password-toggle svg{ width:18px; height:18px; }
 .form-group{ margin-bottom:1.1rem; }
 .form-row{ display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
 .checkbox-row{ display:flex; align-items:center; gap:.5rem; }

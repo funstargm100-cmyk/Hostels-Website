@@ -293,6 +293,27 @@ function showToast(message, type = 'info', duration = 3500) {
 }
 
 // ─── MODAL ────────────────────────────────────────────────────────────────────
+// ─── PASSWORD VISIBILITY TOGGLE ────────────────────────────────
+// Flip a password input between hidden and visible. Called by the eye button in
+// the .password-field wrapper (login + signup). Accepts the BUTTON (so the input
+// is found via its sibling) and keeps the icon, aria-label and aria-pressed in
+// sync so screen readers announce the real state.
+function togglePasswordVisibility(btn) {
+  if (!btn) return;
+  const field = btn.closest('.password-field');
+  const input = field && field.querySelector('input');
+  if (!input) return;
+  const show = input.type === 'password';
+  input.type = show ? 'text' : 'password';
+  btn.setAttribute('aria-pressed', String(show));
+  btn.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+  btn.title = show ? 'Hide password' : 'Show password';
+  btn.innerHTML = `<i data-lucide="${show ? 'eye-off' : 'eye'}"></i>`;
+  if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [btn] });
+  // Keep the caret where it was so the toggle does not feel like a reset.
+  try { input.focus({ preventScroll: true }); } catch { /* ignore */ }
+}
+
 function openModal(id) {
   const el = document.getElementById(id);
   if (el) { el.classList.add('open'); document.body.style.overflow = 'hidden'; }
