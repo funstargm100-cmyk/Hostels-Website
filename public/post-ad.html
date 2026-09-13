@@ -131,7 +131,7 @@
             </select>
           </div>
           <div class="form-group">
-            <label>Price per person (GHS/year)</label>
+            <label>Room price (GHS/year)</label>
             <input type="number" id="adOriginalPrice" name="price_per_head" oninput="calcPrice()" placeholder="e.g. 3500" />
           </div>
         </div>
@@ -174,11 +174,11 @@
         </div>
 
         <div class="price-preview" id="pricePreview" style="display:none">
-          <div class="row" style="font-weight:700"><span>Price per person</span><span id="prevPerHead"></span></div>
           <div class="row text-muted" id="prevRoomTotal"></div>
           <div class="row text-muted" id="prevCommission" style="display:none"></div>
           <div class="row" id="prevTaxable" style="display:none"></div>
           <div class="row"><span id="prevFeeLabel">Platform fee</span><span id="prevPlatformFee" style="color:var(--primary);font-weight:700"></span></div>
+          <div class="row" style="font-weight:700;border-top:1px solid var(--border);margin-top:.35rem;padding-top:.5rem"><span>Price per person</span><span id="prevPerHead"></span></div>
         </div>
         <div class="alert alert-danger" id="step3Error" style="display:none"></div>
       </div>

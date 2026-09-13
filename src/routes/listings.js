@@ -302,8 +302,9 @@ router.post('/', requireAuth, requireRole('owner', 'agent', 'admin'), uploadList
   const location_lat = req.body.location_lat ?? req.body.lat;
   const location_lng = req.body.location_lng ?? req.body.lng;
 
-  // The advertiser may supply EITHER price_per_head (per-person — the preferred
-  // input) or original_price (the room total). Require one of them.
+  // The advertiser may supply EITHER price_per_head (which the post-ad wizard now
+  // uses to carry the entered ROOM PRICE — see below) or original_price (legacy
+  // room total). Require one of them.
   const hasPrice = (price_per_head_in !== undefined && price_per_head_in !== '') || !!original_price;
   if (!title || !hasPrice || !location_area || !occupancy_type) return res.status(400).json({ error: 'Missing required fields' });
 
@@ -319,21 +320,19 @@ router.post('/', requireAuth, requireRole('owner', 'agent', 'admin'), uploadList
   if (!water || !electricity || !furnishing || !bathroom) return res.status(400).json({ error: 'All amenities are required' });
 
   try {
-    // Price is entered PER PERSON by the poster. original_price (the room total)
-    // is derived as per-person × occupancy; listed_price mirrors it (no platform
-    // fee — what is posted is what is shown). If a legacy caller still sends a
-    // room TOTAL via original_price (and no per-person value), fall back to the
-    // old divide-by-occupancy so nothing breaks.
+    // The poster enters the ROOM PRICE (the base). From it we derive, server-side:
+    //   totalRoomPrice = roomPrice + commission        (commission is agents only)
+    //   platformFee    = rate × totalRoomPrice          (5% agent / 7% owner)
+    //   pricePerHead   = (totalRoomPrice + platformFee) / occupancy
+    // `original_price`/`listed_price` hold the room price (what the poster set);
+    // `price_per_head` is the seeker-facing figure and INCLUDES the commission and
+    // the platform fee, split across the room's occupants.
+    // A legacy caller that still sends a room TOTAL via original_price only is
+    // handled by taking that value as the room price directly.
     const occ = parseInt(occupancy_type) || 1;
-    let price, price_per_head;
-    if (price_per_head_in !== undefined && price_per_head_in !== '') {
-      price_per_head = parseFloat(parseFloat(price_per_head_in).toFixed(2));
-      price = parseFloat((price_per_head * occ).toFixed(2));
-    } else {
-      price = parseFloat(original_price);
-      price_per_head = parseFloat((price / occ).toFixed(2));
-    }
-    const listed_price = price;
+    const price = (price_per_head_in !== undefined && price_per_head_in !== '')
+      ? parseFloat(parseFloat(price_per_head_in).toFixed(2))
+      : parseFloat(original_price);
     const expires_at = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
     // ── Poster type, commission & platform fee ──────────────────────────────
@@ -355,8 +354,12 @@ router.post('/', requireAuth, requireRole('owner', 'agent', 'admin'), uploadList
       commValue = parseFloat(commValue.toFixed(2));
       commission = commType === 'amount' ? commValue : parseFloat(((price * commValue) / 100).toFixed(2));
     }
-    const taxableBase = parseFloat((price + commission).toFixed(2));
-    const platformFee = parseFloat((taxableBase * feeRate).toFixed(2));
+    // "Total room price" = the base price plus any agent commission.
+    const totalRoomPrice = parseFloat((price + commission).toFixed(2));
+    const platformFee = parseFloat((totalRoomPrice * feeRate).toFixed(2));
+    // Per person = (total room price + platform fee) ÷ occupancy.
+    const price_per_head = parseFloat(((totalRoomPrice + platformFee) / occ).toFixed(2));
+    const listed_price = price;
 
   const result = await db.query(
       `INSERT INTO listings (owner_id, title, description, occupancy_type, original_price, listed_price, price_per_head, location_area, full_address, location_lat, location_lng, nearest_landmark, gender_preference, move_in_date, expires_at, poster_type, commission_type, commission_value, platform_fee_rate, platform_fee)

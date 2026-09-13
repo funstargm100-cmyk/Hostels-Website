@@ -157,13 +157,15 @@ function validateStep(step) {
 }
 
 // ─── PRICE CALCULATOR ─────────────────────────────────────────────────────────
-// The poster enters the price PER PERSON. The room total is per-person ×
-// occupancy (what a full room costs at that rate).
+// The poster enters the ROOM PRICE (the base). From it:
+//   • total room price = room price + commission   (commission is agents only)
+//   • platform fee     = rate × total room price
+//   • price per person = (total room price + platform fee) ÷ occupancy
 //
-// Platform fee depends on HOW they post:
-//   • OWNER  — room price only.            Fee = 7% of the room total.
-//   • AGENT  — room price + a commission.  Fee = 5% of (room total + commission).
-// The commission can be a percentage of the room total or a flat GHS amount.
+// Platform fee rate depends on HOW they post:
+//   • OWNER  — room price only, no commission.   Fee = 7% of the room price.
+//   • AGENT  — room price + a commission.        Fee = 5% of (price + commission).
+// The commission can be a percentage of the room price or a flat GHS amount.
 const PLATFORM_FEE_RATE = { owner: 0.07, agent: 0.05 };
 
 // Read the current poster type from the radio group ('agent' | 'owner').
@@ -212,26 +214,37 @@ function computeCommission(roomTotal) {
 // Build the pricing model from the current form state. Pure — no DOM writes — so
 // calcPrice() and the review summary share identical maths, and the server can
 // mirror it exactly.
+//
+// The poster enters the ROOM PRICE (the base). From it:
+//   totalRoomPrice = price + commission            (owners: no commission)
+//   platformFee    = rate × totalRoomPrice          (5% agent / 7% owner)
+//   pricePerHead   = (totalRoomPrice + platformFee) / occupancy
+// i.e. the per-person figure the seeker sees already includes the commission and
+// the platform fee, split evenly across the occupants of the room.
 function computePricing() {
-  const perHead = parseFloat(document.getElementById('adOriginalPrice').value);
+  const price = parseFloat(document.getElementById('adOriginalPrice').value);
   const occ = parseInt(document.getElementById('adOccupancy').value);
   const posterType = getPosterType();
-  const roomTotal = (perHead && occ) ? parseFloat((perHead * occ).toFixed(2)) : 0;
-  const commission = posterType === 'agent' ? computeCommission(roomTotal) : { amount: 0, mode: null, raw: 0 };
+  const roomPrice = Number.isFinite(price) ? parseFloat(price.toFixed(2)) : 0;
+  const commission = posterType === 'agent' ? computeCommission(roomPrice) : { amount: 0, mode: null, raw: 0 };
   const rate = PLATFORM_FEE_RATE[posterType] || PLATFORM_FEE_RATE.owner;
-  const taxableBase = parseFloat((roomTotal + commission.amount).toFixed(2));
-  const platformFee = parseFloat((taxableBase * rate).toFixed(2));
-  return { perHead, occ, posterType, roomTotal, commission, rate, taxableBase, platformFee };
+  // "Total room price" = the base price plus any agent commission.
+  const totalRoomPrice = parseFloat((roomPrice + commission.amount).toFixed(2));
+  const platformFee = parseFloat((totalRoomPrice * rate).toFixed(2));
+  // Per person = (total room price + platform fee) ÷ occupancy.
+  const pricePerHead = occ > 0 ? parseFloat(((totalRoomPrice + platformFee) / occ).toFixed(2)) : 0;
+  return { price: roomPrice, occ, posterType, roomPrice, commission, rate, totalRoomPrice, platformFee, pricePerHead };
 }
 
 function calcPrice() {
   const preview = document.getElementById('pricePreview');
   const p = computePricing();
-  if (!p.perHead || !p.occ) { preview.style.display = 'none'; return; }
+  if (!p.price || !p.occ) { preview.style.display = 'none'; return; }
   const ghs = (n) => 'GHS ' + Number(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-  document.getElementById('prevPerHead').textContent = `GHS ${p.perHead.toLocaleString()} / year`;
-  document.getElementById('prevRoomTotal').textContent = `Room total for ${p.occ}-in-1: ${ghs(p.roomTotal)}`;
+  // Headline: the per-person figure the seeker will see (now derived, not typed).
+  document.getElementById('prevPerHead').textContent = `${ghs(p.pricePerHead)} / person`;
+  document.getElementById('prevRoomTotal').textContent = `Total price for ${p.occ}-in-1: ${ghs(p.totalRoomPrice)}`;
 
   const commissionRow = document.getElementById('prevCommission');
   const taxableRow = document.getElementById('prevTaxable');
@@ -241,7 +254,7 @@ function calcPrice() {
       : `Agent commission (${p.commission.raw || 0}%): ${ghs(p.commission.amount)}`;
     commissionRow.textContent = label;
     commissionRow.style.display = 'flex';
-    taxableRow.textContent = `Total (price + commission): ${ghs(p.taxableBase)}`;
+    taxableRow.textContent = `Total room price (price + commission): ${ghs(p.totalRoomPrice)}`;
     taxableRow.style.display = 'flex';
   } else {
     commissionRow.style.display = 'none';
@@ -557,11 +570,11 @@ function buildReviewSummary() {
       ${row('Title', data.get('title') || '—', 'style="font-weight:600;max-width:60%;text-align:right"')}
       ${row('Occupancy', `${p.occ}-in-1`)}
       ${row('Posting as', isAgent ? 'Agent' : 'Owner')}
-      ${row('Price per person', `GHS ${Number(p.perHead).toLocaleString()} / year`, 'style="color:var(--primary);font-weight:700"')}
-      ${row(`Room total (${p.occ}-in-1)`, ghs(p.roomTotal))}
+      ${row('Room price', ghs(p.roomPrice))}
       ${isAgent ? row(p.commission.mode === 'amount' ? 'Agent commission (flat)' : `Agent commission (${p.commission.raw || 0}%)`, ghs(p.commission.amount)) : ''}
-      ${isAgent ? row('Total (price + commission)', ghs(p.taxableBase)) : ''}
+      ${row(`Total room price (price + commission)`, ghs(p.totalRoomPrice))}
       ${row(`Platform fee (${Math.round(p.rate * 100)}%)`, ghs(p.platformFee), 'style="font-weight:700"')}
+      ${row('Price per person', `${ghs(p.pricePerHead)} / year`, 'style="color:var(--primary);font-weight:700"')}
       ${row('Area', area)}
       ${address ? `<div style="padding:0.5rem 0;border-bottom:1px solid var(--border)"><span class="text-muted">Address</span><br><span style="font-size:0.8rem">${address}</span></div>` : ''}
       <div style="display:flex;justify-content:space-between;padding:0.5rem 0"><span class="text-muted">Photos</span><span>${selectedFiles.length} uploaded</span></div>
