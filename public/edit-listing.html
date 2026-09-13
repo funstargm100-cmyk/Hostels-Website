@@ -41,19 +41,19 @@
 
     <form id="editForm">
       <div class="form-group"><label>Title</label><input type="text" id="edTitle" required /></div>
-      <div class="form-group"><label>Description</label><textarea id="edDescription"></textarea></div>
+      <div class="form-group"><label>Description</label><textarea id="edDescription" required></textarea></div>
 
       <div class="form-row">
         <div class="form-group"><label>Price per person (GHS/year)</label><input type="number" id="edPrice" required /></div>
         <div class="form-group">
           <label>Occupancy type</label>
-          <select id="edOccupancy"><option value="1">Self-contained</option><option value="2">2-in-1</option><option value="3">3-in-1</option><option value="4">4-in-1</option></select>
+          <select id="edOccupancy" required><option value="1">Self-contained</option><option value="2">2-in-1</option><option value="3">3-in-1</option><option value="4">4-in-1</option></select>
         </div>
       </div>
 
       <div class="form-row">
         <div class="form-group"><label>Location area</label><input type="text" id="edLocation" required /></div>
-        <div class="form-group"><label>Nearest landmark</label><input type="text" id="edLandmark" /></div>
+        <div class="form-group"><label>Nearest landmark</label><input type="text" id="edLandmark" required /></div>
       </div>
 
       <div class="form-group">
@@ -95,7 +95,7 @@
       <div class="checkbox-row mb-3"><input type="checkbox" id="edPets" /><label style="margin:0">Pet friendly</label></div>
 
       <h3>Photos <span class="text-muted" style="font-size:.85rem;font-weight:400">(<span id="photoCount">0</span>/10)</span></h3>
-      <p class="text-muted" style="font-size:.85rem;margin-top:-.4rem">Drag photos to rearrange them. The first photo is the <strong>cover</strong> shown on your room card.</p>
+      <p class="text-muted" style="font-size:.85rem;margin-top:-.4rem">At least 2 photos required. Drag photos to rearrange them. The first photo is the <strong>cover</strong> shown on your room card.</p>
       <div class="photo-preview mb-2" id="photoGrid"></div>
 
       <div class="photo-add" id="photoDropzone" onclick="document.getElementById('edNewPhotos').click()">

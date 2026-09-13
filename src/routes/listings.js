@@ -74,8 +74,11 @@ async function applyImageChanges(listingId, removeIds, files, photoOrder) {
 
   if (keptIds.length + newFiles.length > MAX_LISTING_PHOTOS)
     return `A room can have at most ${MAX_LISTING_PHOTOS} photos (you would end up with ${keptIds.length + newFiles.length}).`;
-  if (keptIds.length === 0 && newFiles.length === 0)
-    return 'A room needs at least one photo.';
+  // A room must carry at least TWO photos (the cover plus at least one more) — the
+  // same rule enforced when posting. Checked on the FINAL total, so removing photos
+  // down to one is rejected here.
+  if (keptIds.length + newFiles.length < 2)
+    return 'A room needs at least 2 photos.';
 
   // Delete the removed rows (scoped to this listing so a stray id can't touch another listing).
   if (removeIds.length) {
@@ -378,10 +381,23 @@ router.put('/:uuid', requireAuth, uploadListingImages, async (req, res) => {
     const { title, description, original_price, price_per_head: price_per_head_in, occupancy_type, location_area, full_address, nearest_landmark, gender_preference, move_in_date,
             location_lat, location_lng,
             water, electricity, security, furnishing, bathroom, kitchen_access, wifi, parking, pet_friendly } = req.body;
+    // (Required-field checks run just below, after the ad-content scan.)
     if (title || description) {
       const check = validateAdContent(title || listing.title, description || listing.description);
       if (!check.isClean) return res.status(400).json({ error: 'Contains contact info', violations: check.violations });
     }
+    // The edit form must leave a room fully filled in — the same rules as posting.
+    // Enforced when the field is present but blank (the edit form always sends all
+    // of them), so a direct API caller cannot blank out a required field.
+    const blank = (v) => v !== undefined && v !== null && String(v).trim() === '';
+    if (title !== undefined && blank(title)) return res.status(400).json({ error: 'Title is required' });
+    if (description !== undefined && blank(description)) return res.status(400).json({ error: 'Description is required' });
+    if (location_area !== undefined && blank(location_area)) return res.status(400).json({ error: 'Location area is required' });
+    if (nearest_landmark !== undefined && blank(nearest_landmark)) return res.status(400).json({ error: 'Nearest landmark is required' });
+    if (water !== undefined && blank(water)) return res.status(400).json({ error: 'Water supply is required' });
+    if (electricity !== undefined && blank(electricity)) return res.status(400).json({ error: 'Electricity is required' });
+    if (furnishing !== undefined && blank(furnishing)) return res.status(400).json({ error: 'Furnishing is required' });
+    if (bathroom !== undefined && blank(bathroom)) return res.status(400).json({ error: 'Bathroom type is required' });
 
     const fields = []; const vals = []; let p = 1;
     if (title) { fields.push(`title=$${p++}`); vals.push(title); }

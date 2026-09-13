@@ -318,20 +318,43 @@ document.getElementById('edNewPhotos')?.addEventListener('change', (e) => {
   e.target.value = ''; // allow re-selecting the same file
 });
 
+// Same rules as posting a room: every form field must be filled and the room
+// must keep at least 2 photos. Returns an error string, or '' when valid.
+function validateEditForm() {
+  const val = (id) => { const el = document.getElementById(id); return el ? String(el.value || '').trim() : ''; };
+  if (!val('edTitle')) return 'Title is required.';
+  if (!val('edDescription')) return 'Description is required.';
+  if (!val('edPrice')) return 'Enter a price per person.';
+  if (!val('edOccupancy')) return 'Select the occupancy type.';
+  if (!val('edLocation')) return 'Location area is required.';
+  if (!val('edLandmark')) return 'Nearest landmark is required.';
+  if (!val('edLat') || !val('edLng')) return 'Please place a pin on the map to set the location.';
+  // Amenity selects all start on a real value, so validate anyway so every field
+  // on the form is genuinely filled.
+  if (!val('edWater')) return 'Select a water supply.';
+  if (!val('edElectricity')) return 'Select an electricity supply.';
+  if (!val('edFurnishing')) return 'Select the furnishing.';
+  if (!val('edBathroom')) return 'Select the bathroom type.';
+  if (totalPhotoCount() < 2) return 'A room needs at least 2 photos.';
+  return '';
+}
+
 document.getElementById('editForm')?.addEventListener('submit', async (e) => {
   e.preventDefault();
   const btn = document.getElementById('editSubmitBtn');
   const errEl = document.getElementById('editError');
   errEl.style.display = 'none';
+  // Validate BEFORE disabling the button, so a failed check leaves it usable.
+  const invalid = validateEditForm();
+  if (invalid) {
+    errEl.textContent = invalid;
+    errEl.style.display = 'block';
+    errEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
   btn.disabled = true; btn.classList.add('btn-loading');
   // Photos must go as multipart, so the whole update is sent as FormData.
   // The server sets the same text fields it always did and applies the photo changes.
-  if (totalPhotoCount() < 1) {
-    errEl.textContent = 'A room needs at least one photo.';
-    errEl.style.display = 'block';
-    btn.disabled = false; btn.classList.remove('btn-loading');
-    return;
-  }
   try {
     const fd = new FormData();
     fd.append('title', document.getElementById('edTitle').value.trim());
