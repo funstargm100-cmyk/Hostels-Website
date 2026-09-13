@@ -2,6 +2,10 @@
 // prefills the form, and saves via PUT /api/listings/:uuid.
 const editUUID = new URLSearchParams(location.search).get('id');
 const MAX_PHOTOS = 10;
+// The "what's left" prompt is transient — auto-clear it after a few seconds so it
+// never sits on the form blocking the view once the user has read it.
+const PROMPT_TIMEOUT_MS = 4000;
+let editPromptTimer = null;
 
 // A single ordered photo list drives both display and the saved order.
 // Each entry is either:
@@ -343,6 +347,7 @@ document.getElementById('editForm')?.addEventListener('submit', async (e) => {
   e.preventDefault();
   const btn = document.getElementById('editSubmitBtn');
   const errEl = document.getElementById('editError');
+  clearTimeout(editPromptTimer);
   errEl.style.display = 'none';
   // Validate BEFORE disabling the button, so a failed check leaves it usable.
   const invalid = validateEditForm();
@@ -350,6 +355,11 @@ document.getElementById('editForm')?.addEventListener('submit', async (e) => {
     errEl.textContent = invalid;
     errEl.style.display = 'block';
     errEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    // Auto-dismiss the prompt after a timeout.
+    editPromptTimer = setTimeout(() => {
+      errEl.textContent = '';
+      errEl.style.display = 'none';
+    }, PROMPT_TIMEOUT_MS);
     return;
   }
   btn.disabled = true; btn.classList.add('btn-loading');

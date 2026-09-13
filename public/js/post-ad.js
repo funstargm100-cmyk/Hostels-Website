@@ -4,6 +4,12 @@ let coverFile = null;       // required: the entire-building photo (becomes the 
 let selectedFiles = [];     // optional: room/feature photos
 let postMap = null;
 let postMarker = null;
+// Auto-dismiss timing for the "what's left" prompts. A prompt is transient — it
+// tells the user what to fix right now; once read it clears itself so it never
+// sits on the step blocking the view. Keyed per error element so re-showing a
+// prompt resets its own clock (a WeakMap lets the element be collected normally).
+const PROMPT_TIMEOUT_MS = 4000;
+const promptTimers = new WeakMap();
 
 // ─── AUTH GATE ────────────────────────────────────────────────────────────────
 async function checkAuth() {
@@ -31,7 +37,7 @@ function updateWizardUI() {
   document.querySelectorAll('.wizard-panel').forEach((p, i) => {
     if (i + 1 !== currentStep) {
       const err = p.querySelector('.alert-danger');
-      if (err) { err.innerHTML = ''; err.style.display = 'none'; }
+      if (err) { clearTimeout(promptTimers.get(err)); err.innerHTML = ''; err.style.display = 'none'; }
     }
   });
   if (currentStep === 5) initPostMap();
@@ -89,18 +95,39 @@ function missingFieldsForStep(step) {
   return missing;
 }
 
+function clearPromptSoon(errEl) {
+  if (!errEl) return;
+  clearTimeout(promptTimers.get(errEl));
+  const t = setTimeout(() => {
+    errEl.innerHTML = '';
+    errEl.style.display = 'none';
+    promptTimers.delete(errEl);
+  }, PROMPT_TIMEOUT_MS);
+  promptTimers.set(errEl, t);
+}
+
 // Show a "what's left to fill in" prompt in a step's error box (or the submit box
-// for the final gate). Renders a short bullet list.
+// for the final gate). Renders a short bullet list, then auto-clears after a
+// timeout so it does not linger.
 function showStepMissing(errEl, missing) {
   if (!errEl) return;
   const items = missing.map(m => `<li style="margin:.1rem 0">${m}</li>`).join('');
   errEl.innerHTML = `<strong>Please complete the following:</strong><ul style="margin:.4rem 0 0 1.1rem;padding:0">${items}</ul>`;
   errEl.style.display = 'block';
+  clearPromptSoon(errEl);
+}
+
+// Show a plain-text error (e.g. the contact-info rule) and auto-clear it too.
+function showStepError(errEl, text) {
+  if (!errEl) return;
+  errEl.textContent = text;
+  errEl.style.display = 'block';
+  clearPromptSoon(errEl);
 }
 
 function validateStep(step) {
   const errEl = document.getElementById(`step${step}Error`);
-  if (errEl) { errEl.textContent = ''; errEl.style.display = 'none'; }
+  if (errEl) { clearTimeout(promptTimers.get(errEl)); errEl.textContent = ''; errEl.style.display = 'none'; }
 
   const missing = missingFieldsForStep(step);
   // Contact-info is a content rule, not a missing field: report it on its own.
@@ -109,7 +136,7 @@ function validateStep(step) {
     const desc = document.getElementById('adDescription').value.trim();
     const contactPattern = /(\d[\s\-().]{0,2}){7,}|@\w{3,}|\b(whatsapp|telegram|call me|my number)\b/i;
     if (contactPattern.test(title) || contactPattern.test(desc)) {
-      if (errEl) { errEl.textContent = 'Remove contact information from the title/description.'; errEl.style.display = 'block'; }
+      showStepError(errEl, 'Remove contact information from the title/description.');
       return false;
     }
   }
