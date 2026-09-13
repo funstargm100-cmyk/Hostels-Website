@@ -475,9 +475,29 @@ function renderDistanceLine(l) {
 }
 
 // ─── LISTING CARD RENDERER ────────────────────────────────────────────────────
+// Build a small thumbnail URL for a listing image, served by our own resize
+// endpoint. Used for map POPUPS, which render the card image in a tiny box —
+// there is no point downloading the full-size WebP for that. Returns the
+// original URL unchanged for anything that is not a real listing image (e.g.
+// the local placeholder), so nothing breaks.
+function thumbUrl(src, width) {
+  if (!src) return src;
+  // The placeholder is already tiny and lives on our origin — leave it alone.
+  if (src.startsWith('/images/')) return src;
+  return `/api/img/thumb?w=${width || 256}&src=${encodeURIComponent(src)}`;
+}
+
 function renderListingCard(l, options = {}) {
   const isPopup = options && options.isPopup;
-  const img = l.primary_image ? l.primary_image : '/images/placeholder.jpg';
+  const originalImg = l.primary_image ? l.primary_image : '/images/placeholder.jpg';
+  // Popups load a small thumbnail; grid/list/detail keep the full image.
+  const img = isPopup ? thumbUrl(originalImg, 256) : originalImg;
+  // If the thumbnail fails for any reason, fall back ONCE to the full image,
+  // then to the placeholder if that also fails. `data-full` carries the original
+  // so the inline handler does not need to embed a URL.
+  const imgOnError = isPopup && img !== originalImg
+    ? `if(!this.dataset.fellBack){this.dataset.fellBack='1';this.src=this.dataset.full;}else{this.onerror=null;this.src='/images/placeholder.jpg';}`
+    : `this.onerror=null;this.src='/images/placeholder.jpg'`;
   const verified = l.owner_verified ? '<span class="badge badge-verified"><i data-lucide="badge-check" style="width:11px;height:11px"></i> Verified</span>' : '';
   const featured = l.is_featured ? '<span class="badge badge-featured"><i data-lucide="star" style="width:11px;height:11px"></i> Featured</span>' : '';
   const perHead = `<div class="card-price-sub">per&nbsp;person</div>`;
@@ -498,7 +518,7 @@ function renderListingCard(l, options = {}) {
   return `
     <div class="card" onclick="location.href='/listing?id=${l.uuid}'" style="cursor:pointer">
       <div style="position:relative">
-        <img class="card-img" src="${img}" alt="${l.title}" loading="lazy" onerror="this.onerror=null;this.src='/images/placeholder.jpg'" />
+        <img class="card-img" src="${img}" alt="${l.title}" loading="lazy" decoding="async" data-full="${originalImg}" onerror="${imgOnError}" />
         <div style="position:absolute;top:0.6rem;left:0.6rem;display:flex;gap:0.3rem;flex-wrap:wrap">${verified}${featured}</div>
         <button class="fav-btn" style="position:absolute;top:0.5rem;right:0.5rem;background:rgba(255,255,255,0.9);border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center"
           onclick="event.stopPropagation();toggleFav('${l.uuid}',this)"><i data-lucide="heart"></i></button>

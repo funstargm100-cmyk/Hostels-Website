@@ -41,6 +41,7 @@ app.use('/api/user', require('./src/routes/user'));
 app.use('/api/users', require('./src/routes/users'));
 app.use('/api/geo', require('./src/routes/geo'));
 app.use('/api/payments', require('./src/routes/payments'));
+app.use('/api/img', require('./src/routes/images'));
 
 // Serve frontend pages. HTML is marked no-cache so phones always fetch the
 // latest markup (and therefore the latest cache-busted JS URLs) instead of
