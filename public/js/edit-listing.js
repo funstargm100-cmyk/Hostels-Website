@@ -32,7 +32,8 @@ async function initEdit() {
 
     document.getElementById('edTitle').value = listing.title || '';
     document.getElementById('edDescription').value = listing.description || '';
-    document.getElementById('edPrice').value = listing.original_price || listing.listed_price || '';
+    // The form edits the PER-PERSON price, so pre-fill from price_per_head.
+    document.getElementById('edPrice').value = listing.price_per_head || listing.listed_price || listing.original_price || '';
     document.getElementById('edOccupancy').value = String(listing.occupancy_type || 1);
     document.getElementById('edLocation').value = listing.location_area || '';
     document.getElementById('edLandmark').value = listing.nearest_landmark || '';
@@ -335,7 +336,7 @@ document.getElementById('editForm')?.addEventListener('submit', async (e) => {
     const fd = new FormData();
     fd.append('title', document.getElementById('edTitle').value.trim());
     fd.append('description', document.getElementById('edDescription').value.trim());
-    fd.append('original_price', document.getElementById('edPrice').value);
+    fd.append('price_per_head', document.getElementById('edPrice').value);
     fd.append('occupancy_type', document.getElementById('edOccupancy').value);
     fd.append('location_area', document.getElementById('edLocation').value.trim());
     fd.append('nearest_landmark', document.getElementById('edLandmark').value.trim());

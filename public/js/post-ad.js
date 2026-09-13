@@ -63,7 +63,7 @@ function validateStep(step) {
   }
   if (step === 3) {
     if (!document.getElementById('adOccupancy').value) { if (errEl) errEl.textContent = 'Select occupancy type.'; return false; }
-    if (!document.getElementById('adOriginalPrice').value) { if (errEl) errEl.textContent = 'Enter a price.'; return false; }
+    if (!document.getElementById('adOriginalPrice').value) { if (errEl) errEl.textContent = 'Enter a price per person.'; return false; }
   }
   if (step === 5) {
     if (!document.getElementById('adLat').value || !document.getElementById('adLng').value) {
@@ -79,18 +79,16 @@ function validateStep(step) {
 }
 
 // ─── PRICE CALCULATOR ─────────────────────────────────────────────────────────
+// The poster enters the price PER PERSON. The room total is shown for reference
+// as per-person × occupancy (what a full room costs at that rate).
 function calcPrice() {
-  const price = parseFloat(document.getElementById('adOriginalPrice').value);
+  const perHead = parseFloat(document.getElementById('adOriginalPrice').value);
   const occ = parseInt(document.getElementById('adOccupancy').value);
   const preview = document.getElementById('pricePreview');
-  if (!price || !occ) { preview.style.display = 'none'; return; }
-  const fee = price * 0.10;
-  const listed = price + fee;
-  const perHead = listed / occ;
-  document.getElementById('prevOriginal').textContent = `GHS ${price.toLocaleString()}`;
-  document.getElementById('prevFee').textContent = `GHS ${fee.toFixed(2)}`;
-  document.getElementById('prevListed').textContent = `GHS ${listed.toFixed(2)}`;
-  document.getElementById('prevPerHead').textContent = `Per person: GHS ${perHead.toFixed(2)} / year`;
+  if (!perHead || !occ) { preview.style.display = 'none'; return; }
+  const roomTotal = perHead * occ;
+  document.getElementById('prevPerHead').textContent = `GHS ${perHead.toLocaleString()} / year`;
+  document.getElementById('prevRoomTotal').textContent = `Room total for ${occ}-in-1: GHS ${roomTotal.toLocaleString()}`;
   preview.style.display = 'block';
 }
 
@@ -357,17 +355,17 @@ function getMyLocation() {
 function buildReviewSummary() {
   const form = document.getElementById('postAdForm');
   const data = new FormData(form);
-  const price = parseFloat(data.get('original_price') || 0);
+  const perHead = parseFloat(data.get('price_per_head') || 0);
   const occ = parseInt(data.get('occupancy_type') || 1);
-  const listed = price * 1.10;
-  const perPerson = (listed / occ).toFixed(2);
+  const roomTotal = (perHead * occ).toFixed(2);
   const area = data.get('location_area') || '—';
   const address = data.get('full_address') || '';
   document.getElementById('reviewSummary').innerHTML = `
     <div style="display:grid;gap:0.75rem;font-size:0.875rem">
       <div style="display:flex;justify-content:space-between;padding:0.5rem 0;border-bottom:1px solid var(--border)"><span class="text-muted">Title</span><span style="font-weight:600;max-width:60%;text-align:right">${data.get('title') || '—'}</span></div>
       <div style="display:flex;justify-content:space-between;padding:0.5rem 0;border-bottom:1px solid var(--border)"><span class="text-muted">Occupancy</span><span>${occ}-in-1</span></div>
-      <div style="display:flex;justify-content:space-between;padding:0.5rem 0;border-bottom:1px solid var(--border)"><span class="text-muted">Price per person</span><span style="color:var(--primary);font-weight:700">GHS ${perPerson} / year</span></div>
+      <div style="display:flex;justify-content:space-between;padding:0.5rem 0;border-bottom:1px solid var(--border)"><span class="text-muted">Price per person</span><span style="color:var(--primary);font-weight:700">GHS ${Number(perHead).toLocaleString()} / year</span></div>
+      <div style="display:flex;justify-content:space-between;padding:0.5rem 0;border-bottom:1px solid var(--border)"><span class="text-muted">Room total (${occ}-in-1)</span><span>GHS ${Number(roomTotal).toLocaleString()}</span></div>
       <div style="display:flex;justify-content:space-between;padding:0.5rem 0;border-bottom:1px solid var(--border)"><span class="text-muted">Area</span><span>${area}</span></div>
       ${address ? `<div style="padding:0.5rem 0;border-bottom:1px solid var(--border)"><span class="text-muted">Address</span><br><span style="font-size:0.8rem">${address}</span></div>` : ''}
       <div style="display:flex;justify-content:space-between;padding:0.5rem 0"><span class="text-muted">Photos</span><span>${selectedFiles.length} uploaded</span></div>

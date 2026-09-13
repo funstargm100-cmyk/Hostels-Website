@@ -290,7 +290,7 @@ router.get('/:uuid', optionalAuth, async (req, res) => {
 
 // POST /api/listings
 router.post('/', requireAuth, requireRole('owner', 'agent', 'admin'), uploadListingImages, async (req, res) => {
-  const { title, description, occupancy_type, original_price, location_area, nearest_landmark, gender_preference, move_in_date, water, electricity, security, furnishing, bathroom, kitchen_access, wifi, parking, pet_friendly } = req.body;
+  const { title, description, occupancy_type, original_price, price_per_head: price_per_head_in, location_area, nearest_landmark, gender_preference, move_in_date, water, electricity, security, furnishing, bathroom, kitchen_access, wifi, parking, pet_friendly } = req.body;
   // The post-ad wizard names the pin fields lat/lng (see post-ad.html), while the
   // edit form uses location_lat/location_lng. Accept BOTH spellings: reading only
   // location_lat/location_lng silently stored NULL for every room posted through
@@ -299,16 +299,31 @@ router.post('/', requireAuth, requireRole('owner', 'agent', 'admin'), uploadList
   const location_lat = req.body.location_lat ?? req.body.lat;
   const location_lng = req.body.location_lng ?? req.body.lng;
 
-  if (!title || !original_price || !location_area || !occupancy_type) return res.status(400).json({ error: 'Missing required fields' });
+  // The advertiser may supply EITHER price_per_head (per-person — the preferred
+  // input) or original_price (the room total). Require one of them.
+  const hasPrice = (price_per_head_in !== undefined && price_per_head_in !== '') || !!original_price;
+  if (!title || !hasPrice || !location_area || !occupancy_type) return res.status(400).json({ error: 'Missing required fields' });
 
   const contentCheck = validateAdContent(title, description);
   if (!contentCheck.isClean) return res.status(400).json({ error: 'Ad contains contact information. Remove it and resubmit.', violations: contentCheck.violations });
   if (!req.files || !req.files.length) return res.status(400).json({ error: 'At least one image required' });
 
   try {
-    const price = parseFloat(original_price);
+    // Price is entered PER PERSON by the poster. original_price (the room total)
+    // is derived as per-person × occupancy; listed_price mirrors it (no platform
+    // fee — what is posted is what is shown). If a legacy caller still sends a
+    // room TOTAL via original_price (and no per-person value), fall back to the
+    // old divide-by-occupancy so nothing breaks.
+    const occ = parseInt(occupancy_type) || 1;
+    let price, price_per_head;
+    if (price_per_head_in !== undefined && price_per_head_in !== '') {
+      price_per_head = parseFloat(parseFloat(price_per_head_in).toFixed(2));
+      price = parseFloat((price_per_head * occ).toFixed(2));
+    } else {
+      price = parseFloat(original_price);
+      price_per_head = parseFloat((price / occ).toFixed(2));
+    }
     const listed_price = price;
-    const price_per_head = parseFloat((listed_price / parseInt(occupancy_type)).toFixed(2));
     const expires_at = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
   const result = await db.query(
@@ -353,7 +368,7 @@ router.put('/:uuid', requireAuth, uploadListingImages, async (req, res) => {
     const listing = result.rows[0];
     if (!listing && req.session.user.role !== 'admin') return res.status(404).json({ error: 'Listing not found' });
 
-    const { title, description, original_price, occupancy_type, location_area, full_address, nearest_landmark, gender_preference, move_in_date,
+    const { title, description, original_price, price_per_head: price_per_head_in, occupancy_type, location_area, full_address, nearest_landmark, gender_preference, move_in_date,
             location_lat, location_lng,
             water, electricity, security, furnishing, bathroom, kitchen_access, wifi, parking, pet_friendly } = req.body;
     if (title || description) {
@@ -371,15 +386,23 @@ router.put('/:uuid', requireAuth, uploadListingImages, async (req, res) => {
     if (location_lng !== undefined && location_lng !== '') { fields.push(`location_lng=$${p++}`); vals.push(parseFloat(location_lng)); }
     if (gender_preference) { fields.push(`gender_preference=$${p++}`); vals.push(gender_preference); }
     if (move_in_date) { fields.push(`move_in_date=$${p++}`); vals.push(move_in_date); }
-    if (original_price) {
+    // Price may arrive as price_per_head (per-person, preferred) or as a room
+    // TOTAL via original_price (legacy). Derive the other two from whichever came.
+    if (price_per_head_in !== undefined && price_per_head_in !== '') {
+      const occ = parseInt(occupancy_type || listing.occupancy_type) || 1;
+      const pph = parseFloat(parseFloat(price_per_head_in).toFixed(2));
+      const op = parseFloat((pph * occ).toFixed(2));
+      fields.push(`original_price=$${p++}`, `listed_price=$${p++}`, `price_per_head=$${p++}`);
+      vals.push(op, op, pph);
+    } else if (original_price) {
       const op = parseFloat(original_price);
-      const occ = parseInt(occupancy_type || listing.occupancy_type);
+      const occ = parseInt(occupancy_type || listing.occupancy_type) || 1;
       const lp = op; // price posted is price shown (no platform fee)
       const pph = parseFloat((lp / occ).toFixed(2));
       fields.push(`original_price=$${p++}`, `listed_price=$${p++}`, `price_per_head=$${p++}`);
       vals.push(op, lp, pph);
     }
-    if (occupancy_type && original_price) { fields.push(`occupancy_type=$${p++}`); vals.push(parseInt(occupancy_type)); }
+    if (occupancy_type && (original_price || (price_per_head_in !== undefined && price_per_head_in !== ''))) { fields.push(`occupancy_type=$${p++}`); vals.push(parseInt(occupancy_type)); }
     // Editing an existing listing must NOT send it back through admin review —
     // an already-approved room stays live. Only new posts (POST /) require review.
     vals.push(req.params.uuid);

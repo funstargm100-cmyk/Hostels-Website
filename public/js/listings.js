@@ -267,14 +267,14 @@ function clearFilters() {
 // finds are genuinely nearby rather than the whole country.
 let areaExpandSteps = 0;          // how many times the current scope has grown
 let areaExpanding = false;        // true while the auto-expand loop is running
-// Once the expansion FINDS rooms, it keeps widening for a few more steps to pull
-// in neighbouring area results — but the camera must stay on the FIRST patch where
+// Once the expansion FINDS rooms, it does ONE more widening pass to pull in the
+// neighbouring area's results — but the camera must stay on the FIRST patch where
 // a room appeared, so this flag tells renderMapListings not to re-frame.
 let areaHoldView = false;
 const AREA_EXPAND_FACTOR = 1.8;   // radius multiplier per step
 const AREA_EXPAND_MAX_KM = 500;   // give up past this (no rooms anywhere near)
 // How many EXTRA expansions to run after the first hit, to gather nearby rooms.
-const AREA_EXTRA_EXPANDS = 3;
+const AREA_EXTRA_EXPANDS = 1;
 // Small pause between steps so the loader chip is visible and the expanding
 // radius reads as a deliberate search rather than a single flicker.
 const AREA_EXPAND_STEP_MS = 450;
