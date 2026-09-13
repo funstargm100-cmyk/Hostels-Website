@@ -162,12 +162,12 @@ function validateStep(step) {
 //
 // AGENT  — commission is entered as a GHS AMOUNT PER PERSON (C):
 //   • total commission (all occupants) = C × occ
-//   • platform fee                      = 5% × (total commission + P)
+//   • platform fee                      = (total commission × occ) + P
 //   • total price per person            = P + C + platform fee
 //
 // OWNER  — no commission:
 //   • total price for (occ)    = P × occ
-//   • platform fee             = 7% × P
+//   • platform fee             = P
 //   • total price per person   = P + platform fee
 const PLATFORM_FEE_RATE = { owner: 0.07, agent: 0.05 };
 
@@ -186,7 +186,7 @@ function onPosterTypeChange() {
   const hint = document.getElementById('posterTypeHint');
   if (hint) {
     hint.textContent = isAgent
-      ? 'Posting as an agent — your commission is charged per occupant; the platform fee is 5% of the price per person plus the total commission.'
+      ? 'Posting as an agent — your commission is charged per occupant; the platform fee is the total commission × occupancy plus the price per person.'
       : 'Posting as the owner of the room — no agent commission, 7% platform fee.';
   }
   calcPrice();
@@ -209,11 +209,11 @@ function computeCommissionPerPerson() {
 //   occ = occupancy
 //   AGENT: C = entered commission per person
 //     totalCommission = C × occ
-//     platformFee     = 5% × (totalCommission + P)
+//     platformFee     = (totalCommission × occ) + P
 //     totalPerPerson  = P + C + platformFee
 //   OWNER (no commission):
 //     totalForOcc     = P × occ
-//     platformFee     = 7% × P
+//     platformFee     = P
 //     totalPerPerson  = P + platformFee
 function computePricing() {
   const priceInput = parseFloat(document.getElementById('adOriginalPrice').value);
@@ -227,10 +227,10 @@ function computePricing() {
   // "Total commission" is the agent's per-occupant commission × occupancy.
   const totalCommission = isAgent ? parseFloat((commissionPerPerson * (occ || 0)).toFixed(2)) : 0;
   // Platform fee is a PER-PERSON figure:
-  //   agent -> 5% of (total commission + per-person price)
-  //   owner -> 7% of the per-person price
-  const feeBasePerPerson = isAgent ? parseFloat((totalCommission + pricePerPerson).toFixed(2)) : pricePerPerson;
-  const platformFee = parseFloat((feeBasePerPerson * rate).toFixed(2));
+  //   agent -> (total commission × occupancy) + per-person price
+  //   owner -> the per-person price (no commission)
+  const feeBasePerPerson = isAgent ? parseFloat(((totalCommission * (occ || 0)) + pricePerPerson).toFixed(2)) : pricePerPerson;
+  const platformFee = parseFloat(feeBasePerPerson.toFixed(2));
   // What a single occupant ends up paying.
   const totalPerPerson = parseFloat((pricePerPerson + commissionPerPerson + platformFee).toFixed(2));
   // Owner-only display figure: the whole room for all occupants (price × occ).
@@ -267,8 +267,8 @@ function calcPrice() {
     ownerTotalRow.style.display = 'flex';
   }
 
-  const pct = Math.round(p.rate * 100);
-  document.getElementById('prevFeeLabel').textContent = `Platform fee (${pct}%)`;
+  document.getElementById('prevFeeLabel').textContent =
+    p.isAgent ? 'Platform fee (total commission × occupancy + price)' : 'Platform fee';
   document.getElementById('prevPlatformFee').textContent = ghs(p.platformFee);
   document.getElementById('prevPerHead').textContent = `${ghs(p.totalPerPerson)} / person`;
   preview.style.display = 'block';
@@ -582,7 +582,7 @@ function buildReviewSummary() {
         ? row(`Commission per occupant`, ghs(p.commissionPerPerson))
           + row(`Total commission (${p.occ} occupant${p.occ === 1 ? '' : 's'})`, ghs(p.totalCommission))
         : row(`Total price for ${p.occ}-in-1`, ghs(p.totalForOcc))}
-      ${row(`Platform fee (${Math.round(p.rate * 100)}%)`, ghs(p.platformFee), 'style="font-weight:700"')}
+      ${row(p.isAgent ? 'Platform fee (total commission × occupancy + price)' : 'Platform fee', ghs(p.platformFee), 'style="font-weight:700"')}
       ${row('Total price per person', `${ghs(p.totalPerPerson)} / year`, 'style="color:var(--primary);font-weight:700"')}
       ${row('Area', area)}
       ${address ? `<div style="padding:0.5rem 0;border-bottom:1px solid var(--border)"><span class="text-muted">Address</span><br><span style="font-size:0.8rem">${address}</span></div>` : ''}
