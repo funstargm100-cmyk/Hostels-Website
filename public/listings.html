@@ -60,11 +60,15 @@
 
   <div class="listings-layout">
     <aside class="filters-panel" id="filtersPanel">
-      <div style="display:flex;justify-content:space-between;align-items:center">
+      <!-- Fixed header, scrollable field list, fixed action footer: the panel
+           scrolls on its own without moving the header or the Clear/Apply bar.
+           See .filters-panel / .filters-scroll in style.css. -->
+      <div class="filters-head" style="display:flex;justify-content:space-between;align-items:center">
         <h3 style="margin:0">Filters</h3>
         <button class="btn btn-ghost btn-sm" onclick="toggleFilters()" style="display:none" id="closeFiltersBtn">✕</button>
       </div>
 
+      <div class="filters-scroll">
       <h4>Location</h4>
       <input type="text" id="searchLocation" placeholder="Area or landmark" />
 
@@ -125,8 +129,9 @@
       <h4>Amenities</h4>
       <div class="checkbox-row mb-1"><input type="checkbox" id="filterWifi" /><label style="margin:0">Wi-Fi available</label></div>
       <div class="checkbox-row"><input type="checkbox" id="filterParking" /><label style="margin:0">Parking available</label></div>
+      </div><!-- /.filters-scroll -->
 
-      <div style="display:flex;gap:.6rem;margin-top:1.4rem">
+      <div class="filters-actions" style="display:flex;gap:.6rem">
         <button class="btn btn-outline" style="flex:1" onclick="clearFilters()">Clear</button>
         <button class="btn btn-primary" style="flex:1" onclick="applyFilters()">Apply</button>
       </div>

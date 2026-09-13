@@ -160,7 +160,11 @@ async function loadListings() {
 
   try {
     const data = await api.get('/api/listings?' + params.toString());
-    lastFetchedListings = data.listings;
+    // Mutate the array IN PLACE rather than reassigning, so the window alias
+    // installed at declaration keeps pointing at the live result set (the shared
+    // card renderer syncs like-state through it).
+    lastFetchedListings.length = 0;
+    lastFetchedListings.push(...data.listings);
     // The results are in — end the loader and play the brush beat for the new
     // pins. "Search this area" gets the tighter, faster version, since the user is
     // already looking at the right patch of map.
@@ -425,7 +429,11 @@ let pinEnterTimer = null;
 let pinLabelTimer = null;
 // How long a single pin takes to fall in — mirrors map-pin-drop in style.css.
 const PIN_DROP_MS = 550;
+// The current result set. Also exposed on window so the shared card renderer
+// (app.js) can keep it in sync when a like toggles — otherwise the map popups,
+// which render from these same objects, keep showing stale heart state.
 let lastFetchedListings = [];
+window.lastFetchedListings = lastFetchedListings;
 // True while WE move the camera (fitBounds/flyTo), so the moveend/zoomend
 // handlers can tell our programmatic moves apart from a genuine user pan/zoom.
 let suppressMoveEvent = false;

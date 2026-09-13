@@ -399,8 +399,39 @@ textarea{ resize:vertical; min-height:110px; }
 @media (max-width:1100px){ .owner-grid{ grid-template-columns:repeat(2,1fr); } }
 @media (max-width:640px){ .owner-grid{ grid-template-columns:1fr; gap:.9rem; } }
 .filters-panel{ background:var(--card-bg); border:1px solid var(--border); border-radius:var(--radius); padding:1.4rem; position:sticky; top:90px; }
+/* Independently scrolling filter sidebar (desktop/tablet): the panel sticks in
+   place and is capped to the viewport, with the header and the Clear/Apply bar
+   pinned while only the middle field list scrolls. */
+@media (min-width:901px){
+  /* The normal in-flow sidebar: cap to the viewport and let the middle scroll. */
+  .filters-panel{
+    display:flex;
+    flex-direction:column;
+    max-height:calc(100vh - 110px);
+    overflow:hidden;
+  }
+  /* Header keeps its own space; the first h4 sits a touch below it. */
+  .filters-head{ flex:0 0 auto; padding-bottom:.35rem; }
+  /* The scroll area owns the overflow; min-height:0 lets it shrink inside flex. */
+  .filters-scroll{ flex:1 1 auto; overflow-y:auto; min-height:0; margin:0 -0.4rem; padding:0 0.4rem; }
+  .filters-actions{ flex:0 0 auto; margin-top:1rem; padding-top:1rem; border-top:1px solid var(--border); }
+}
+/* Fullscreen-map drawer (also desktop): it spans the full height, so the scroll
+   area fills whatever is left below the header and above the action bar. */
+body.map-fullscreen-active .filters-panel{
+  display:flex; flex-direction:column; overflow:hidden;
+}
+body.map-fullscreen-active .filters-head{ flex:0 0 auto; }
+body.map-fullscreen-active .filters-scroll{ flex:1 1 auto; overflow-y:auto; min-height:0; }
+body.map-fullscreen-active .filters-actions{ flex:0 0 auto; margin-top:1rem; padding-top:1rem; border-top:1px solid var(--border); }
 .filters-panel h4{ font-family:var(--font-body); font-size:.8rem; font-weight:800; margin:1rem 0 .5rem; color:var(--text-muted); }
 .filters-panel h4:first-child{ margin-top:0; }
+/* Slim, unobtrusive scrollbar so it does not intrude on the filter fields. */
+.filters-scroll{ scrollbar-width:thin; scrollbar-color:var(--border) transparent; }
+.filters-scroll::-webkit-scrollbar{ width:8px; }
+.filters-scroll::-webkit-scrollbar-track{ background:transparent; }
+.filters-scroll::-webkit-scrollbar-thumb{ background:var(--border); border-radius:999px; }
+.filters-scroll::-webkit-scrollbar-thumb:hover{ background:var(--text-muted); }
 .chip-row{ display:flex; flex-wrap:wrap; gap:.5rem; }
 .chip-radio{ position:relative; }
 .chip-radio input{ position:absolute; opacity:0; width:0; height:0; }

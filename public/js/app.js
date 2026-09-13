@@ -592,7 +592,7 @@ function renderListingCard(l, options = {}) {
       <div style="position:relative">
         <img class="card-img" src="${img}" alt="${l.title}" loading="lazy" decoding="async" data-full="${originalImg}" onerror="${imgOnError}" />
         <div style="position:absolute;top:0.6rem;left:0.6rem;display:flex;gap:0.3rem;flex-wrap:wrap">${verified}${featured}</div>
-        <button class="fav-btn${favActive ? ' active' : ''}" style="position:absolute;top:0.5rem;right:0.5rem;background:rgba(255,255,255,0.9);border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center"
+        <button class="fav-btn${favActive ? ' active' : ''}" data-listing-uuid="${l.uuid}" style="position:absolute;top:0.5rem;right:0.5rem;background:rgba(255,255,255,0.9);border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center"
           onclick="event.stopPropagation();toggleFav('${l.uuid}',this)">${favIcon}</button>
       </div>
       <div class="card-body">
@@ -611,14 +611,49 @@ function renderListingCard(l, options = {}) {
     </div>`;
 }
 
+// Paint ONE heart button to a given favorited/not state.
+function paintFavButton(btn, favorited) {
+  if (!btn) return;
+  btn.innerHTML = favorited
+    ? '<i data-lucide="heart" style="width:20px;height:20px;fill:var(--primary);color:var(--primary)"></i>'
+    : '<i data-lucide="heart" style="width:20px;height:20px"></i>';
+  btn.classList.toggle('active', favorited);
+  if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [btn] });
+}
+
+// Keep EVERY surface in agreement after a like/unlike: the listing object behind
+// the map popups and the grid (and home rails / favourites), plus any heart
+// button already painted for this room anywhere in the DOM.
+//
+// The grid and the map both render from the same `lastFetchedListings` array on
+// /listings, so a like that only repainted the clicked button left the map popup
+// (and any later re-render) showing stale state. Editing the shared objects here
+// fixes all of them at once.
+function syncFavoriteState(uuid, favorited) {
+  // Shared listing arrays held by the browse page and home rails.
+  const arrays = [window.lastFetchedListings];
+  if (Array.isArray(window.homeRailListings)) arrays.push(window.homeRailListings);
+  arrays.forEach(arr => {
+    if (Array.isArray(arr)) arr.forEach(l => { if (l && l.uuid === uuid) l.favorited = favorited; });
+  });
+  // Any heart already on the page for this room (grid card, rail card, popup).
+  document.querySelectorAll(`.fav-btn[data-listing-uuid="${uuid}"]`).forEach(btn => paintFavButton(btn, favorited));
+  // The detail page keeps its own single button + listing object.
+  if (typeof currentListing !== 'undefined' && currentListing && currentListing.uuid === uuid) {
+    currentListing.favorited = favorited;
+    if (typeof applyFavoriteState === 'function') applyFavoriteState(favorited);
+  }
+}
+
 async function toggleFav(uuid, btn) {
   const user = JSON.parse(localStorage.getItem('user') || 'null');
   if (!user) return location.href = '/login?redirect=' + encodeURIComponent(location.pathname + location.search);
   try {
     const { favorited } = await api.post(`/api/listings/${uuid}/favorite`);
-    btn.innerHTML = favorited ? '<i data-lucide="heart" style="width:20px;height:20px;fill:var(--primary);color:var(--primary)"></i>' : '<i data-lucide="heart" style="width:20px;height:20px"></i>';
-    btn.classList.toggle('active', favorited);
-    if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [btn] });
+    // Repaint every heart for this room, not just the one clicked, and keep the
+    // in-memory listing objects in sync so the map/grid stay correct.
+    syncFavoriteState(uuid, favorited);
+    paintFavButton(btn, favorited);
   } catch (e) {
     showToast(e.message, 'error');
   }
