@@ -26,6 +26,14 @@ function updateWizardUI() {
   document.getElementById('prevBtn').style.display = currentStep > 1 ? '' : 'none';
   document.getElementById('nextBtn').style.display = currentStep < TOTAL_STEPS ? '' : 'none';
   document.getElementById('submitBtn').style.display = currentStep === TOTAL_STEPS ? '' : 'none';
+  // Clear any step's leftover "what's left" prompt for steps we are LEAVING, so a
+  // stale message never greets the user on a step they already completed.
+  document.querySelectorAll('.wizard-panel').forEach((p, i) => {
+    if (i + 1 !== currentStep) {
+      const err = p.querySelector('.alert-danger');
+      if (err) { err.innerHTML = ''; err.style.display = 'none'; }
+    }
+  });
   if (currentStep === 5) initPostMap();
   if (currentStep === TOTAL_STEPS) buildReviewSummary();
 }
@@ -43,64 +51,69 @@ function wizardPrev() {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-function validateStep(step) {
-  const errEl = document.getElementById(`step${step}Error`);
-  if (errEl) errEl.textContent = '';
-
+// What is still missing ON A GIVEN STEP, as a list of human-readable items.
+// Collecting them all (rather than bailing on the first) lets the step show a
+// single "what's left" prompt instead of making the user fix one field per click.
+function missingFieldsForStep(step) {
+  const val = (id) => { const el = document.getElementById(id); return el ? String(el.value || '').trim() : ''; };
+  const missing = [];
   if (step === 1) {
     // A room needs at least TWO photos: the cover (entire building) plus at least
     // one more. The cover is held separately, so the total is cover + selectedFiles.
-    if (!coverFile) { if (errEl) errEl.textContent = 'Please upload a cover photo of the entire building first.'; return false; }
-    if (selectedFiles.length > 9) { if (errEl) errEl.textContent = 'Maximum 9 additional photos allowed.'; return false; }
-    if (1 + selectedFiles.length < 2) {
-      if (errEl) errEl.textContent = 'Please upload at least 2 photos in total (the building cover plus at least one more).';
-      return false;
-    }
+    if (!coverFile) missing.push('Cover photo of the whole building');
+    if (selectedFiles.length > 9) missing.push('At most 9 extra photos (you have ' + selectedFiles.length + ')');
+    else if (1 + selectedFiles.length < 2) missing.push('At least 1 more photo (2 in total)');
   }
   if (step === 2) {
-    const title = document.getElementById('adTitle').value.trim();
-    const desc = document.getElementById('adDescription').value.trim();
-    if (!title) { if (errEl) errEl.textContent = 'Title is required.'; return false; }
-    if (!desc) { if (errEl) errEl.textContent = 'Description is required.'; return false; }
-    const contactPattern = /(\d[\s\-().]{0,2}){7,}|@\w{3,}|\b(whatsapp|telegram|call me|my number)\b/i;
-    if (contactPattern.test(title) || contactPattern.test(desc)) {
-      if (errEl) errEl.textContent = 'Remove contact information from title/description.';
-      return false;
-    }
+    if (!val('adTitle')) missing.push('Title');
+    if (!val('adDescription')) missing.push('Description');
   }
   if (step === 3) {
-    if (!document.getElementById('adOccupancy').value) { if (errEl) errEl.textContent = 'Select occupancy type.'; return false; }
-    if (!document.getElementById('adOriginalPrice').value) { if (errEl) errEl.textContent = 'Enter a price per person.'; return false; }
+    if (!val('adOccupancy')) missing.push('Occupancy type');
+    if (!val('adOriginalPrice')) missing.push('Price per person');
   }
   if (step === 4) {
     // Amenity selects all start on a real value, so an empty one means the user
     // went out of their way to unset it — but validate anyway so every field on
     // the step is genuinely filled.
-    const requiredSelects = [
-      ['edWater', 'Select a water supply.'],
-      ['edElectricity', 'Select an electricity supply.'],
-      ['edFurnishing', 'Select the furnishing.'],
-      ['edBathroom', 'Select the bathroom type.']
-    ];
-    for (const [id, msg] of requiredSelects) {
-      const el = document.getElementById(id);
-      if (!el || !String(el.value || '').trim()) { if (errEl) errEl.textContent = msg; return false; }
-    }
+    if (!val('edWater')) missing.push('Water supply');
+    if (!val('edElectricity')) missing.push('Electricity');
+    if (!val('edFurnishing')) missing.push('Furnishing');
+    if (!val('edBathroom')) missing.push('Bathroom type');
   }
   if (step === 5) {
-    if (!document.getElementById('adLat').value || !document.getElementById('adLng').value) {
-      if (errEl) errEl.textContent = 'Please drop a pin on the map to set the location.';
-      return false;
-    }
-    if (!document.getElementById('adLocationArea').value.trim()) {
-      if (errEl) errEl.textContent = 'Location area is required.';
-      return false;
-    }
-    if (!document.getElementById('adLandmark').value.trim()) {
-      if (errEl) errEl.textContent = 'Nearest landmark is required.';
+    if (!val('adLat') || !val('adLng')) missing.push('Map pin (tap the map to set the location)');
+    if (!val('adLocationArea')) missing.push('Location area');
+    if (!val('adLandmark')) missing.push('Nearest landmark');
+  }
+  return missing;
+}
+
+// Show a "what's left to fill in" prompt in a step's error box (or the submit box
+// for the final gate). Renders a short bullet list.
+function showStepMissing(errEl, missing) {
+  if (!errEl) return;
+  const items = missing.map(m => `<li style="margin:.1rem 0">${m}</li>`).join('');
+  errEl.innerHTML = `<strong>Please complete the following:</strong><ul style="margin:.4rem 0 0 1.1rem;padding:0">${items}</ul>`;
+  errEl.style.display = 'block';
+}
+
+function validateStep(step) {
+  const errEl = document.getElementById(`step${step}Error`);
+  if (errEl) { errEl.textContent = ''; errEl.style.display = 'none'; }
+
+  const missing = missingFieldsForStep(step);
+  // Contact-info is a content rule, not a missing field: report it on its own.
+  if (step === 2 && !missing.length) {
+    const title = document.getElementById('adTitle').value.trim();
+    const desc = document.getElementById('adDescription').value.trim();
+    const contactPattern = /(\d[\s\-().]{0,2}){7,}|@\w{3,}|\b(whatsapp|telegram|call me|my number)\b/i;
+    if (contactPattern.test(title) || contactPattern.test(desc)) {
+      if (errEl) { errEl.textContent = 'Remove contact information from the title/description.'; errEl.style.display = 'block'; }
       return false;
     }
   }
+  if (missing.length) { showStepMissing(errEl, missing); return false; }
   return true;
 }
 
@@ -406,15 +419,17 @@ document.getElementById('postAdForm').addEventListener('submit', async (e) => {
   errEl.textContent = '';
 
   // Final gate: re-run every step's validation so the form cannot be submitted
-  // with anything missing (e.g. jumping straight to Review). On the first failing
-  // step we jump the wizard to it so the user sees exactly what to fix.
+  // with anything missing (e.g. jumping straight to Review). We jump the wizard to
+  // the FIRST incomplete step, where validateStep() has already written the
+  // "what's left to fill in" prompt — so the message appears at that step.
   for (let s = 1; s <= TOTAL_STEPS - 1; s++) {
     if (!validateStep(s)) {
-      const stepErr = document.getElementById(`step${s}Error`);
-      errEl.textContent = (stepErr && stepErr.textContent) || 'Please complete all fields before submitting.';
       currentStep = s;
       updateWizardUI();
       window.scrollTo({ top: 0, behavior: 'smooth' });
+      // Bring the prompt into view for tall steps.
+      const stepErr = document.getElementById(`step${s}Error`);
+      if (stepErr) stepErr.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
   }
