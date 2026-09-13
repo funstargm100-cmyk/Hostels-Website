@@ -578,13 +578,22 @@ function renderListingCard(l, options = {}) {
   // Amenities are excluded from map popup cards to keep them sleek, focused, and clean
   const amenitiesHtml = isPopup ? '' : `<div class="amenity-icons">${amenityIcons.map(a => `<span class="amenity-icon">${a}</span>`).join('')}</div>`;
 
+  // Paint the heart FILLED when the viewer already saved this room, so a page
+  // refresh (or paging/refiltering) shows liked rooms as liked — not as an
+  // unfilled heart that would re-save on click. `favorited` is set by the
+  // listings/owner-profile APIs for a signed-in viewer; guests always get false.
+  const favActive = !!l.favorited;
+  const favIcon = favActive
+    ? '<i data-lucide="heart" style="fill:var(--primary);color:var(--primary)"></i>'
+    : '<i data-lucide="heart"></i>';
+
   return `
     <div class="card" onclick="location.href='/listing?id=${l.uuid}'" style="cursor:pointer">
       <div style="position:relative">
         <img class="card-img" src="${img}" alt="${l.title}" loading="lazy" decoding="async" data-full="${originalImg}" onerror="${imgOnError}" />
         <div style="position:absolute;top:0.6rem;left:0.6rem;display:flex;gap:0.3rem;flex-wrap:wrap">${verified}${featured}</div>
-        <button class="fav-btn" style="position:absolute;top:0.5rem;right:0.5rem;background:rgba(255,255,255,0.9);border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center"
-          onclick="event.stopPropagation();toggleFav('${l.uuid}',this)"><i data-lucide="heart"></i></button>
+        <button class="fav-btn${favActive ? ' active' : ''}" style="position:absolute;top:0.5rem;right:0.5rem;background:rgba(255,255,255,0.9);border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center"
+          onclick="event.stopPropagation();toggleFav('${l.uuid}',this)">${favIcon}</button>
       </div>
       <div class="card-body">
         <div class="card-title">${l.title}</div>

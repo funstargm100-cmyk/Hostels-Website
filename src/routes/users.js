@@ -21,20 +21,34 @@ router.get('/:id', optionalAuth, async (req, res) => {
     const poster = uRes.rows[0];
     if (!poster) return res.status(404).json({ error: 'Ad poster not found' });
 
+    // Flag each room the viewer has already saved, so profile cards paint the
+    // heart filled on load (same contract as GET /api/listings). Guests -> false.
+    const viewer = req.session.user;
+    const favSelect = viewer
+      ? 'f.user_id IS NOT NULL as favorited'
+      : 'FALSE as favorited';
+    const favJoin = viewer
+      ? 'LEFT JOIN favorites f ON f.listing_id = l.id AND f.user_id = $2'
+      : '';
+    const favGroup = viewer ? ', f.user_id' : '';
+    const favParams = viewer ? [id, viewer.id] : [id];
+
     const [listings] = await db.query2(`
       SELECT l.id, l.uuid, l.title, l.location_area, l.nearest_landmark, l.listed_price, l.price_per_head,
              l.occupancy_type, l.gender_preference, l.is_featured, l.views_count, l.interest_count,
              l.move_in_date, l.created_at, l.location_lat, l.location_lng,
              img.image_path as primary_image,
+             ${favSelect},
              ROUND(AVG(r.rating)::numeric, 1) as avg_rating, COUNT(r.id) as review_count,
              a.wifi, a.water, a.electricity, a.furnishing, a.parking
       FROM listings l
       LEFT JOIN listing_images img ON img.listing_id = l.id AND img.is_primary = TRUE
       LEFT JOIN reviews r ON r.listing_id = l.id
       LEFT JOIN amenities a ON a.listing_id = l.id
+      ${favJoin}
       WHERE l.owner_id=$1 AND l.status='active'
-      GROUP BY l.id, img.image_path, a.wifi, a.water, a.electricity, a.furnishing, a.parking
-      ORDER BY l.is_featured DESC, l.created_at DESC`, [id]);
+      GROUP BY l.id, img.image_path, a.wifi, a.water, a.electricity, a.furnishing, a.parking${favGroup}
+      ORDER BY l.is_featured DESC, l.created_at DESC`, favParams);
 
     for (const lst of listings) {
       if (lst.location_lat != null) {
@@ -45,7 +59,6 @@ router.get('/:id', optionalAuth, async (req, res) => {
     }
 
     let following = false;
-    const viewer = req.session.user;
     if (viewer) {
       const f = await db.query('SELECT 1 FROM follows WHERE follower_id=$1 AND poster_id=$2', [viewer.id, id]);
       following = f.rows.length > 0;

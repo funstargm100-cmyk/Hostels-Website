@@ -49,6 +49,11 @@ async function loadListing() {
     renderAmenities(amenities);
     renderPriceBox(listing);
     renderReviews(reviews, listing.avg_rating, listing.review_count);
+    // Paint the action buttons from server state so they reflect reality on load:
+    // a room already saved shows a filled heart, one already requested shows
+    // "Request Sent". Without this both reset to their default look on refresh.
+    applyFavoriteState(!!listing.favorited);
+    applyRequestState(!!listing.has_requested);
     initMap(listing.display_lat, listing.display_lng, listing.location_area);
     // Distance from the seeker's daily base — shown automatically, no input.
     showBaseDistance();
@@ -491,6 +496,9 @@ function openInterestModal() {
   // Belt-and-braces: the server rejects this too, but never open the form for
   // someone trying to book their own room.
   if (isOwnListing(currentListing)) return showToast("You can't send a request to your own room", 'error');
+  // Already requested this room — the button is disabled, but guard the handler
+  // too so a stale tap cannot create a duplicate request.
+  if (currentListing && currentListing.has_requested) return showToast('You have already sent a request for this room.', 'info');
   openModal('interestModal');
 }
 function openReportModal() { openModal('reportModal'); }
@@ -514,9 +522,15 @@ async function submitInterest(e) {
     closeModal('interestModal');
     showToast('Request sent! We will contact you shortly.', 'success');
     document.getElementById('interestForm').reset();
+    // The request now exists: reflect it immediately and remember it on the
+    // listing so a reopen/tap cannot send a duplicate.
+    if (currentListing) currentListing.has_requested = true;
+    applyRequestState(true);
   } catch (ex) {
     showToast(ex.message, 'error');
   } finally {
+    // `btn` is the modal's submit button (#interestSubmitBtn), separate from the
+    // page's Request button — restore it so the form can be retried on failure.
     btn.disabled = false; btn.textContent = 'Send Request';
   }
 }
@@ -535,17 +549,38 @@ async function submitReport(e) {
   }
 }
 
+// Reflect a favorited/not-favorited state on the heart button. Shared by the
+// initial page load and the click handler so both look identical.
+function applyFavoriteState(favorited) {
+  const btn = document.getElementById('favBtn');
+  if (!btn) return;
+  btn.innerHTML = favorited
+    ? '<i data-lucide="heart" style="width:20px;height:20px;fill:var(--primary);color:var(--primary)"></i>'
+    : '<i data-lucide="heart" style="width:20px;height:20px"></i>';
+  btn.classList.toggle('active', favorited);
+  if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [btn] });
+}
+
+// Reflect whether the viewer has already requested this room. When they have,
+// the button reads "Request Sent" and stops opening the modal.
+function applyRequestState(hasRequested) {
+  const btn = document.getElementById('requestBtn');
+  const label = document.getElementById('requestBtnLabel');
+  if (!btn) return;
+  if (label) label.textContent = hasRequested ? 'Request Sent' : 'Send Request';
+  btn.classList.toggle('requested', hasRequested);
+  btn.disabled = hasRequested;
+  btn.title = hasRequested ? 'You have already sent a request for this room' : '';
+  if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [btn] });
+}
+
 async function toggleFavorite() {
   const user = JSON.parse(localStorage.getItem('user') || 'null');
   if (!user) return location.href = '/login?redirect=' + encodeURIComponent(location.pathname + location.search);
   if (isOwnListing(currentListing)) return showToast("You can't save your own room", 'error');
   try {
     const { favorited } = await api.post(`/api/listings/${listingUUID}/favorite`);
-    const btn = document.getElementById('favBtn');
-    btn.innerHTML = favorited
-      ? '<i data-lucide="heart" style="width:20px;height:20px;fill:var(--primary);color:var(--primary)"></i>'
-      : '<i data-lucide="heart" style="width:20px;height:20px"></i>';
-    if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [btn] });
+    applyFavoriteState(favorited);
     showToast(favorited ? 'Saved to favorites' : 'Removed from favorites', 'success');
   } catch (e) { showToast(e.message, 'error'); }
 }

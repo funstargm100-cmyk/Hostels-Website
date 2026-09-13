@@ -28,16 +28,33 @@ router.post('/', optionalAuth, async (req, res) => {
 
     await db.query('UPDATE listings SET interest_count = interest_count + 1 WHERE id=$1', [listing.id]);
 
-    const ownerRes = await db.query('SELECT email FROM users WHERE id=$1', [listing.owner_id]);
-    const owner = ownerRes.rows[0];
-    if (owner?.email) await sendEmail(owner.email, 'New Interest in Your Listing', templates.interestReceived(listing.title));
-    // In-app notification to the owner (dashboard "My listings").
-    await notify(listing.owner_id, 'interestReceived', [listing.title], { link: '/dashboard#listings' });
-    if (seeker_email) await sendEmail(seeker_email, 'Request Received', templates.requestUpdate('received', listing.title));
-    // In-app confirmation to the signed-in seeker (dashboard "My requests").
-    if (seeker_id) await notify(seeker_id, 'requestUpdate', ['received', listing.title], { link: '/dashboard#requests' });
-
+    // The request is saved — that is the user's success condition. Respond NOW
+    // and let the notifications/emails run in the background. Awaiting SMTP was
+    // holding the response for several seconds, which left the seeker staring at
+    // "Sending..." long after the request had actually gone through.
     res.status(201).json({ message: 'Interest submitted. We will contact you shortly.', uuid: result.rows[0].uuid });
+
+    // Fire-and-forget side effects. Each is isolated so one failure (e.g. SMTP
+    // down) cannot reject the others or affect the response already sent.
+    (async () => {
+      const ownerRes = await db.query('SELECT email FROM users WHERE id=$1', [listing.owner_id]);
+      const owner = ownerRes.rows[0];
+      if (owner?.email) await sendEmail(owner.email, 'New Interest in Your Listing', templates.interestReceived(listing.title));
+    })().catch(err => console.error('interest owner email failed:', err.message));
+
+    // In-app notification to the owner (dashboard "My listings").
+    notify(listing.owner_id, 'interestReceived', [listing.title], { link: '/dashboard#listings' })
+      .catch(err => console.error('interest owner notify failed:', err.message));
+
+    if (seeker_email) {
+      sendEmail(seeker_email, 'Request Received', templates.requestUpdate('received', listing.title))
+        .catch(err => console.error('interest seeker email failed:', err.message));
+    }
+    // In-app confirmation to the signed-in seeker (dashboard "My requests").
+    if (seeker_id) {
+      notify(seeker_id, 'requestUpdate', ['received', listing.title], { link: '/dashboard#requests' })
+        .catch(err => console.error('interest seeker notify failed:', err.message));
+    }
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server error' });

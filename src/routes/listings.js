@@ -133,7 +133,10 @@ async function applyImageChanges(listingId, removeIds, files, photoOrder) {
 }
 
 // GET /api/listings
-router.get('/', async (req, res) => {
+// optionalAuth so a signed-in viewer's saved rooms come back flagged
+// (`favorited`), letting cards paint the heart filled on load instead of only
+// after a click. Guests simply get favorited=false everywhere.
+router.get('/', optionalAuth, async (req, res) => {
   try {
     const { location, min_price, max_price, occupancy, gender, water, electricity, wifi, parking, furnished, bathroom, sort, page = 1, limit = 12, near_lat, near_lng, near_km = 5 } = req.query;
     const offset = (page - 1) * limit;
@@ -198,12 +201,25 @@ router.get('/', async (req, res) => {
     if (!orderBy) orderBy = 'l.is_featured DESC, l.created_at DESC';
     const whereStr = `WHERE ${where.join(' AND ')}`;
 
+    // Is THIS viewer's saved-room flag. Anonymous viewers get a constant false,
+    // so the same query shape works with or without a signed-in user.
+    const viewerId = req.user ? req.user.id : null;
+    const favSelect = viewerId
+      ? 'f.user_id IS NOT NULL as favorited'
+      : 'FALSE as favorited';
+    const favJoin = viewerId
+      ? `LEFT JOIN favorites f ON f.listing_id = l.id AND f.user_id = $${p++}`
+      : '';
+    const favGroup = viewerId ? ', f.user_id' : '';
+    if (viewerId) params.push(viewerId);
+
     const sql = `
       SELECT l.id, l.uuid, l.title, l.location_area, l.full_address, l.nearest_landmark, l.listed_price, l.price_per_head,
              l.occupancy_type, l.gender_preference, l.is_featured, l.views_count, l.interest_count,
              l.move_in_date, l.created_at, l.location_lat, l.location_lng,
              u.is_kyc_verified as owner_verified,
              img.image_path as primary_image,
+             ${favSelect},
              ROUND(AVG(r.rating)::numeric, 1) as avg_rating, COUNT(r.id) as review_count,
              a.wifi, a.water, a.electricity, a.security, a.furnishing, a.bathroom, a.parking
       FROM listings l
@@ -211,12 +227,15 @@ router.get('/', async (req, res) => {
       LEFT JOIN listing_images img ON img.listing_id = l.id AND img.is_primary = TRUE
       LEFT JOIN reviews r ON r.listing_id = l.id
       LEFT JOIN amenities a ON a.listing_id = l.id
+      ${favJoin}
       ${whereStr}
-      GROUP BY l.id, u.is_kyc_verified, img.image_path, a.wifi, a.water, a.electricity, a.security, a.furnishing, a.bathroom, a.parking
+      GROUP BY l.id, u.is_kyc_verified, img.image_path, a.wifi, a.water, a.electricity, a.security, a.furnishing, a.bathroom, a.parking${favGroup}
       ORDER BY ${orderBy}
       LIMIT $${p} OFFSET $${p+1}`;
 
-    // WHERE-only params for the count query (scoring params are ORDER BY-only)
+    // WHERE-only params for the count query (scoring params are ORDER BY-only).
+    // whereParamCount stops before the favorites viewer id, which the count query
+    // does not reference, it is sliced off here.
     const whereParams = params.slice(0, whereParamCount);
     const [listings] = await db.query2(sql, [...params, parseInt(limit), parseInt(offset)]);
     // Coordinates: real ones power distance-to-base calculations in the client;
@@ -266,6 +285,23 @@ router.get('/:uuid', optionalAuth, async (req, res) => {
       isFollowingOwner = fCheck.rows.length > 0;
     }
     listing.is_following_owner = isFollowingOwner;
+
+    // Viewer-specific state for the detail page's action buttons, so they paint
+    // correctly on load (not only after a click):
+    //   favorited      -> heart starts filled if this room is already saved
+    //   has_requested  -> Request button reads "Request Sent" and is disabled
+    // Guests get both false. An owner viewing their own room also gets false for
+    // has_requested (the UI hides the button for owners anyway).
+    let favorited = false;
+    let has_requested = false;
+    if (viewer && viewer.id !== listing.owner_id) {
+      const fRow = await db.query('SELECT 1 FROM favorites WHERE user_id=$1 AND listing_id=$2', [viewer.id, listing.id]);
+      favorited = fRow.rows.length > 0;
+      const rRow = await db.query('SELECT 1 FROM contact_requests WHERE seeker_id=$1 AND listing_id=$2 LIMIT 1', [viewer.id, listing.id]);
+      has_requested = rRow.rows.length > 0;
+    }
+    listing.favorited = favorited;
+    listing.has_requested = has_requested;
 
     const [images] = await db.query2('SELECT image_path, is_primary FROM listing_images WHERE listing_id=$1 ORDER BY sort_order', [listing.id]);
     const amenitiesRes = await db.query('SELECT * FROM amenities WHERE listing_id=$1', [listing.id]);
