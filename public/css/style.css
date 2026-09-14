@@ -457,6 +457,24 @@ textarea{ resize:vertical; min-height:110px; }
 @media (max-width:900px){ .grid-3{ grid-template-columns:repeat(2,1fr); } }
 @media (max-width:600px){ .grid-3{ grid-template-columns:1fr; } }
 
+/* Saved rooms tab (dashboard #favoritesList). The generic .grid-3 collapses to
+   ONE full-width card per row on phones, which made each saved room enormous.
+   Keep them two-up and denser — matching the browse grid's mobile treatment —
+   so a shortlist is scannable without endless scrolling. */
+#favoritesList .card-img{ aspect-ratio:16/11; }
+@media (max-width:640px){
+  #favoritesList.grid-3{ grid-template-columns:repeat(2,1fr); gap:.7rem; }
+  #favoritesList .card-title{ font-size:.9rem; }
+  #favoritesList .card-body{ padding:.6rem .7rem .2rem; }
+  #favoritesList .amenity-icons{ display:none; }
+  #favoritesList .card-footer{ padding:.4rem .7rem .6rem; }
+  #favoritesList .card-price{ font-size:.95rem; }
+  #favoritesList .card-footer .tag{ margin-left:auto; align-self:flex-end; }
+  #favoritesList .tag{ font-size:.6rem; padding:.2rem .45rem; }
+  #favoritesList .fav-btn{ width:28px; height:28px; }
+  #favoritesList .fav-btn svg{ width:14px; height:14px; }
+}
+
 /* ── featured rooms: small cards, horizontal scroll ─────────────── */
 .hscroll{ display:flex; gap:1rem; overflow-x:auto; scroll-snap-type:x mandatory; padding:.2rem .2rem 1rem; scrollbar-width:thin; }
 .hscroll::-webkit-scrollbar{ height:6px; }
