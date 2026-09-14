@@ -198,14 +198,10 @@ textarea{ resize:vertical; min-height:110px; }
   .tag{ font-size:.65rem; padding:.22rem .5rem; }
   .card-footer .tag{ align-self:flex-start; margin-top:.2rem; }
 }
-.fav-btn{ border:none; cursor:pointer; color:var(--brick); transition:transform .15s ease; }
+/* Like buttons are gold in every theme. */
+.fav-btn{ border:none; cursor:pointer; color:var(--gold); transition:transform .15s ease; }
 .fav-btn:hover{ transform:scale(1.12); }
-.fav-btn.active i,.fav-btn.active svg{ fill:var(--brick); }
-/* Like buttons read gold in the light/white theme (in dark theme --brick already
-   resolves to gold, so this only needs to lift the light theme). */
-[data-theme="light"] .fav-btn{ color:var(--gold); }
-[data-theme="light"] .fav-btn.active i,
-[data-theme="light"] .fav-btn.active svg{ fill:var(--gold); }
+.fav-btn.active i,.fav-btn.active svg{ fill:var(--gold); }
 /* Request button once the viewer has already sent a request: reads as done
    (gold), not clickable. */
 .btn.requested{ background:var(--gold); border-color:var(--gold); color:var(--ink); opacity:.9; cursor:default; }
