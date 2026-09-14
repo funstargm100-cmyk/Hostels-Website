@@ -234,6 +234,78 @@ textarea{ resize:vertical; min-height:110px; }
 [data-theme="dark"] .logo img.rentel-wordmark{ content:url('/images/rentel_wordmark.png'); }
 .navbar-transparent .logo img.rentel-wordmark{ content:url('/images/rentel_wordmark.png'); }
 .navbar-transparent .logo{ color:#fff; }
+
+/* ── logo intro animation ────────────────────────────────
+   Sequence, timed off one 2.3s timeline:
+     0.00–0.62s  amber rounded-square cover pops in at the centre of the logo
+     0.42–0.83s  the icon appears inside that cover (still centred)
+     0.83–1.43s  the cover dissolves while the icon slides left to its slot
+     1.16–1.97s  "Rentel" sweeps in from the left behind the roofline edge
+   The cover is the icon tile's own amber, at the icon's start position, so it
+   reads as the icon being revealed rather than as a second block. Colours come
+   from CSS vars where possible, so light/dark/transparent-over-hero track. */
+.logo.logo-intro{ position:relative; --logo-intro-delay:0ms; }
+/* Travel from "centred in the logo" to the icon's own slot is half the logo's
+   width (15px icon + gap + wordmark), which no percentage of the 30px icon can
+   express — so the distance is a variable both the icon and its cover read.
+   --logo-mid is set from the measured logo width in animations.js; the 66px
+   fallback keeps a static render correct if that script never runs. */
+.logo.logo-intro .rentel-icon{
+  animation:logoIconSlide 2.3s cubic-bezier(.5,.02,.2,1) var(--logo-intro-delay) both;
+  --logo-mid:66px;
+}
+.logo.logo-intro .rentel-wordmark{
+  clip-path:inset(-45% 102% -45% -3%);   /* hidden until the sweep starts */
+  animation:logoWordReveal 2.3s cubic-bezier(.6,.05,.2,1) var(--logo-intro-delay) both;
+}
+/* The cover: same box, radius and amber as the icon tile itself. It sits at
+   the icon's slot (30px icon + .5rem gap = 38px to the wordmark) and is pushed
+   RIGHT by --logo-mid, i.e. the same distance the icon travels, which puts it
+   exactly over the icon's centred start. It then fades there — it does not
+   follow the icon back left, so no ghost is left beside the settled icon. */
+.logo.logo-intro::before{
+  content:"";
+  position:absolute; left:38px; top:50%;
+  width:30px; height:30px; border-radius:7px;
+  background:#EFA00B;                            /* the icon tile's amber */
+  z-index:2; pointer-events:none;
+  opacity:0;
+  transform:translate(-50%,-50%) translateX(var(--logo-mid,66px)) scale(0);
+  animation:logoSquare 2.3s cubic-bezier(.34,1.56,.64,1) var(--logo-intro-delay) both;
+}
+/* Cover geometry, in % of the 2.3s timeline:
+   0 → 16%   pop in at the centre (overshoot handled by the easing)
+   16 → 33%  hold, so the icon is clearly seen inside it
+   33 → 52%  dissolve on the spot as the icon departs
+   52 → 100% gone                                 */
+@keyframes logoSquare{
+  0%   { opacity:0; transform:translate(-50%,-50%) translateX(var(--logo-mid,66px)) scale(0); }
+  8%   { opacity:1; transform:translate(-50%,-50%) translateX(var(--logo-mid,66px)) scale(.55); }
+  16%  { opacity:1; transform:translate(-50%,-50%) translateX(var(--logo-mid,66px)) scale(1); }
+  33%  { opacity:1; transform:translate(-50%,-50%) translateX(var(--logo-mid,66px)) scale(1); }
+  52%  { opacity:0; transform:translate(-50%,-50%) translateX(var(--logo-mid,66px)) scale(1); }
+  100% { opacity:0; transform:translate(-50%,-50%) translateX(var(--logo-mid,66px)) scale(1); }
+}
+/* The icon is hidden to the right of its slot, under the cover, then slides
+   home. --logo-mid is measured in animations.js as (logo width / 2 - icon
+   width / 2), so at the hold beat the icon sits dead-centre under the cover. */
+@keyframes logoIconSlide{
+  0%,18%   { opacity:0; transform:translateX(var(--logo-mid,66px)); }
+  36%      { opacity:1; transform:translateX(var(--logo-mid,66px)); }
+  62%      { opacity:1; transform:translateX(0); }
+  100%     { opacity:1; transform:translateX(0); }
+}
+@keyframes logoWordReveal{
+  0%,50.5%   { clip-path:inset(-45% 102% -45% -3%); }
+  85.7%      { clip-path:inset(-45% -8% -45% -3%); }
+  100%       { clip-path:inset(-45% -8% -45% -3%); }
+}
+/* Respect the OS "reduce motion" setting: show the finished logo outright. */
+@media (prefers-reduced-motion:reduce){
+  .logo.logo-intro::before{ display:none; }
+  .logo.logo-intro .rentel-icon,
+  .logo.logo-intro .rentel-wordmark{ animation:none; clip-path:none; }
+}
 .nav-links{ display:flex; align-items:center; gap:1.7rem; font-weight:600; font-size:.92rem; }
 .nav-links a:hover{ color:var(--primary); }
 .nav-actions{ display:flex; align-items:center; gap:.7rem; }
