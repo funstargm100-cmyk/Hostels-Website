@@ -17,8 +17,8 @@
   --primary:#14213D;
   --primary-hover:#0B152B;
   --primary-light:#E9E4D8;
-  --accent:#D4AF37;
-  --accent-hover:#B8952C;
+  --accent:#ef9d00;
+  --accent-hover:#ffbb3c;
   --success:#2F9E68;
   --danger:#D64545;
   /* legacy alias tokens — mapped onto the new palette so existing rules

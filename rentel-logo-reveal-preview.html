@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Rentel Logo Reveal — Preview</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #0f0f10; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2rem; font-family: -apple-system, sans-serif; }
+
+  /* ============ MOCK NAVBAR (for context only) ============ */
+  .mock-nav { width: 100%; background: #17171a; border-bottom: 1px solid #2a2a2e; padding: 1rem 2rem; position: absolute; top: 0; left: 0; display: flex; align-items: center; }
+
+  .replay-btn { position: fixed; bottom: 1.5rem; right: 1.5rem; background: #EF9D00; color: #000; border: none; padding: 0.7rem 1.3rem; border-radius: 999px; font-weight: 700; cursor: pointer; font-size: 0.9rem; }
+
+  /* ============================================================
+     RENTEL LOGO REVEAL — drop this block + the CSS below into
+     your navbar-brand markup.
+     ============================================================ */
+  .rentel-reveal {
+    --logo-h: 40px;              /* overall nav logo height — change to resize */
+    --ring-color: #EF9D00;       /* matches icon badge orange, no other color used */
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    text-decoration: none;
+  }
+
+  .rentel-icon-wrap {
+    position: relative;
+    width: var(--logo-h);
+    height: var(--logo-h);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .rentel-ring {
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 4px; height: 4px;
+    border-radius: 50%;
+    border: 6px solid var(--ring-color);
+    transform: translate(-50%, -50%);
+    animation: rentelRing 950ms cubic-bezier(.2,.7,.3,1) both;
+  }
+
+  .rentel-icon-img {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    opacity: 0;
+    transform: scale(0.6);
+    animation: rentelIconIn 700ms cubic-bezier(.2,.7,.3,1) both;
+    animation-delay: 250ms;
+  }
+
+  .rentel-wordmark-img {
+    height: calc(var(--logo-h) * 0.72);
+    width: auto;
+    display: block;
+    clip-path: inset(0 100% 0 0);
+    animation: rentelWordmarkIn 700ms cubic-bezier(.3,.6,.2,1) both;
+    animation-delay: 1050ms;
+  }
+
+  @keyframes rentelRing {
+    0%   { width: 4px;  height: 4px;  border-width: 6px; opacity: 1; }
+    38%  { width: 4px;  height: 4px;  border-width: 6px; opacity: 1; }
+    72%  { width: var(--logo-h); height: var(--logo-h); border-width: 2px; opacity: 1; }
+    85%  { width: var(--logo-h); height: var(--logo-h); border-width: 2px; opacity: 1; }
+    100% { width: var(--logo-h); height: var(--logo-h); border-width: 2px; opacity: 0; }
+  }
+
+  @keyframes rentelIconIn {
+    0%   { opacity: 0; transform: scale(0.6); }
+    100% { opacity: 1; transform: scale(1); }
+  }
+
+  /* Wipes left-to-right; pauses just before the last letter, then
+     lands it a beat later — same "staggered finish" as the reference. */
+  @keyframes rentelWordmarkIn {
+    0%   { clip-path: inset(0 100% 0 0); }
+    65%  { clip-path: inset(0 6% 0 0); }
+    80%  { clip-path: inset(0 6% 0 0); }
+    100% { clip-path: inset(0 0% 0 0); }
+  }
+
+  /* Accessibility: skip straight to the final state if the user
+     prefers reduced motion. */
+  @media (prefers-reduced-motion: reduce) {
+    .rentel-ring { display: none; }
+    .rentel-icon-img { animation: none; opacity: 1; transform: none; }
+    .rentel-wordmark-img { animation: none; clip-path: none; }
+  }
+  /* ============================================================ */
+</style>
+</head>
+<body>
+
+  <nav class="mock-nav">
+    <a href="/" class="rentel-reveal" id="logo">
+      <span class="rentel-icon-wrap">
+        <span class="rentel-ring"></span>
+        <img class="rentel-icon-img" src="images/rentel-icon.png" alt="" />
+      </span>
+      <img class="rentel-wordmark-img" src="images/rentel-wordmark.png" alt="Rentel" />
+    </a>
+  </nav>
+
+  <button class="replay-btn" onclick="replay()">▶ Replay animation</button>
+
+  <script>
+    function replay() {
+      const el = document.getElementById('logo');
+      const clone = el.cloneNode(true);
+      el.replaceWith(clone);
+    }
+  </script>
+</body>
+</html>

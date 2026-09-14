@@ -1,0 +1,58 @@
+﻿<!doctype html>
+<html lang="en" data-theme="dark">
+
+<head>
+   <meta charset="utf-8" />
+   <meta name="viewport" content="width=device-width, initial-scale=1" />
+   <title>Palette check</title>
+   <link rel="stylesheet" href="/css/style.css" />
+   <style>
+      body {
+         padding: 1.5rem;
+         font-family: var(--font-body)
+      }
+
+      .row {
+         display: flex;
+         gap: .7rem;
+         flex-wrap: wrap;
+         margin-bottom: 1.2rem;
+         align-items: center
+      }
+   </style>
+</head>
+
+<body>
+   <div class="row">
+      <a href="/" class="logo"><img class="rentel-icon" src="/images/rentel_icon.png" alt="Rentel icon"><img
+            class="rentel-wordmark" src="/images/rentel_wordmark_ink.png" alt="Rentel"></a>
+   </div>
+   <div class="row">
+      <button class="btn btn-primary">Primary</button>
+      <button class="btn btn-secondary">Secondary</button>
+      <button class="btn btn-outline">Outline</button>
+   </div>
+   <div class="row">
+      <span class="badge badge-verified">Verified</span>
+      <span class="badge badge-featured">Featured</span>
+      <span class="status-badge status-active">active</span>
+      <span class="status-badge status-pending">pending</span>
+   </div>
+   <div class="row">
+      <div class="alert alert-info" style="margin:0;flex:1">Info alert</div>
+      <div class="alert alert-success" style="margin:0;flex:1">Success alert</div>
+      <div class="alert alert-danger" style="margin:0;flex:1">Danger alert</div>
+   </div>
+   <div class="row">
+      <div class="card" style="width:220px">
+         <div class="card-body">
+            <div class="card-title">Room card</div>
+            <div class="card-distance"><i data-lucide="navigation"></i><span>1.2 km away</span></div>
+            <p class="text-muted" style="margin:0;font-size:.85rem">Muted body text on the card surface.</p>
+         </div>
+      </div>
+      <div class="trust-band" style="flex:1;padding:1rem">Trust band</div>
+   </div>
+</body>
+
+</html>
