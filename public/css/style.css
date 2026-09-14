@@ -487,52 +487,15 @@ textarea{ resize:vertical; min-height:110px; }
 @media (max-width:900px){ .why-grid{ grid-template-columns:repeat(2,1fr); } }
 @media (max-width:640px){ .why-grid{ grid-template-columns:1fr; } }
 
-/* ── signed-in welcome band ───────────────────────────
-   The "Welcome back" greeting sits on a navy panel with a soft gold glow,
-   so it reads as a proper landing moment instead of grey text floating over
-   the page. Navy is --primary in light mode and --bg-secondary in dark, so the
-   band tracks the theme; the gold glow is --accent in both. */
-.welcome-band{ position:relative; }
+/* ── signed-in welcome heading ────────────────────────
+   The "Welcome back" greeting is plain text on the page — no card, panel or
+   background. It just reuses .section-head for the heading/action row and
+   gets a little breathing room before the feature cards below. */
 .welcome-band .welcome-head{
-  position:relative; overflow:hidden;
   align-items:center; margin-bottom:1.4rem;
-  padding:1.8rem 2rem;
-  border-radius:var(--radius);
-  border:1px solid var(--border);
-  background:
-    radial-gradient(120% 180% at 100% 0%, rgba(239,157,0,.20) 0%, rgba(239,157,0,0) 55%),
-    linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
-  box-shadow:var(--shadow-md);
-  color:#fff;
 }
-/* In dark mode --primary is gold, so keep the band on a navy surface with the
-   same gold glow — otherwise the whole band would flip to gold. */
-[data-theme="dark"] .welcome-band .welcome-head{
-  background:
-    radial-gradient(120% 180% at 100% 0%, rgba(239,157,0,.16) 0%, rgba(239,157,0,0) 55%),
-    linear-gradient(135deg, #161C2E 0%, #0E1220 100%);
-  border-color:rgba(239,157,0,.22);
-}
-/* gold hairline along the top edge of the band */
-.welcome-band .welcome-head::before{
-  content:""; position:absolute; left:0; right:0; top:0; height:3px;
-  background:linear-gradient(90deg, var(--accent), var(--accent-hover), transparent);
-}
-.welcome-band .welcome-head h2{
-  color:#fff; margin:0 0 .35rem; letter-spacing:-.01em;
-}
-.welcome-band .welcome-head h2 em{ font-style:italic; color:var(--accent-hover); }
-.welcome-band .welcome-head .text-muted{ color:rgba(255,255,255,.78) !important; max-width:60ch; }
-/* the action button sits ON the navy band, so it flips to gold for contrast */
-.welcome-band .welcome-head .btn-outline{
-  border-color:rgba(255,255,255,.35); color:#fff;
-}
-.welcome-band .welcome-head .btn-outline:hover{
-  border-color:var(--accent); color:var(--accent-hover); background:rgba(255,255,255,.06);
-}
-@media (max-width:640px){
-  .welcome-band .welcome-head{ padding:1.4rem 1.3rem; }
-}
+.welcome-band .welcome-head h2{ margin:0 0 .35rem; letter-spacing:-.01em; }
+.welcome-band .welcome-head .text-muted{ max-width:60ch; }
 
 /* ── feature cards (the 3 tiles under the greeting) ───────────────────
    These previously had no styles at all, so they rendered as three bare
