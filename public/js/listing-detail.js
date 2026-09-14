@@ -555,7 +555,7 @@ function applyFavoriteState(favorited) {
   const btn = document.getElementById('favBtn');
   if (!btn) return;
   btn.innerHTML = favorited
-    ? '<i data-lucide="heart" style="width:20px;height:20px;fill:var(--primary);color:var(--primary)"></i>'
+    ? '<i data-lucide="heart" style="width:20px;height:20px;fill:var(--gold);color:var(--gold)"></i>'
     : '<i data-lucide="heart" style="width:20px;height:20px"></i>';
   btn.classList.toggle('active', favorited);
   if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [btn] });

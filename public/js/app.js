@@ -584,7 +584,7 @@ function renderListingCard(l, options = {}) {
   // listings/owner-profile APIs for a signed-in viewer; guests always get false.
   const favActive = !!l.favorited;
   const favIcon = favActive
-    ? '<i data-lucide="heart" style="fill:var(--primary);color:var(--primary)"></i>'
+    ? '<i data-lucide="heart" style="fill:var(--gold);color:var(--gold)"></i>'
     : '<i data-lucide="heart"></i>';
 
   return `
@@ -615,7 +615,7 @@ function renderListingCard(l, options = {}) {
 function paintFavButton(btn, favorited) {
   if (!btn) return;
   btn.innerHTML = favorited
-    ? '<i data-lucide="heart" style="width:20px;height:20px;fill:var(--primary);color:var(--primary)"></i>'
+    ? '<i data-lucide="heart" style="width:20px;height:20px;fill:var(--gold);color:var(--gold)"></i>'
     : '<i data-lucide="heart" style="width:20px;height:20px"></i>';
   btn.classList.toggle('active', favorited);
   if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [btn] });
