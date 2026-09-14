@@ -261,32 +261,6 @@ textarea{ resize:vertical; min-height:110px; }
    logo must always use the white-letter variant, never the navy ink artwork */
 .site-footer .logo img.rentel-wordmark{ content:url('/images/rentel_wordmark.png'); }
 
-/* ── footer logo hover: gold→silver metallic sweep ─────────────────────
-   The sweep is a diagonal highlight that travels left→right across the
-   wordmark on hover. It is layered over the white artwork with mix-blend
-   mode so it reads as a sheen on the letters rather than a coloured box. */
-.site-footer .logo{ position:relative; overflow:hidden; border-radius:4px; }
-.site-footer .logo::after{
-  content:"";
-  position:absolute; inset:0; pointer-events:none;
-  background:linear-gradient(105deg,
-    transparent 30%,
-    rgba(212,175,55,.95) 45%,   /* gold */
-    rgba(255,255,255,.98) 50%,  /* silver core */
-    rgba(192,192,192,.95) 55%,  /* silver */
-    transparent 70%);
-  transform:translateX(-120%);
-  transition:transform .65s cubic-bezier(.4,0,.2,1);
-  mix-blend-mode:screen;
-}
-.site-footer .logo:hover::after,
-.site-footer .logo:focus-visible::after{ transform:translateX(120%); }
-@media (prefers-reduced-motion:reduce){
-  .site-footer .logo::after{ transition:none; }
-  .site-footer .logo:hover::after,
-  .site-footer .logo:focus-visible::after{ transform:translateX(0); }
-}
-
 /* ── logo intro animation ────────────────────────────────
    Sequence, timed off one 2.3s timeline:
      0.00–0.62s  amber rounded-square cover pops in at the centre of the logo
