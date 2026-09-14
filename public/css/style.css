@@ -536,7 +536,7 @@ textarea{ resize:vertical; min-height:110px; }
   border:1px solid rgba(239,157,0,.28);
   transition:color .22s ease, background .22s ease, border-color .22s ease;
 }
-[data-theme="dark"] .aud-card-icon{ background:rgba(239,157,0,.18); }
+[data-theme="dark"] .aud-card-icon{ color:#fff; background:rgba(239,157,0,.18); }
 .aud-card-icon svg,.aud-card-icon i{ width:22px; height:22px; }
 .aud-card:hover .aud-card-icon{ color:#fff; background:var(--accent); border-color:var(--accent); }
 
