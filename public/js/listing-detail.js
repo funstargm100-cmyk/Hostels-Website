@@ -499,7 +499,55 @@ function openInterestModal() {
   // Already requested this room — the button is disabled, but guard the handler
   // too so a stale tap cannot create a duplicate request.
   if (currentListing && currentListing.has_requested) return showToast('You have already sent a request for this room.', 'info');
+  prefillInterestForm();
   openModal('interestModal');
+}
+
+// Pull the seeker's details straight from their account so the request form is a
+// confirmation step, not a place to retype (or alter) them. The fields are set
+// read-only and a note points to the account page for any changes. Guests who
+// are not logged in still fill the form in by hand.
+function prefillInterestForm() {
+  const nameEl = document.getElementById('intName');
+  const phoneEl = document.getElementById('intPhone');
+  const emailEl = document.getElementById('intEmail');
+  const noteEl = document.getElementById('interestAccountNote');
+
+  // A logged-in seeker: lock FIRST and fill from the cached user immediately, so
+  // the fields are never editable even for the instant before the fresh profile
+  // arrives (and a fast typer cannot slip a value in that the fetch overwrites).
+  const cached = (() => { try { return JSON.parse(localStorage.getItem('user') || 'null'); } catch { return null; } })();
+  const loggedIn = !!(cached && localStorage.getItem('token'));
+  if (!loggedIn) {
+    // Visitor — leave the form editable and clear any stale locked styling.
+    [nameEl, phoneEl, emailEl].forEach(el => {
+      el.readOnly = false;
+      el.removeAttribute('aria-readonly');
+      el.style.background = '';
+      el.style.cursor = '';
+    });
+    if (noteEl) noteEl.style.display = 'none';
+    return;
+  }
+
+  [nameEl, phoneEl, emailEl].forEach(el => {
+    el.readOnly = true;
+    el.setAttribute('aria-readonly', 'true');
+    el.style.background = 'var(--surface-2, #f4f5f7)';
+    el.style.cursor = 'not-allowed';
+  });
+  if (noteEl) noteEl.style.display = 'block';
+  nameEl.value = cached.name || '';
+  phoneEl.value = cached.phone || '';
+  emailEl.value = cached.email || '';
+
+  // Then refresh from the account endpoint so the details are always current.
+  api.get('/api/user/profile').then((data) => {
+    const p = data.user || {};
+    nameEl.value = p.name || nameEl.value;
+    phoneEl.value = p.phone || '';
+    emailEl.value = p.email || '';
+  }).catch(() => { /* keep the cached values already shown */ });
 }
 function openReportModal() { openModal('reportModal'); }
 
@@ -521,7 +569,10 @@ async function submitInterest(e) {
     });
     closeModal('interestModal');
     showToast('Request sent! We will contact you shortly.', 'success');
-    document.getElementById('interestForm').reset();
+    // Clear only the fields the seeker typed; the account details stay prefilled
+    // for the next request (and would be re-pulled anyway when the modal opens).
+    document.getElementById('intMoveIn').value = '';
+    document.getElementById('intMessage').value = '';
     // The request now exists: reflect it immediately and remember it on the
     // listing so a reopen/tap cannot send a duplicate.
     if (currentListing) currentListing.has_requested = true;

@@ -38,24 +38,45 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const PHONE_RE = /^\+?[0-9]{9,15}$/;
 const normalizePhone = (p) => (p || '').replace(/[\s()\-]/g, '');
 
+// A request is "in progress" while it is still open — any status before the
+// connection is finalised (connected/closed). These same two statuses are the
+// ones that block withdrawing a request, so the rules stay consistent.
 // GET /api/user/profile
 router.get('/profile', requireAuth, async (req, res) => {
   try {
     const result = await db.query('SELECT id, uuid, name, email, phone, role, is_verified, is_kyc_verified, wallet_balance, avatar, base_location, base_lat, base_lng, created_at FROM users WHERE id=$1', [req.session.user.id]);
-    res.json({ user: result.rows[0] });
+    // While the seeker has an in-progress request, their profile details are
+    // locked: the owner is already reviewing the details that were submitted.
+    const active = await db.query(
+      "SELECT 1 FROM contact_requests WHERE seeker_id=$1 AND status IN ('received','in_progress') LIMIT 1",
+      [req.session.user.id]);
+    res.json({ user: result.rows[0], has_active_request: active.rows.length > 0 });
   } catch (err) { res.status(500).json({ error: 'Server error' }); }
 });
 
-// PUT /api/user/profile  — edit name / email / phone / base location
+// PUT /api/user/profile  — edit name / phone / base location (email is NOT editable)
 router.put('/profile', requireAuth, async (req, res) => {
-  const { name, email, phone, base_location, base_lat, base_lng } = req.body;
+  const { name, phone, base_location, base_lat, base_lng } = req.body;
   if (!name || !name.trim() || name.trim().length < 2)
     return res.status(400).json({ error: 'Please enter your full name' });
-  const normEmail = (email || '').trim().toLowerCase();
   const normPhone = normalizePhone(phone);
-  if (!normEmail) return res.status(400).json({ error: 'A valid email address is required' });
-  if (!EMAIL_RE.test(normEmail)) return res.status(400).json({ error: 'Please enter a valid email address' });
   if (normPhone && !PHONE_RE.test(normPhone)) return res.status(400).json({ error: 'Please enter a valid phone number (9–15 digits)' });
+  try {
+    // A seeker with a request still in progress cannot change their profile
+    // details — the details already submitted with the request must stay intact.
+    const active = await db.query(
+      "SELECT 1 FROM contact_requests WHERE seeker_id=$1 AND status IN ('received','in_progress') LIMIT 1",
+      [req.session.user.id]);
+    if (active.rows.length) {
+      return res.status(409).json({ error: 'You have a request in progress. Profile details are locked until it is completed — cancel the request to make changes.' });
+    }
+  } catch (err) {
+    return res.status(500).json({ error: 'Server error' });
+  }
+  // Email is immutable: never read from the body. Always keep the account's
+  // current email so a crafted request cannot change it either.
+  const cur = await db.query('SELECT email FROM users WHERE id=$1', [req.session.user.id]);
+  const normEmail = (cur.rows[0] && cur.rows[0].email || '').trim().toLowerCase();
   // Location (workplace/school base) only applies to seekers. For owners/agents
   // the column is simply left untouched, whatever the client sends.
   // SEEKERS: the base is now LOCKED to UENR (Sunyani) — any base_location /
@@ -64,10 +85,9 @@ router.put('/profile', requireAuth, async (req, res) => {
   const isSeeker = req.session.user.role === 'seeker';
   try {
     // Reject a clash with any OTHER account before updating.
-    const dupe = await db.query('SELECT email, phone FROM users WHERE (email=$1 OR phone=$2) AND id<>$3',
-      [normEmail, normPhone || null, req.session.user.id]);
+    const dupe = await db.query('SELECT email, phone FROM users WHERE phone=$1 AND id<>$2',
+      [normPhone || null, req.session.user.id]);
     for (const row of dupe.rows) {
-      if (row.email === normEmail) return res.status(409).json({ error: 'That email is already used by another account' });
       if (normPhone && row.phone === normPhone) return res.status(409).json({ error: 'That phone number is already used by another account' });
     }
     // Seekers: the base is fixed — force the UENR values and ignore the client's
@@ -88,7 +108,7 @@ router.put('/profile', requireAuth, async (req, res) => {
               ${coordClause}
        WHERE id=$5
        RETURNING id, uuid, name, email, phone, role, is_verified, is_kyc_verified, wallet_balance, avatar, base_location, base_lat, base_lng, created_at`,
-      [name.trim(), normEmail, normPhone || null, baseLocation, req.session.user.id, addressChanged, lat, lng]);
+      [name.trim(), normEmail, (normPhone || null), baseLocation, req.session.user.id, addressChanged, lat, lng]);
     res.json({ message: 'Profile updated', user: result.rows[0] });
   } catch (err) {
     if (err.code === '23505') return res.status(409).json({ error: 'That email or phone number is already in use' });

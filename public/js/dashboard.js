@@ -336,8 +336,11 @@ async function loadAccount() {
   if (!el) return;
   el.innerHTML = '<p class="text-muted">Loading…</p>';
   try {
-    const { user } = await api.get('/api/user/profile');
+    const { user, has_active_request } = await api.get('/api/user/profile');
     profileData = user;
+    // While a request is in progress the owner is already reviewing the details
+    // submitted with it, so every profile detail is locked until it is completed.
+    const locked = !!has_active_request;
     const memberSince = new Date(user.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
     // The seeker's daily base is FIXED to UENR — shown read-only, never editable.
     // Owners have no base_location at all.
@@ -346,12 +349,13 @@ async function loadAccount() {
       <div class="account-grid">
         <div class="card account-card">
           <h3>Profile details</h3>
+          ${locked ? `<div class="alert alert-info" style="margin-bottom:1rem">You have a request in progress. Your profile details are locked until it is completed — cancel the request to make changes.</div>` : ''}
           <form id="accountForm">
-            <div class="form-group"><label for="acctName">Full name</label><input id="acctName" value="${escAttr(user.name)}" required /></div>
-            <div class="form-group"><label for="acctEmail">Email</label><input id="acctEmail" type="email" value="${escAttr(user.email || '')}" required /></div>
-            <div class="form-group"><label for="acctPhone">Phone</label><input id="acctPhone" type="tel" value="${escAttr(user.phone || '')}" /></div>
+            <div class="form-group"><label for="acctName">Full name</label><input id="acctName" value="${escAttr(user.name)}" ${locked ? 'disabled' : 'required'} /></div>
+            <div class="form-group"><label for="acctEmail">Email</label><input id="acctEmail" type="email" value="${escAttr(user.email || '')}" disabled /><span class="field-hint">Your email is your account identifier and cannot be changed.</span></div>
+            <div class="form-group"><label for="acctPhone">Phone</label><input id="acctPhone" type="tel" value="${escAttr(user.phone || '')}" ${locked ? 'disabled' : ''} /></div>
             ${showLocation ? `<div class="form-group"><label>Base location (fixed)</label><input value="${escAttr(user.base_location || 'UENR, Sunyani')}" disabled /><span class="field-hint">Every seeker's daily base is set to UENR and cannot be changed.</span></div>` : ''}
-            <button class="btn btn-primary" type="submit">Save changes</button>
+            <button class="btn btn-primary" type="submit" ${locked ? 'disabled' : ''}>Save changes</button>
           </form>
         </div>
         <div class="card account-card">
@@ -376,6 +380,7 @@ async function loadAccount() {
       </div>`;
     document.getElementById('accountForm').addEventListener('submit', onAccountSave);
     document.getElementById('passwordForm').addEventListener('submit', onPasswordSave);
+    window.__profileLocked = locked;
   } catch (e) { el.innerHTML = `<p class="text-muted">${e.message}</p>`; }
 }
 
@@ -394,10 +399,11 @@ function applyAccountName(name) {
 
 async function onAccountSave(ev) {
   ev.preventDefault();
+  if (window.__profileLocked) return showToast('Profile details are locked while a request is in progress.', 'error');
   const btn = ev.target.querySelector('button[type="submit"]');
   const payload = {
     name: document.getElementById('acctName').value.trim(),
-    email: document.getElementById('acctEmail').value.trim(),
+    // Email is never sent — it is read-only and the server keeps it unchanged.
     phone: document.getElementById('acctPhone').value.trim()
     // No base_location here: the seeker's daily base is locked to UENR and the
     // server ignores any base fields the client sends.

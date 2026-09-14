@@ -143,6 +143,10 @@
     <h3>Send a request</h3>
     <p class="text-muted" style="font-size:.85rem">We'll pass your details to the owner. No direct contact until you're both ready.</p>
     <form id="interestForm" onsubmit="submitInterest(event)">
+      <div id="interestAccountNote" class="alert alert-info" style="display:none;margin-bottom:.9rem">
+        These details come from your account and can't be edited here.
+        To change them, go to your <a href="/dashboard#account">account page</a>.
+      </div>
       <div class="form-group"><label>Your name</label><input type="text" id="intName" required /></div>
       <div class="form-row">
         <div class="form-group"><label>Phone</label><input type="tel" id="intPhone" /></div>
