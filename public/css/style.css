@@ -609,24 +609,6 @@ textarea{ resize:vertical; min-height:110px; }
 .modal-overlay.open .modal{ transform:scale(1); }
 .modal-actions{ display:flex; justify-content:flex-end; gap:.6rem; margin-top:1.3rem; }
 
-/* ── request (interest) form ─────────────────────────── */
-/* Dark theme: the request form's fields are light, so the text on them must be
-   black — including the native date field, whose value text otherwise renders
-   white-on-white. */
-[data-theme="dark"] #interestForm label,
-[data-theme="dark"] #interestForm input,
-[data-theme="dark"] #interestForm textarea{ color:#000; }
-[data-theme="dark"] #interestForm input,
-[data-theme="dark"] #interestForm textarea{ background:#fff; border-color:#c9cdd6; }
-[data-theme="dark"] #interestForm input::placeholder,
-[data-theme="dark"] #interestForm textarea::placeholder{ color:#000; }
-[data-theme="dark"] #interestForm input::-webkit-datetime-edit,
-[data-theme="dark"] #interestForm input::-webkit-datetime-edit-fields-wrapper{ color:#000; }
-/* On the white field the calendar glyph must be dark to be visible. */
-[data-theme="dark"] #interestForm input[type="date"]::-webkit-calendar-picker-indicator{
-  filter:none; opacity:1;
-}
-
 /* ── filters / listings page ─────────────────────────────────────────── */
 .listings-layout{ display:grid; grid-template-columns:270px 1fr; gap:2rem; align-items:start; }
 /* keep browse cards side-by-side on mobile (overrides global .grid-2 single-column rule) */
