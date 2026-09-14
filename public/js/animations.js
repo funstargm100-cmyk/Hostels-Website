@@ -61,6 +61,14 @@
     }, { once: true });
   }
 
+  // Force a full replay from a clean slate: drop the class, let the browser
+  // commit the resting state for a frame, then re-arm. Removing and re-adding
+  // within the same frame would not restart the CSS animation.
+  function replay(el) {
+    el.classList.remove('logo-intro');
+    requestAnimationFrame(function () { arm(el); });
+  }
+
   function inFirstViewport(el) {
     const r = el.getBoundingClientRect();
     return r.top < window.innerHeight && r.bottom > 0 && r.width > 0 && r.height > 0;
@@ -103,6 +111,25 @@
       }, { once: true });
     });
   });
+
+  // Footer logo: unlike the header logo, which only plays once on load, the
+  // footer logo replays every time the footer scrolls into view. An
+  // IntersectionObserver (kept, not unobserved) fires on each entry, and a flag
+  // stops it re-firing while the footer merely stays on screen.
+  const footerLogos = logos.filter(function (el) { return el.closest('.site-footer'); });
+  if (footerLogos.length && 'IntersectionObserver' in window) {
+    const seen = new WeakMap();   // el -> is the footer currently in view?
+    const io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        const el = entry.target;
+        const was = seen.get(el) || false;
+        seen.set(el, entry.isIntersecting);
+        // Replay on each fresh entry from outside → inside the viewport.
+        if (entry.isIntersecting && !was) replay(el);
+      });
+    }, { threshold: 0.4 });
+    footerLogos.forEach(function (el) { io.observe(el); });
+  }
 
   // bfcache restore: the first load left the logo in its finished state, so
   // replay the whole thing rather than showing a frozen logo on a "second" load.
