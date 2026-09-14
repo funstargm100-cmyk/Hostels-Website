@@ -14,10 +14,8 @@
   --text:#1C1C1E;
   --text-muted:#6B7280;
   --border:#E4E0D6;
-  --primary:#d68b00;
-  --primary-hover:#a56b00;
-  /*--primary:#14213D;
-  --primary-hover:#0B152B;*/
+  --primary:#14213D;
+  --primary-hover:#0B152B;
   --primary-light:#E9E4D8; 
   --accent:#ef9d00;
   --accent-hover:#ffbb3c;
@@ -118,8 +116,8 @@ p{ margin:0 0 1rem; }
 }
 .btn:active{ transform:scale(.97); }
 .btn svg,.btn i{ width:16px; height:16px; }
-.btn-primary{ background:var(--primary); color:#fff; box-shadow:var(--shadow-sm); }
-.btn-primary:hover{ background:var(--primary-deep); box-shadow:var(--shadow-md); }
+.btn-primary{ background:var(--gold); color:var(--ink); box-shadow:var(--shadow-sm); }
+.btn-primary:hover{ background:var(--gold-deep); color:#fff; box-shadow:var(--shadow-md); }
 .btn-secondary{ background:var(--gold); color:var(--ink); }
 .btn-secondary:hover{ background:var(--gold-deep); color:#fff; }
 .btn-outline{ background:transparent; border-color:var(--border); color:var(--text); }
