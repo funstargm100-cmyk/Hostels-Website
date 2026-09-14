@@ -609,6 +609,19 @@ textarea{ resize:vertical; min-height:110px; }
 .modal-overlay.open .modal{ transform:scale(1); }
 .modal-actions{ display:flex; justify-content:flex-end; gap:.6rem; margin-top:1.3rem; }
 
+/* ── request (interest) form ─────────────────────────── */
+/* Dark theme: the white name/phone/email fields need black text to read; the
+   navy date field needs its calendar glyph inverted to white. */
+[data-theme="dark"] #interestForm #intName,
+[data-theme="dark"] #interestForm #intPhone,
+[data-theme="dark"] #interestForm #intEmail{ color:#000; }
+[data-theme="dark"] #interestForm #intName::placeholder,
+[data-theme="dark"] #interestForm #intPhone::placeholder,
+[data-theme="dark"] #interestForm #intEmail::placeholder{ color:#000; }
+[data-theme="dark"] #interestForm input[type="date"]::-webkit-calendar-picker-indicator{
+  filter:invert(1) brightness(2);
+}
+
 /* ── filters / listings page ─────────────────────────────────────────── */
 .listings-layout{ display:grid; grid-template-columns:270px 1fr; gap:2rem; align-items:start; }
 /* keep browse cards side-by-side on mobile (overrides global .grid-2 single-column rule) */
