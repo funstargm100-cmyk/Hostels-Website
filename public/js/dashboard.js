@@ -166,14 +166,31 @@ async function loadRequests() {
   try {
     const { requests } = await api.get('/api/requests/mine');
     if (!requests.length) { el.innerHTML = `<div class="empty-state"><div class="icon"><i data-lucide="message-circle" style="width:48px;height:48px"></i></div><p>You haven't reached out to any rooms yet — browse rooms and tap “I'm Interested” to start.</p><a href="/listings" class="btn btn-primary btn-sm" style="margin-top:.9rem">Browse rooms</a></div>`; if (typeof lucide !== 'undefined') lucide.createIcons(); return; }
-    el.innerHTML = `<div class="table-wrap"><table><thead><tr><th>Room</th><th>Status</th><th>Move-in</th><th>Date</th></tr></thead><tbody>` +
+    // A request can only be withdrawn while it is still pending. Once an admin
+    // has connected or closed it, the connection already happened — no button.
+    const canWithdraw = (status) => status !== 'connected' && status !== 'closed';
+    el.innerHTML = `<div class="table-wrap"><table><thead><tr><th>Room</th><th>Status</th><th>Move-in</th><th>Date</th><th>Actions</th></tr></thead><tbody>` +
       requests.map(r => `<tr>
         <td><a href="/listing?id=${r.listing_uuid}" style="color:var(--primary)">${r.listing_title}</a><br><span class="text-muted">${r.location_area}</span></td>
         <td><span class="status-badge status-${r.status}">${r.status.replace('_', ' ')}</span></td>
         <td>${r.move_in_date ? new Date(r.move_in_date).toLocaleDateString() : '—'}</td>
         <td>${new Date(r.created_at).toLocaleDateString()}</td>
+        <td>${canWithdraw(r.status) ? `<button class="btn btn-ghost btn-sm" onclick="withdrawRequest('${r.uuid}')">Unrequest</button>` : '<span class="text-muted">—</span>'}</td>
       </tr>`).join('') + '</tbody></table></div>';
+    if (typeof lucide !== 'undefined') lucide.createIcons();
   } catch (e) { el.innerHTML = `<p class="text-muted">${e.message}</p>`; }
+}
+
+// A seeker withdraws a pending request. Removes it from their list AND from the
+// admin requests table (both read contact_requests), and frees the listing's
+// "Request Sent" button to be used again.
+async function withdrawRequest(uuid) {
+  if (!confirm('Withdraw this request? The owner will no longer see your interest.')) return;
+  try {
+    await api.delete(`/api/requests/${uuid}`);
+    showToast('Request withdrawn', 'success');
+    loadRequests();
+  } catch (e) { showToast(e.message, 'error'); }
 }
 
 // One-line colour key for the request status column.

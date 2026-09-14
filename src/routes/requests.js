@@ -61,6 +61,45 @@ router.post('/', optionalAuth, async (req, res) => {
   }
 });
 
+// DELETE /api/requests/:uuid
+// A seeker withdraws ("unrequests") one of their own requests. Removing the row
+// makes the seeker's list drop it, the listing's "Request Sent" button revert to
+// normal (has_requested checks for ANY row), and the row disappear from the
+// admin requests table — which reads this same contact_requests table.
+router.delete('/:uuid', requireAuth, async (req, res) => {
+  try {
+    const seekerId = req.session.user.id;
+    // Only the request's OWN seeker may withdraw it, and only while it is still
+    // in a pending state. Once an admin has moved it to connected/closed the
+    // connection already happened, so withdrawing is not allowed.
+    const fr = await db.query(
+      `SELECT cr.id, cr.listing_id, cr.status, l.title, l.owner_id
+         FROM contact_requests cr JOIN listings l ON l.id = cr.listing_id
+        WHERE cr.uuid=$1 AND cr.seeker_id=$2`,
+      [req.params.uuid, seekerId]
+    );
+    const request = fr.rows[0];
+    if (!request) return res.status(404).json({ error: 'Request not found' });
+    if (request.status === 'connected' || request.status === 'closed')
+      return res.status(409).json({ error: 'This request has already been handled and can no longer be withdrawn' });
+
+    await db.query('DELETE FROM contact_requests WHERE id=$1', [request.id]);
+    // Undo the interest bump from POST /api/requests so the listing's count stays
+    // honest (never below zero).
+    await db.query('UPDATE listings SET interest_count = GREATEST(interest_count - 1, 0) WHERE id=$1', [request.listing_id]);
+
+    res.json({ message: 'Request withdrawn' });
+
+    // Fire-and-forget: let the owner know so the withdrawal is visible on their
+    // side too (dashboard notifications), and the admin list already lost the row.
+    notify(request.owner_id, 'requestCancelled', [request.title], { link: '/dashboard#listings' })
+      .catch(err => console.error('request cancel owner notify failed:', err.message));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // GET /api/requests/mine
 router.get('/mine', requireAuth, async (req, res) => {
   try {

@@ -171,7 +171,13 @@ router.put('/requests/:id/status', admin, async (req, res) => {
     const result = await db.query('SELECT cr.*, u.email FROM contact_requests cr LEFT JOIN users u ON cr.seeker_id=u.id WHERE cr.id=$1', [req.params.id]);
     const request = result.rows[0];
     if (!request) return res.status(404).json({ error: 'Not found' });
-    await db.query('UPDATE contact_requests SET status=$1, admin_notes=$2 WHERE id=$3', [status, admin_notes || null, req.params.id]);
+    // Only touch admin_notes when the client actually sent the field. A status-only
+    // update (or an old client) must NOT blank a note that was saved earlier.
+    if ('admin_notes' in req.body) {
+      await db.query('UPDATE contact_requests SET status=$1, admin_notes=$2 WHERE id=$3', [status, admin_notes || null, req.params.id]);
+    } else {
+      await db.query('UPDATE contact_requests SET status=$1 WHERE id=$2', [status, req.params.id]);
+    }
     const emailTo = request.seeker_email || request.email;
     if (emailTo) await sendEmail(emailTo, 'Request Update', templates.requestUpdate(status));
     if (request.seeker_id) await notify(request.seeker_id, 'requestUpdate', [status], { link: '/dashboard#requests' });

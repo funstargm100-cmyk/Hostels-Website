@@ -54,8 +54,7 @@ Open http://localhost:3000
 - 🏠 Multi-step ad posting wizard with contact-info firewall
 - 💬 Middleman contact model — owner/seeker never exchange direct contacts
 - 🗺️ Map with ±150–300m privacy jitter + distance calculator
-- 💰 Automatic 10% commission split (5% owner, 5% platform)
-- 🪪 KYC verification before first listing
+- 💰 Automatic 5% commission (5% platform fee)
 - 📊 Admin dashboard: moderation, requests, users, payouts, audit logs
 - 🌙 Dark/light mode toggle
 - 📱 PWA installable

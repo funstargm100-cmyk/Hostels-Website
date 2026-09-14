@@ -1,5 +1,8 @@
 let pendingRejectId = null;
 let pendingRequestId = null;
+// Last-fetched admin requests, so the modal can look up a row's status/notes by
+// id instead of baking them into the button's onclick (which broke on quotes).
+let adminRequests = [];
 
 async function initAdmin() {
   const user = await initNavAuth();
@@ -165,6 +168,12 @@ async function loadAdminRequests() {
   const el = document.getElementById('adminRequestsTable');
   try {
     const { requests } = await api.get(`/api/admin/requests${status ? '?status=' + status : ''}`);
+    // Keep the rows so the Update button can look up a request's notes by id.
+    // Embedding the note text in the onclick attribute broke whenever a note
+    // contained an apostrophe ("Don't call back") — the single-quoted attribute
+    // ended early and the button became a no-op. Looking it up here sidesteps
+    // all HTML-escaping entirely.
+    adminRequests = requests;
     if (!requests.length) { el.innerHTML = '<p class="text-muted">No requests.</p>'; return; }
     el.innerHTML = `<div class="table-wrap"><table><thead><tr><th>Seeker</th><th>Room</th><th>Owner Contact</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead><tbody>` +
       requests.map(r => `<tr>
@@ -173,15 +182,20 @@ async function loadAdminRequests() {
         <td style="font-size:0.82rem">${r.owner_name}<br>${r.owner_phone || r.owner_email || ''}</td>
         <td><span class="status-badge status-${r.status}">${r.status.replace('_', ' ')}</span></td>
         <td>${new Date(r.created_at).toLocaleDateString()}</td>
-        <td><button class="btn btn-outline btn-sm" onclick="openRequestModal(${r.id},'${r.status}')">Update</button></td>
+        <td><button class="btn btn-outline btn-sm" onclick="openRequestModal(${r.id})">Update</button></td>
       </tr>`).join('') + '</tbody></table></div>';
   } catch (e) { el.innerHTML = `<p class="text-muted">${e.message}</p>`; }
 }
 
-function openRequestModal(id, currentStatus) {
+function openRequestModal(id) {
   pendingRequestId = id;
-  document.getElementById('newRequestStatus').value = currentStatus;
-  document.getElementById('adminNotes').value = '';
+  const r = (adminRequests || []).find(x => x.id === id);
+  if (r) {
+    document.getElementById('newRequestStatus').value = r.status;
+    // Preload the SAVED note so the admin edits what's there instead of retyping
+    // it — previously the box was always blank, so an update wiped the note.
+    document.getElementById('adminNotes').value = r.admin_notes || '';
+  }
   openModal('requestModal');
 }
 

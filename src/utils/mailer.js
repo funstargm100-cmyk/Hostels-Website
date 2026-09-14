@@ -71,6 +71,10 @@ const copy = {
     title: 'Someone is interested in your room',
     message: `Someone showed interest in "${listing}". We'll be in touch to connect you.`
   }),
+  requestCancelled: (listing) => ({
+    title: 'A seeker withdrew their request',
+    message: `A seeker withdrew their interest in "${listing}".`
+  }),
   requestUpdate: (status, listing) => ({
     title: status === 'received' ? 'We received your request' : `Your request was marked ${REQUEST_STATUS_LABEL[status] || status}`,
     message: listing
@@ -97,6 +101,7 @@ const templates = {
   adReactivated: (title) => wrap(copy.adReactivated(title)),
   adDeleted: (title) => wrap(copy.adDeleted(title)),
   interestReceived: (listing) => wrap(copy.interestReceived(listing)),
+  requestCancelled: (listing) => wrap(copy.requestCancelled(listing)),
   requestUpdate: (status, listing) => wrap(copy.requestUpdate(status, listing)),
   payoutConfirmed: (amount) => wrap(copy.payoutConfirmed(amount)),
   resetPassword: (link) => `<p>We received a request to reset your Rentel password.</p><p><a href="${link}">Click here to choose a new password</a>. This link expires in 1 hour.</p><p>If you didn't request this, you can safely ignore this email — your password won't change.</p>`
