@@ -144,15 +144,14 @@
     <p class="text-muted" style="font-size:.85rem">Only send request when you are ready to rent the room!</p>
     <form id="interestForm" onsubmit="submitInterest(event)">
       <div id="interestAccountNote" class="alert alert-info" style="display:none;margin-bottom:.9rem">
-        These details come from your account and can't be edited here.
-        To change them, go to your <a href="/dashboard#account">account page</a>.
+        These details are not editable, Go to your <a href="/dashboard#account"><u>account page</u></a> to edit them.
       </div>
       <div class="form-group"><label>Your name</label><input type="text" id="intName" required /></div>
       <div class="form-row">
         <div class="form-group"><label>Phone</label><input type="tel" id="intPhone" /></div>
         <div class="form-group"><label>Email</label><input type="email" id="intEmail" /></div>
       </div>
-      <div class="form-group"><label>Preferred move-in date</label><input type="date" id="intMoveIn" /></div>
+      <div class="form-group"><label>When do yoou want to move in?</label><input type="date" id="intMoveIn" /></div>
       <div class="form-group"><label>Message (optional)</label><textarea id="intMessage" placeholder="Anything the owner should know?"></textarea></div>
       <button type="submit" class="btn btn-primary" style="width:100%" id="interestSubmitBtn">Send Request</button>
     </form>
