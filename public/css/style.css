@@ -19,8 +19,8 @@
   --primary-light:#E9E4D8;
   --accent:#ef9d00;
   --accent-hover:#ffbb3c;
-  --success:#2F9E68;
-  --danger:#D64545;
+  --success:#118e51;
+  --danger:#c52929;
   /* legacy alias tokens — mapped onto the new palette so existing rules
      that reference them continue to work (theme-switchable via the vars above) */
   --ink:var(--text);
@@ -52,13 +52,13 @@
   --text:#F5F3EC;
   --text-muted:#9099AE;
   --border:#232B42;
-  --primary:#D4AF37;
-  --primary-hover:#E8C563;
+  --primary:#ef9d00;
+  --primary-hover:#a56b00;
   --primary-light:#2A2413;
   --accent:#3B4A6B;
   --accent-hover:#4C5F87;
-  --success:#34B679;
-  --danger:#E5573F;
+  --success:#00b460;
+  --danger:#d84126;
   --ink:var(--text);
   --ink-soft:#B9C0D0;
   --paper:var(--bg);
@@ -257,6 +257,35 @@ textarea{ resize:vertical; min-height:110px; }
 [data-theme="dark"] .logo img.rentel-wordmark{ content:url('/images/rentel_wordmark.png'); }
 .navbar-transparent .logo img.rentel-wordmark{ content:url('/images/rentel_wordmark.png'); }
 .navbar-transparent .logo{ color:#fff; }
+/* the footer sits on navy (light) / near-black (dark) in BOTH themes, so its
+   logo must always use the white-letter variant, never the navy ink artwork */
+.site-footer .logo img.rentel-wordmark{ content:url('/images/rentel_wordmark.png'); }
+
+/* ── footer logo hover: gold→silver metallic sweep ─────────────────────
+   The sweep is a diagonal highlight that travels left→right across the
+   wordmark on hover. It is layered over the white artwork with mix-blend
+   mode so it reads as a sheen on the letters rather than a coloured box. */
+.site-footer .logo{ position:relative; overflow:hidden; border-radius:4px; }
+.site-footer .logo::after{
+  content:"";
+  position:absolute; inset:0; pointer-events:none;
+  background:linear-gradient(105deg,
+    transparent 30%,
+    rgba(212,175,55,.95) 45%,   /* gold */
+    rgba(255,255,255,.98) 50%,  /* silver core */
+    rgba(192,192,192,.95) 55%,  /* silver */
+    transparent 70%);
+  transform:translateX(-120%);
+  transition:transform .65s cubic-bezier(.4,0,.2,1);
+  mix-blend-mode:screen;
+}
+.site-footer .logo:hover::after,
+.site-footer .logo:focus-visible::after{ transform:translateX(120%); }
+@media (prefers-reduced-motion:reduce){
+  .site-footer .logo::after{ transition:none; }
+  .site-footer .logo:hover::after,
+  .site-footer .logo:focus-visible::after{ transform:translateX(0); }
+}
 
 /* ── logo intro animation ────────────────────────────────
    Sequence, timed off one 2.3s timeline:
