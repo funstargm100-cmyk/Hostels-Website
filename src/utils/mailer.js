@@ -99,7 +99,7 @@ const templates = {
   interestReceived: (listing) => wrap(copy.interestReceived(listing)),
   requestUpdate: (status, listing) => wrap(copy.requestUpdate(status, listing)),
   payoutConfirmed: (amount) => wrap(copy.payoutConfirmed(amount)),
-  resetPassword: (link) => `<p>We received a request to reset your Roomy password.</p><p><a href="${link}">Click here to choose a new password</a>. This link expires in 1 hour.</p><p>If you didn't request this, you can safely ignore this email — your password won't change.</p>`
+  resetPassword: (link) => `<p>We received a request to reset your Rentel password.</p><p><a href="${link}">Click here to choose a new password</a>. This link expires in 1 hour.</p><p>If you didn't request this, you can safely ignore this email — your password won't change.</p>`
 };
 
 module.exports = { sendEmail, templates, copy, REQUEST_STATUS_LABEL };

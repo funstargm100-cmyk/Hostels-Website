@@ -9,7 +9,7 @@ async function loadPoster() {
     posterData = data;
     document.getElementById('profileSkeleton').style.display = 'none';
     document.getElementById('profileContent').style.display = 'block';
-    document.title = `${data.poster.name} — Roomy`;
+    document.title = `${data.poster.name} — Rentel`;
 
     document.getElementById('posterName').textContent = data.poster.name;
     document.getElementById('posterAvatar').textContent = (data.poster.name || 'O').charAt(0).toUpperCase();

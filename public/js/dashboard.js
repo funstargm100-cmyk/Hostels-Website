@@ -72,7 +72,7 @@ function initDashboardSidebar() {
 }
 
 function confirmLogout() {
-  if (!confirm('Log out of Roomy?\n\nYou\'ll need to sign in again to see your dashboard.')) return;
+  if (!confirm('Log out of Rentel?\n\nYou\'ll need to sign in again to see your dashboard.')) return;
   handleLogout();
 }
 
@@ -154,7 +154,7 @@ async function loadOverview() {
         <div class="stat-card"><div class="stat-card-value">${requests.length}</div><div class="stat-card-label">My requests</div></div>
         <div class="stat-card"><div class="stat-card-value">${requests.filter(r => r.status === 'connected').length}</div><div class="stat-card-label">Connected</div></div>
         <div class="stat-card"><div class="stat-card-value">${favorites.length}</div><div class="stat-card-label">Saved rooms</div></div>
-        <div class="stat-card"><div class="stat-card-value">${days}</div><div class="stat-card-label">Days on Roomy</div></div>`;
+        <div class="stat-card"><div class="stat-card-value">${days}</div><div class="stat-card-label">Days on Rentel</div></div>`;
     }
   } catch (e) { statsEl.innerHTML = `<p class="text-muted">${e.message}</p>`; }
   loadActivity();

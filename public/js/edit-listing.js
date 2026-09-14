@@ -32,7 +32,7 @@ async function initEdit() {
     const { listing, amenities, images } = await api.get(`/api/listings/${editUUID}/edit-data`);
     document.getElementById('editLoading').style.display = 'none';
     document.getElementById('editContent').style.display = 'block';
-    document.title = `Edit: ${listing.title} — Roomy`;
+    document.title = `Edit: ${listing.title} — Rentel`;
 
     document.getElementById('edTitle').value = listing.title || '';
     document.getElementById('edDescription').value = listing.description || '';

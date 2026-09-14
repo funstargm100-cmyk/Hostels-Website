@@ -1,9 +1,9 @@
-﻿// ─── SIGNUP WIZARD ────────────────────────────────────────────────────────
+// --- SIGNUP WIZARD --------------------------------------------------------
 // Seekers no longer pick a daily base: every seeker's base is fixed to UENR
 // (Sunyani), set server-side at signup (see src/utils/seekerBase.js). So the
-// seeker path is just two steps: role → details. The old base-location map
+// seeker path is just two steps: role ? details. The old base-location map
 // step and its search/pin code were removed.
-// Step 1: choose role → both paths: details
+// Step 1: choose role ? both paths: details
 let suRole = null;
 
 const suSteps = ['suStep1', 'seekerDetailsForm', 'signupForm'];
@@ -18,10 +18,10 @@ function suShow(id) {
   const sub = document.getElementById('suStepSub');
   if (id === 'suStep1') {
     title.textContent = 'Create your account';
-    sub.textContent = 'First — what brings you to Roomy?';
+    sub.textContent = 'First � what brings you to Rentel?';
   } else if (id === 'seekerDetailsForm') {
     title.textContent = 'Your details';
-    sub.textContent = 'Step 2 of 2 — almost done';
+    sub.textContent = 'Step 2 of 2 � almost done';
   } else {
     title.textContent = 'Your details';
     sub.textContent = 'Tell us a bit about yourself';
@@ -35,7 +35,7 @@ function suErr(msg) {
   el.style.display = 'block';
 }
 
-// Role selection (step 1). Seekers go straight to details — no base map step;
+// Role selection (step 1). Seekers go straight to details � no base map step;
 // their daily base is fixed to UENR server-side.
 document.querySelectorAll('.su-role-card').forEach(card => {
   card.addEventListener('click', () => {
@@ -47,7 +47,7 @@ document.querySelectorAll('.su-role-card').forEach(card => {
 function suPrev() { suShow('suStep1'); }
 
 
-// ─── SUBMIT (both paths) ──────────────────────────────────────────────────────
+// --- SUBMIT (both paths) ------------------------------------------------------
 async function suSubmit(btnId, fields) {
   const btn = document.getElementById(btnId);
   const name = fields.name();
@@ -59,12 +59,12 @@ async function suSubmit(btnId, fields) {
   if (!phone) { suErr('Please enter your phone number.'); return; }
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) { suErr('Please enter a valid email address.'); return; }
   const phoneDigits = phone.replace(/[\s()\-]/g, '');
-  if (!/^\+?[0-9]{9,15}$/.test(phoneDigits)) { suErr('Please enter a valid phone number (9–15 digits).'); return; }
+  if (!/^\+?[0-9]{9,15}$/.test(phoneDigits)) { suErr('Please enter a valid phone number (9�15 digits).'); return; }
   if (!password) { suErr('Please choose a password.'); return; }
   if (password.length < 6) { suErr('Password must be at least 6 characters.'); return; }
   btn.disabled = true; btn.classList.add('btn-loading');
   try {
-    // NOTE: no base fields here — the seeker's daily base is fixed to UENR and
+    // NOTE: no base fields here � the seeker's daily base is fixed to UENR and
     // set by the server (src/utils/seekerBase.js). Anything sent is ignored.
     const body = {
       name,
@@ -74,11 +74,11 @@ async function suSubmit(btnId, fields) {
       role: suRole
     };
     const res = await api.post('/api/auth/signup', body);
-    // Account created — send the user straight to the verification step.
+    // Account created � send the user straight to the verification step.
     const emailQ = email || '';
     showToast(
       res.emailSent === false
-        ? 'Account created, but the verification email failed — use "Resend code" next.'
+        ? 'Account created, but the verification email failed � use "Resend code" next.'
         : 'Account created! Enter the verification code we emailed you.',
       res.emailSent === false ? 'error' : 'success'
     );
@@ -88,7 +88,7 @@ async function suSubmit(btnId, fields) {
         '&t=' + Date.now();
     }, 1200);
   } catch (ex) {
-    // Credential already used for this same role — point them at login instead.
+    // Credential already used for this same role � point them at login instead.
     if (ex.accountExists || (ex.data && ex.data.accountExists)) {
       suErr(ex.message + ' You can log in with your existing password to use that account.');
     } else {

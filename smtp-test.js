@@ -10,7 +10,7 @@ const t = nodemailer.createTransport({
 t.sendMail({
   from: `"Hostels Platform" <${process.env.EMAIL_USER}>`,
   to: process.env.EMAIL_USER,
-  subject: 'SMTP test — Roomy',
+  subject: 'SMTP test — Rentel',
   html: '<p>If you got this, OTP emails will work.</p>'
 }).then(i => console.log('SEND OK — id', i.messageId))
   .catch(e => { console.log('SEND FAILED:', e.code, e.response || e.message); process.exit(1); });

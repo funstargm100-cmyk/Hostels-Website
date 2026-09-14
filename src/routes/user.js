@@ -21,7 +21,7 @@ async function geocodeBase(text) {
     url.searchParams.set('format', 'json');
     url.searchParams.set('limit', '1');
     url.searchParams.set('countrycodes', 'gh');
-    const r = await fetch(url, { headers: { 'User-Agent': 'Roomy/1.0 (student housing marketplace)' } });
+    const r = await fetch(url, { headers: { 'User-Agent': 'Rentel/1.0 (student housing marketplace)' } });
     if (!r.ok) throw new Error('upstream ' + r.status);
     const data = await r.json();
     const out = data && data[0] && Number.isFinite(parseFloat(data[0].lat))

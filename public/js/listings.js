@@ -102,7 +102,7 @@ async function deactivateOwnListing(uuid) {
 function setUpOwnerView() {
   const title = document.querySelector('.results-toolbar h2');
   if (title) title.textContent = 'My rooms';
-  document.title = 'My rooms — Roomy';
+  document.title = 'My rooms — Rentel';
   const filters = document.getElementById('filtersPanel');
   if (filters) filters.remove();
   const layout = document.querySelector('.listings-layout');

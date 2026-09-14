@@ -46,7 +46,7 @@ router.get('/search', async (req, res) => {
     url.searchParams.set('accept-language', 'en');
 
     const r = await fetch(url, {
-      headers: { 'User-Agent': 'Roomy/1.0 (student housing marketplace)' }
+      headers: { 'User-Agent': 'Rentel/1.0 (student housing marketplace)' }
     });
     if (!r.ok) throw new Error('Upstream error ' + r.status);
     const data = await r.json();
@@ -106,7 +106,7 @@ router.get('/route', async (req, res) => {
     const url = `https://router.project-osrm.org/route/v1/driving/${fromLng},${fromLat};${toLng},${toLat}`;
     const params = new URLSearchParams({ overview: 'full', geometries: 'geojson' });
     const r = await fetch(`${url}?${params}`, {
-      headers: { 'User-Agent': 'Roomy/1.0 (student housing marketplace)' }
+      headers: { 'User-Agent': 'Rentel/1.0 (student housing marketplace)' }
     });
     if (!r.ok) throw new Error('Upstream error ' + r.status);
     const data = await r.json();
