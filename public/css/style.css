@@ -332,6 +332,33 @@ textarea{ resize:vertical; min-height:110px; }
   .logo.logo-intro .rentel-icon,
   .logo.logo-intro .rentel-wordmark{ animation:none; clip-path:none; }
 }
+
+/* ── logo hover animation ─────────────────
+   A quick, tactile reaction when the logo is pointed at: the icon tile lifts
+   and scales up slightly while the wordmark grows a touch, then both settle
+   back. Transitions (not the intro keyframes) so it never collides with the
+   intro replay armed in animations.js — that class owns the icon's transform
+   only while it is present, and this rule is scoped out of that state. */
+.logo .rentel-icon,
+.logo .rentel-wordmark{
+  transition:transform .28s cubic-bezier(.34,1.56,.64,1), filter .28s ease;
+  will-change:transform;
+}
+.logo:hover .rentel-icon{
+  transform:translateY(-2px) scale(1.12) rotate(-4deg);
+  filter:drop-shadow(0 4px 8px rgba(239,160,11,.45));
+}
+.logo:hover .rentel-wordmark{ transform:scale(1.045); }
+/* While the intro sequence owns the icon, hand the transform back to it so the
+   hover rule cannot fight the keyframes. */
+.logo.logo-intro .rentel-icon,
+.logo.logo-intro .rentel-wordmark{ transition:none; }
+@media (prefers-reduced-motion:reduce){
+  .logo .rentel-icon,
+  .logo .rentel-wordmark{ transition:none; }
+  .logo:hover .rentel-icon{ transform:none; filter:none; }
+  .logo:hover .rentel-wordmark{ transform:none; }
+}
 .nav-links{ display:flex; align-items:center; gap:1.7rem; font-weight:600; font-size:.92rem; }
 .nav-links a:hover{ color:var(--primary); }
 .nav-actions{ display:flex; align-items:center; gap:.7rem; }
