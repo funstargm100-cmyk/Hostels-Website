@@ -226,8 +226,9 @@ textarea{ resize:vertical; min-height:110px; }
 }
 .logo img.rentel-icon{ width:30px; height:30px; display:block; object-fit:contain; flex-shrink:0; }
 .logo img.rentel-wordmark{
-  height:26px; width:auto; display:block; object-fit:contain;
-  margin-left:.45rem;                /* same gap as the reference logo */
+  height:19px; width:auto; display:block; object-fit:contain;
+  margin-left:.5rem;                 /* same gap as the reference logo */
+  align-self:center;                 /* keep it optically centred against the taller icon */
 }
 /* dark theme / transparent-over-hero nav: swap to the white-letter variant */
 [data-theme="dark"] .logo img.rentel-wordmark{ content:url('/images/rentel_wordmark.png'); }
