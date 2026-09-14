@@ -170,12 +170,23 @@ router.get('/listings', requireAuth, async (req, res) => {
 // GET /api/user/favorites
 router.get('/favorites', requireAuth, async (req, res) => {
   try {
+    // Select the same columns the shared card renderer (renderListingCard in
+    // app.js) expects, so the Saved rooms tab paints complete cards — not just a
+    // title and price. `favorited` is a constant TRUE here: every row returned is
+    // saved by definition, so the shared renderer fills the heart. Without it the
+    // hearts rendered unfilled on this tab even though the rooms WERE saved.
     const [favorites] = await db.query2(`
-      SELECT l.uuid, l.title, l.location_area, l.listed_price, l.price_per_head, l.occupancy_type,
-             img.image_path as primary_image, f.created_at as saved_at
+      SELECT l.uuid, l.title, l.location_area, l.price_per_head, l.occupancy_type,
+             l.is_featured, l.location_lat, l.location_lng,
+             u.is_kyc_verified as owner_verified,
+             img.image_path as primary_image, f.created_at as saved_at,
+             TRUE as favorited,
+             a.wifi, a.water, a.furnishing, a.parking
       FROM favorites f
       JOIN listings l ON f.listing_id = l.id
+      LEFT JOIN users u ON l.owner_id = u.id
       LEFT JOIN listing_images img ON img.listing_id = l.id AND img.is_primary = TRUE
+      LEFT JOIN amenities a ON a.listing_id = l.id
       WHERE f.user_id = $1 AND l.status = 'active'
       ORDER BY f.created_at DESC`, [req.session.user.id]);
     res.json({ favorites });

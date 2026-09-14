@@ -645,6 +645,22 @@ function syncFavoriteState(uuid, favorited) {
   }
 }
 
+// Keep the Saved rooms tab (dashboard #favoritesList) in step with a like toggle.
+// Un-saving a room WHILE on that tab used to leave its card sitting there (now
+// with an empty heart) until the next full reload. Drop the card immediately and
+// fall back to the empty state when the grid runs out.
+function syncFavoritesTab(uuid, favorited) {
+  const grid = document.getElementById('favoritesList');
+  if (!grid) return;
+  const card = grid.querySelector(`.fav-btn[data-listing-uuid="${uuid}"]`)?.closest('.card');
+  if (favorited) return;
+  if (card) card.remove();
+  if (!grid.querySelector('.card')) {
+    grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><div class="icon"><i data-lucide="heart" style="width:48px;height:48px"></i></div><p>Nothing saved yet. Tap the ♥ on any room to shortlist it here.</p></div>';
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  }
+}
+
 async function toggleFav(uuid, btn) {
   const user = JSON.parse(localStorage.getItem('user') || 'null');
   if (!user) return location.href = '/login?redirect=' + encodeURIComponent(location.pathname + location.search);
@@ -654,6 +670,7 @@ async function toggleFav(uuid, btn) {
     // in-memory listing objects in sync so the map/grid stay correct.
     syncFavoriteState(uuid, favorited);
     paintFavButton(btn, favorited);
+    syncFavoritesTab(uuid, favorited);
   } catch (e) {
     showToast(e.message, 'error');
   }
