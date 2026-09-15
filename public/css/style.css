@@ -2057,6 +2057,15 @@ td{ padding:.8rem 1rem; border-top:1px solid var(--border); vertical-align:top; 
 .su-role-name{ font-weight:700; font-size:.95rem; color:var(--text); }
 .su-role-desc{ font-size:.78rem; color:var(--text-muted); line-height:1.4; }
 @media (max-width:480px){ .su-role-cards{ grid-template-columns:1fr; } }
+/* Wizard footer actions (Back + Create account). `min-width:0` lets the
+   primary button shrink instead of overflowing the card on narrow phones. */
+.su-actions{ display:flex; gap:.7rem; }
+.su-actions .btn{ min-width:0; }
+.su-actions .btn:last-child{ flex:1; }
+@media (max-width:400px){
+  .su-actions{ flex-direction:column-reverse; }
+  .su-actions .btn{ width:100%; }
+} }
 #suMap{ height:300px; border-radius:var(--radius-sm); margin:.8rem 0; z-index:0; }
 #suMap .leaflet-pane{ z-index:10 !important; }
 #suMap .leaflet-top, #suMap .leaflet-bottom{ z-index:20 !important; }
