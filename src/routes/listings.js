@@ -8,6 +8,16 @@ const { applyLocationJitter, calculateDistance } = require('../utils/location');
 const { notifyFollowers } = require('../utils/notify');
 const { storeImage } = require('../utils/imageStorage');
 
+// How many people may share a room (the "N-in-1" occupancy). The poster picks a
+// value from 1..MAX_OCCUPANCY; both routes clamp to this range so a direct API call
+// cannot create a nonsensical occupancy (the pricing maths multiplies by it).
+const MAX_OCCUPANCY = 6;
+function clampOccupancy(value) {
+  const n = parseInt(value, 10);
+  if (!Number.isFinite(n)) return 1;
+  return Math.min(Math.max(n, 1), MAX_OCCUPANCY);
+}
+
 // Use memory storage — Vercel has no writable filesystem.
 //
 // fileSize is the PER-FILE cap. The client compresses before uploading (see
@@ -375,7 +385,7 @@ router.post('/', requireAuth, requireRole('owner', 'agent', 'admin'), uploadList
     // We store: original_price/listed_price = the WHOLE ROOM total
     // (totalPerPerson × occ) — what a full room costs and what payments settle
     // against; price_per_head = the seeker-facing total per person.
-    const occ = parseInt(occupancy_type) || 1;
+    const occ = clampOccupancy(occupancy_type);
     const pricePerPerson = (price_per_head_in !== undefined && price_per_head_in !== '')
       ? parseFloat(parseFloat(price_per_head_in).toFixed(2))
       : parseFloat(original_price);
@@ -507,7 +517,7 @@ router.put('/:uuid', requireAuth, uploadListingImages, async (req, res) => {
       fields.push(`original_price=$${p++}`, `listed_price=$${p++}`, `price_per_head=$${p++}`);
       vals.push(op, lp, pph);
     }
-    if (occupancy_type && (original_price || (price_per_head_in !== undefined && price_per_head_in !== ''))) { fields.push(`occupancy_type=$${p++}`); vals.push(parseInt(occupancy_type)); }
+    if (occupancy_type && (original_price || (price_per_head_in !== undefined && price_per_head_in !== ''))) { fields.push(`occupancy_type=$${p++}`); vals.push(clampOccupancy(occupancy_type)); }
     // Editing an existing listing must NOT send it back through admin review —
     // an already-approved room stays live. Only new posts (POST /) require review.
     vals.push(req.params.uuid);
