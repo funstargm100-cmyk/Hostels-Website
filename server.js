@@ -57,8 +57,11 @@ pages.forEach(page => {
   app.get(route, (req, res) => sendNoCache(res, file));
 });
 
-// Role-tailored home pages (served as real files — no JS view switching)
-app.get('/home-visitor', (req, res) => sendNoCache(res, 'home-visitor.html'));
+// Role-tailored home pages (served as real files — no JS view switching).
+// The visitor home IS the site root ('/' -> index.html); only the seeker and
+// agent homes are separate files, and logged-in roles are redirected to them
+// client-side (see public/js/home.js).
+app.get('/home-visitor', (req, res) => res.redirect(301, '/'));
 app.get('/home-seeker', (req, res) => sendNoCache(res, 'home-seeker.html'));
 app.get('/home-agent', (req, res) => sendNoCache(res, 'home-agent.html'));
 

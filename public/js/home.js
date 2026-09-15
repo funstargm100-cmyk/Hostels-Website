@@ -1,5 +1,6 @@
 async function loadFeatured() {
-  const grids = ['featuredListings', 'featuredListingsSeeker', 'agentListings']
+  // The index page is the visitor home only, so there is a single grid to fill.
+  const grids = ['featuredListings']
     .map(id => document.getElementById(id)).filter(Boolean);
   for (const grid of grids) {
     try {
@@ -22,32 +23,24 @@ async function loadStats() {
 
 // ─── ROLE-TAILORED HOMEPAGE ─────────────────────────────────────────────────────
 async function initHomeRole() {
+  // The index page is now only the VISITOR home. As soon as we know the viewer is
+  // signed in, hand them off to their own dedicated page: /home-seeker for seekers,
+  // /home-agent for owners/agents, /admin for admins. Signed-out visitors stay here.
+  // (home-seeker.js / home-agent.js guard the other direction, so a wrong-role link
+  // still lands on the right page.)
   const user = await initNavAuth(); // defined in app.js — validates token & caches user
   const role = user?.role;
-  const visitor = document.getElementById('homeVisitor');
-  const seeker = document.getElementById('homeSeeker');
-  const agent = document.getElementById('homeAgent');
-  const heroTitle = document.getElementById('heroTitle');
-  const heroSub = document.getElementById('heroSub');
+  // Known roles go straight to their page; anyone else (signed out, or an
+  // unrecognised role) stays on the visitor home. Guarding with an explicit set
+  // also prevents a redirect loop, since goHomeForRole() returns '/' for unknowns.
+  const HOME_BY_ROLE = { seeker: '/home-seeker', owner: '/home-agent', agent: '/home-agent', admin: '/admin' };
+  const target = HOME_BY_ROLE[role];
 
-  if (role === 'owner' || role === 'agent') {
-    if (visitor) visitor.style.display = 'none';
-    if (seeker) seeker.style.display = 'none';
-    if (agent) agent.style.display = '';
-    if (heroTitle) heroTitle.innerHTML = 'Fill your rooms <em>faster.</em>';
-    if (heroSub) heroSub.textContent = 'Find hostels to list, post new rooms in minutes, and get paid — every serious seeker is routed straight to you.';
-    const g = document.getElementById('agentGreeting');
-    if (g) g.textContent = `Welcome back, ${user.name?.split(' ')[0] || 'agent'}`;
-  } else if (role === 'seeker') {
-    if (visitor) visitor.style.display = 'none';
-    if (agent) agent.style.display = 'none';
-    if (seeker) seeker.style.display = '';
-    if (heroTitle) heroTitle.innerHTML = 'Find a hostel with <em>ease.</em>';
-    if (heroSub) heroSub.textContent = 'No more roaming around town. Search verified rooms near your campus or workplace, shortlist favourites and connect safely — all free.';
-    const g = document.getElementById('seekerGreeting');
-    if (g) g.textContent = `Welcome back, ${user.name?.split(' ')[0] || 'seeker'}`;
+  if (target && target !== location.pathname) {
+    location.replace(target);
+    return;
   }
-  // visitor: leave the default sections visible
+
   if (window.renderFooterNav) window.renderFooterNav();
 }
 
