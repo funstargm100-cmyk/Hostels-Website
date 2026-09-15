@@ -28,7 +28,7 @@
         <button id="themeToggle" aria-label="Toggle theme"></button>
         <a href="/login" id="loginBtn" class="btn btn-ghost btn-sm">Log in</a>
         <a href="/signup" id="signupBtn" class="btn btn-primary btn-sm">Sign up</a>
-        <a href="/dashboard" id="dashboardBtn" class="btn btn-outline btn-sm" style="display:none">Dashboard</a>
+        <a href="/dashboard" id="dashboardBtn" class="btn btn-outline btn-sm" style="display:none">Profile</a>
         <button id="logoutBtn" class="btn btn-ghost btn-sm" style="display:none">Log out</button>
       </div>
     </div>
@@ -36,15 +36,15 @@
 
   <header class="hero">
     <div class="hero-inner reveal">
-      <div class="hero-eyebrow"><i data-lucide="map-pin"></i> Accra · Kumasi · Takoradi · Tamale</div>
-      <h1 id="heroTitle">Find a hostel with <em>ease.</em></h1>
-      <p id="heroSub">No more roaming around town. Search verified rooms near your campus or workplace, shortlist
-        favourites and connect safely — all free.</p>
+     /* <div class="hero-eyebrow"><i data-lucide="map-pin"></i> Accra · Kumasi · Takoradi · Tamale</div>*/
+      <h1 id="heroTitle">Your Next Room Is <em>Already Listed</em></h1>
+        <p>Skip the agents-on-the-street hustle. Search verified hostels near your campus, save your
+          favourites and connect with Us safely — all free.</p>
 
       <form class="search-card"
         onsubmit="event.preventDefault(); location.href='/listings?location='+encodeURIComponent(this.q.value)+'&max_price='+this.budget.value">
         <div class="form-group" style="margin-bottom:0">
-          <label>Where to?</label>
+          <label>Where do you want your hostel?</label>
           <input name="q" type="text" placeholder="e.g. Legon, East Legon, Adenta..." />
         </div>
         <div class="form-group" style="margin-bottom:0">
@@ -83,7 +83,7 @@
       <div class="aud-card">
         <div class="aud-card-icon"><i data-lucide="message-circle"></i></div>
         <h3>Your requests</h3>
-        <p>Track every enquiry in one place — know the moment an owner responds.</p>
+        <p>Track every enquiry in one place — know the moment agent responds.</p>
         <a href="/dashboard" class="aud-card-link">Track requests <i data-lucide="arrow-right"
             style="width:14px;height:14px"></i></a>
       </div>
@@ -93,8 +93,8 @@
   <section class="section container">
     <div class="section-head">
       <div>
-        <h2>Pick up where you left off</h2>
-        <p class="text-muted" style="margin:0">Fresh rooms near the areas you're searching.</p>
+        <h2>Newly posted</h2>
+        <p class="text-muted" style="margin:0">Fresh rooms to pick from.</p>
       </div>
       <a href="/listings" class="btn btn-outline">See all rooms</a>
     </div>
@@ -105,7 +105,7 @@
     <div class="section-head">
       <div>
         <h2>Popular near campus</h2>
-        <p class="text-muted" style="margin:0">Where students and young workers are looking right now.</p>
+        <p class="text-muted" style="margin:0">Where students are looking right now.</p>
       </div>
     </div>
     <div class="area-chips">
@@ -122,24 +122,24 @@
 
   <section class="section container reveal">
     <div class="section-head">
-      <h2>Why seekers trust Rentel</h2>
+      <h2>Why students love Rentel</h2>
     </div>
     <div class="why-grid">
       <div class="why-card"><i data-lucide="badge-check"></i>
-        <h3>Verified rooms only</h3>
-        <p class="text-muted">Every room passes human review before it goes live.</p>
+        <h3>Scam prevention</h3>
+        <p class="text-muted">All payments goes through us, Under no circumstance do you pay money to anyone!</p>
       </div>
       <div class="why-card"><i data-lucide="droplets"></i>
         <h3>The real picture</h3>
         <p class="text-muted">Water flow, power, bathroom type — known before you visit.</p>
       </div>
       <div class="why-card"><i data-lucide="shield"></i>
-        <h3>Your number stays yours</h3>
-        <p class="text-muted">Contacts are only shared after both sides confirm interest.</p>
+        <h3>Your privacy is your concern</h3>
+        <p class="text-muted">Contact and Account details are kept safe and private.</p>
       </div>
       <div class="why-card"><i data-lucide="wallet"></i>
         <h3>No hidden charges</h3>
-        <p class="text-muted">Browsing and requests are free. One flat 10% fee at the end.</p>
+        <p class="text-muted">You only pay the listed price, No other fees.</p>
       </div>
     </div>
   </section>
@@ -149,8 +149,7 @@
       <div class="footer-grid">
         <div>
           <a href="/" class="logo" style="color:#fff"><img class="rentel-icon" src="/images/rentel_icon.png" alt="Rentel icon"><img class="rentel-wordmark" src="/images/rentel_wordmark_ink.png" alt="Rentel"></a>
-          <p class="mt-2" style="max-width:34ch">Ghana's marketplace for hostels, self-contained rooms and shared houses
-            — verified owners, no middleman drama.</p>
+          <p class="mt-2" style="max-width:34ch">No need to roam around finding hostels to rent, Rentel has you covered. All on your smartphone</p>
         </div>
         <div>
           <h4>Explore</h4>
@@ -178,8 +177,7 @@
         </div>
       </div>
       <div class="footer-bottom">
-        <span>© 2026 Rentel. Built for renters and hosts across Ghana.</span>
-        <span>Accra · Kumasi · Takoradi · Tamale</span>
+        <span>© 2026 Rentel. All rights reserved.</span>
       </div>
     </div>
   </footer>

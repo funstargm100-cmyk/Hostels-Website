@@ -2,7 +2,7 @@
 async function loadFeaturedSeeker() {
   const grid = document.getElementById('featuredListingsSeeker');
   try {
-    const { listings } = await api.get('/api/listings?limit=8&sort=featured');
+    const { listings } = await api.get('/api/listings?limit=6&sort=featured');
     if (!listings.length) {
       grid.innerHTML = '<p class="text-muted">No rooms yet. <a href="/post-ad" style="color:var(--primary)">Be the first to post!</a></p>';
       return;

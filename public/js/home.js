@@ -3,7 +3,7 @@ async function loadFeatured() {
     .map(id => document.getElementById(id)).filter(Boolean);
   for (const grid of grids) {
     try {
-      const { listings } = await api.get('/api/listings?limit=8&sort=featured');
+      const { listings } = await api.get('/api/listings?limit=6&sort=featured');
       if (!listings.length) { grid.innerHTML = '<p class="text-muted">No rooms yet. <a href="/post-ad" style="color:var(--primary)">Be the first to post!</a></p>'; continue; }
       grid.innerHTML = listings.map(renderListingCard).join('');
       if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [grid] });

@@ -425,7 +425,7 @@ textarea{ resize:vertical; min-height:110px; }
 .hero-eyebrow{ font-weight:700; font-size:.85rem; color:var(--gold); margin-bottom:.9rem; display:flex; align-items:center; gap:.5rem; }
 .hero h1{ color:#fff; max-width:20ch; margin-bottom:.9rem; }
 .hero h1 em{ font-style:italic; color:var(--gold); }
-.hero p{ max-width:56ch; color:#E4DFEE; font-size:1.08rem; }
+.hero p{ max-width:56ch; color:#cecbd4; font-size:1.08rem; }
 .search-card{
   background:var(--surface); border-radius:var(--radius); box-shadow:var(--shadow-lg); padding:1.2rem;
   margin-top:1.8rem; display:grid; grid-template-columns:1.4fr 1fr auto; gap:1rem; align-items:end;
