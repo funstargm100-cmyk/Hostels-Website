@@ -178,7 +178,7 @@ async function loadAdminRequests() {
     el.innerHTML = `<div class="table-wrap"><table><thead><tr><th>Seeker</th><th>Room</th><th>Owner Contact</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead><tbody>` +
       requests.map(r => `<tr>
         <td>${r.seeker_name}<br><span class="text-muted" style="font-size:0.75rem">${r.seeker_phone || r.seeker_email || ''}</span></td>
-        <td><a href="/listing?id=${r.listing_uuid}" target="_blank" style="color:var(--primary)">${r.listing_title}</a></td>
+        <td><a href="/listing?id=${r.listing_uuid}" target="_blank" style="color:var(--primary)">${r.listing_title}</a>${(r.message || '').trim() ? '<span class="msg-dot" title="Seeker left a message"><i data-lucide="message-square" style="width:14px;height:14px"></i></span>' : ''}</td>
         <td style="font-size:0.82rem">${r.owner_name}<br>${r.owner_phone || r.owner_email || ''}</td>
         <td><span class="status-badge status-${r.status}">${r.status.replace('_', ' ')}</span></td>
         <td>${new Date(r.created_at).toLocaleDateString()}</td>
@@ -269,6 +269,12 @@ function openRequestModal(id) {
     document.getElementById('reqRoomLine').innerHTML =
       `<strong>${r.listing_title || 'Room'}</strong> — requested by ${r.seeker_name || 'a seeker'}`;
     renderPricingBreakdown(r);
+    // The message the seeker typed on the request form (optional). Was saved all
+    // along but never surfaced to the admin — show it, or an explicit placeholder.
+    const msg = (r.message || '').trim();
+    const msgEl = document.getElementById('reqMessage');
+    msgEl.textContent = msg || 'No message provided.';
+    msgEl.classList.toggle('req-empty', !msg);
     document.getElementById('newRequestStatus').value = r.status;
     // Preload the SAVED note so the admin edits what's there instead of retyping
     // it — previously the box was always blank, so an update wiped the note.

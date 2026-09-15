@@ -618,6 +618,10 @@ textarea{ resize:vertical; min-height:110px; }
 .req-line.req-strong span:last-child{ font-weight:700; }
 .req-map{ height:220px; border-radius:var(--radius); overflow:hidden; border:1px solid var(--border, #e6e6ef); z-index:0; }
 .req-empty{ font-size:.86rem; color:var(--text-muted); margin:0; }
+.req-message{ background:var(--bg, #f7f7fb); border:1px solid var(--border, #e6e6ef); border-radius:var(--radius); padding:.7rem .9rem; font-size:.88rem; white-space:pre-wrap; word-break:break-word; }
+.req-message.req-empty{ background:transparent; border-style:dashed; }
+/* A small icon next to a room that has a seeker message, so admins can spot them. */
+.msg-dot{ display:inline-flex; align-items:center; color:var(--primary); margin-left:.35rem; vertical-align:-2px; }
 
 /* ── request (interest) form ─────────────────────────── */
 /* Dark theme: the white name/phone/email fields need black text to read; the
@@ -1952,6 +1956,10 @@ body.map-fullscreen-active .filters-panel.open{ transform:translateX(0); }
 #sidebarMobileToggle:hover{ background:var(--primary-light); color:var(--primary); }
 #sidebarMobileToggle:active{ transform:scale(.92); }
 #sidebarMobileToggle i,#sidebarMobileToggle svg{ width:20px; height:20px; }
+.topbar-logout{ display:inline-flex; align-items:center; gap:.35rem; background:none; border:1px solid var(--border); border-radius:var(--radius-sm); padding:.45rem .7rem; color:var(--text-muted); font:inherit; font-size:.82rem; font-weight:700; cursor:pointer; flex-shrink:0; transition:background .18s ease, color .18s ease, border-color .18s ease; }
+.topbar-logout:hover{ background:var(--primary-light); color:var(--primary); border-color:var(--primary); }
+.topbar-logout i,.topbar-logout svg{ width:16px; height:16px; }
+@media (max-width:480px){ .topbar-logout span{ display:none; } .topbar-logout{ padding:.45rem; } }
 .mobile-tabs{ display:none; }
 @media (max-width:900px){
   .dashboard-topbar{ display:flex; }

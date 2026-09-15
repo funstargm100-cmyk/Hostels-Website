@@ -69,6 +69,9 @@ function initDashboardSidebar() {
 
   const logout = document.getElementById('sidebarLogout');
   if (logout) logout.addEventListener('click', confirmLogout);
+
+  const logoutMobile = document.getElementById('logoutBtnMobile');
+  if (logoutMobile) logoutMobile.addEventListener('click', confirmLogout);
 }
 
 function confirmLogout() {
