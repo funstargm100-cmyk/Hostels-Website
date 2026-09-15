@@ -182,21 +182,103 @@ async function loadAdminRequests() {
         <td style="font-size:0.82rem">${r.owner_name}<br>${r.owner_phone || r.owner_email || ''}</td>
         <td><span class="status-badge status-${r.status}">${r.status.replace('_', ' ')}</span></td>
         <td>${new Date(r.created_at).toLocaleDateString()}</td>
-        <td><button class="btn btn-outline btn-sm" onclick="openRequestModal(${r.id})">Update</button></td>
+        <td><button class="btn btn-outline btn-sm" onclick="openRequestModal(${r.id})"><i data-lucide="calculator" style="width:14px;height:14px"></i> Details</button></td>
       </tr>`).join('') + '</tbody></table></div>';
+    if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [el] });
   } catch (e) { el.innerHTML = `<p class="text-muted">${e.message}</p>`; }
+}
+
+// The room's price breakdown, reconstructed from what was stored at post time.
+// Mirrors public/js/post-ad.js and the server (src/routes/listings.js):
+//   agent -> commission is a flat GHS amount PER OCCUPANT; platform fee is
+//            5% of ((total commission x occupancy) + price per person)
+//   owner -> no commission; platform fee is 7% of the price per person
+// The stored price_per_head is the FINAL per-person figure, so the base price is
+// recovered by subtracting the commission and fee back out of it.
+function renderPricingBreakdown(r) {
+  const box = document.getElementById('reqPricing');
+  const ghs = (n) => 'GHS ' + Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  const occ = Number(r.occupancy_type) || 1;
+  const isAgent = r.poster_type === 'agent';
+  const perHead = Number(r.price_per_head) || 0;       // final, all-in per person
+  const fee = Number(r.platform_fee) || 0;             // stored platform fee
+  const commPerOccupant = isAgent ? (Number(r.commission_value) || 0) : 0;
+  const totalCommission = isAgent ? +(commPerOccupant * occ).toFixed(2) : 0;
+  // Recover the poster's base price per person (what they asked for the room).
+  const basePerPerson = +(perHead - commPerOccupant - fee).toFixed(2);
+  const feePct = r.platform_fee_rate != null ? Math.round(Number(r.platform_fee_rate) * 100) : (isAgent ? 5 : 7);
+  const roomTotal = +(perHead * occ).toFixed(2);
+
+  const lines = [
+    `<div class="req-line"><span>Room type</span><span>${occ}-in-1 (${occ} occupant${occ === 1 ? '' : 's'})</span></div>`,
+    `<div class="req-line req-strong"><span>Price per person (base)</span><span>${ghs(basePerPerson)}</span></div>`
+  ];
+  if (isAgent) {
+    lines.push(`<div class="req-line"><span>Agent commission / occupant</span><span>${ghs(commPerOccupant)}</span></div>`);
+    lines.push(`<div class="req-line"><span>Total commission (× ${occ})</span><span>${ghs(totalCommission)}</span></div>`);
+  }
+  lines.push(`<div class="req-line"><span>Platform fee (${feePct}%)</span><span>${ghs(fee)}</span></div>`);
+  lines.push(`<div class="req-line req-total"><span>Total per person</span><span>${ghs(perHead)}</span></div>`);
+  lines.push(`<div class="req-line"><span>Full room total (${occ} occupant${occ === 1 ? '' : 's'})</span><span>${ghs(roomTotal)}</span></div>`);
+
+  box.innerHTML = `<h4><i data-lucide="calculator" style="width:16px;height:16px"></i> Price calculation${isAgent ? ' · Agent post' : ' · Owner post'}</h4>` + lines.join('');
+  if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [box] });
+}
+
+// Leaflet map showing the room's REAL coordinates (admins only). Reuses one map
+// instance and just moves the view/marker when the modal is reopened.
+let reqMap = null;
+let reqMarker = null;
+function renderRequestMap(r) {
+  const el = document.getElementById('reqMap');
+  const coordsEl = document.getElementById('reqCoords');
+  const lat = r.location_lat != null ? Number(r.location_lat) : null;
+  const lng = r.location_lng != null ? Number(r.location_lng) : null;
+
+  if (lat == null || lng == null || !Number.isFinite(lat) || !Number.isFinite(lng)) {
+    el.style.display = 'none';
+    coordsEl.textContent = 'No coordinates were captured for this room.';
+    return;
+  }
+  el.style.display = 'block';
+  coordsEl.innerHTML =
+    `${r.location_area ? r.location_area + ' — ' : ''}${r.full_address || ''}` +
+    ` <a href="https://www.google.com/maps?q=${lat},${lng}" target="_blank" rel="noopener" style="color:var(--primary)">Open in Google Maps</a><br>` +
+    `<span style="font-family:monospace">${lat.toFixed(6)}, ${lng.toFixed(6)}</span>`;
+
+  if (typeof L === 'undefined') { el.style.display = 'none'; coordsEl.textContent += ' (map unavailable)'; return; }
+
+  // Build lazily; the map div only has real dimensions once the modal is open.
+  if (!reqMap) {
+    reqMap = L.map(el, { zoomControl: true, attributionControl: false }).setView([lat, lng], 17);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(reqMap);
+    reqMarker = L.marker([lat, lng]).addTo(reqMap);
+  } else {
+    reqMap.setView([lat, lng], 17);
+    reqMarker.setLatLng([lat, lng]);
+  }
+  // The container was hidden until just now, so Leaflet must re-measure.
+  setTimeout(() => reqMap && reqMap.invalidateSize(), 60);
 }
 
 function openRequestModal(id) {
   pendingRequestId = id;
   const r = (adminRequests || []).find(x => x.id === id);
   if (r) {
+    document.getElementById('reqRoomLine').innerHTML =
+      `<strong>${r.listing_title || 'Room'}</strong> — requested by ${r.seeker_name || 'a seeker'}`;
+    renderPricingBreakdown(r);
     document.getElementById('newRequestStatus').value = r.status;
     // Preload the SAVED note so the admin edits what's there instead of retyping
     // it — previously the box was always blank, so an update wiped the note.
     document.getElementById('adminNotes').value = r.admin_notes || '';
+  } else {
+    document.getElementById('reqPricing').innerHTML = '<p class="req-empty">Room details unavailable.</p>';
   }
   openModal('requestModal');
+  // Map after the modal is visible so it measures correctly.
+  if (r) renderRequestMap(r);
 }
 
 async function updateRequestStatus() {

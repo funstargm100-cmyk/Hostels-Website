@@ -4,6 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Admin — Rentel</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <link rel="stylesheet" href="/css/style.css" />
 </head>
 <body>
@@ -136,8 +137,20 @@
 
 <!-- Update request modal -->
 <div class="modal-overlay" id="requestModal">
-  <div class="modal">
-    <h3>Update request</h3>
+ <div class="modal" style="max-width:560px">
+    <h3>Request details</h3>
+    <p class="text-muted" id="reqRoomLine" style="margin:-.3rem 0 .9rem;font-size:.9rem"></p>
+
+    <!-- Price calculation for the requested room -->
+    <div id="reqPricing" class="req-pricing" style="margin-bottom:1rem"></div>
+
+    <!-- Exact pin the admin needs for verification -->
+    <div class="form-group">
+      <label>Exact location <span class="text-muted" style="font-size:.78rem">(real coordinates — for verification only)</span></label>
+      <div id="reqMap" class="req-map"></div>
+      <p class="text-muted" id="reqCoords" style="font-size:.8rem;margin:.5rem 0 0"></p>
+    </div>
+
     <div class="form-group">
       <label>Status</label>
       <select id="newRequestStatus">
@@ -152,12 +165,13 @@
       <button class="btn btn-ghost" onclick="closeModal('requestModal')">Cancel</button>
       <button class="btn btn-primary" onclick="updateRequestStatus()">Save</button>
     </div>
-  </div>
+ </div>
 </div>
 
 <nav class="footer-nav" id="footerNav"></nav>
 
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js" defer></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
 <script src="/js/app.js" defer></script>
 <script src="/js/footernav.js" defer></script>
 <script src="/js/admin.js" defer></script>

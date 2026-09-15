@@ -609,6 +609,16 @@ textarea{ resize:vertical; min-height:110px; }
 .modal-overlay.open .modal{ transform:scale(1); }
 .modal-actions{ display:flex; justify-content:flex-end; gap:.6rem; margin-top:1.3rem; }
 
+/* ── admin request breakdown (price + exact pin) ─────────── */
+.req-pricing{ background:var(--bg, #f7f7fb); border:1px solid var(--border, #e6e6ef); border-radius:var(--radius); padding:.9rem 1rem; }
+.req-pricing h4{ margin:0 0 .6rem; font-size:.9rem; display:flex; align-items:center; gap:.4rem; }
+.req-line{ display:flex; justify-content:space-between; gap:1rem; padding:.28rem 0; font-size:.86rem; }
+.req-line span:first-child{ color:var(--text-muted); }
+.req-line.req-total{ border-top:1px solid var(--border, #e6e6ef); margin-top:.45rem; padding-top:.55rem; font-weight:700; }
+.req-line.req-strong span:last-child{ font-weight:700; }
+.req-map{ height:220px; border-radius:var(--radius); overflow:hidden; border:1px solid var(--border, #e6e6ef); z-index:0; }
+.req-empty{ font-size:.86rem; color:var(--text-muted); margin:0; }
+
 /* ── request (interest) form ─────────────────────────── */
 /* Dark theme: the white name/phone/email fields need black text to read; the
    navy date field needs its calendar glyph inverted to white. */

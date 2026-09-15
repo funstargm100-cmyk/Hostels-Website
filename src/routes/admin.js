@@ -148,8 +148,19 @@ router.get('/requests', admin, async (req, res) => {
     const where = status ? 'WHERE cr.status = $1' : '';
     const limitParam = status ? '$2' : '$1';
     const offsetParam = status ? '$3' : '$2';
+    // Admins are trusted staff, so — unlike the public listing endpoints — this
+    // returns the room's REAL coordinates (location_lat/lng, never the jittered
+    // display_* pair) plus the full pricing breakdown (occupancy, per-person
+    // price, agent commission, platform fee) so the admin modal can explain how
+    // each room's price was calculated and show its exact pin.
     const [requests] = await db.query2(`
       SELECT cr.*, l.title as listing_title, l.uuid as listing_uuid,
+             l.occupancy_type, l.original_price, l.listed_price, l.price_per_head,
+             l.poster_type, l.commission_type, l.commission_value,
+             l.platform_fee_rate, l.platform_fee,
+             l.location_area, l.full_address, l.nearest_landmark,
+             l.location_lat, l.location_lng,
+             (SELECT image_path FROM listing_images li WHERE li.listing_id = l.id ORDER BY li.is_primary DESC, li.sort_order ASC LIMIT 1) as primary_image,
              u.name as owner_name, u.email as owner_email, u.phone as owner_phone
       FROM contact_requests cr
       JOIN listings l ON cr.listing_id = l.id
