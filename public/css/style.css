@@ -1502,6 +1502,10 @@ body.map-fullscreen-active .filters-panel.open{ transform:translateX(0); }
   overflow:hidden;
   border-radius:var(--radius);
   background:var(--card-bg);
+  /* Leaflet's default stylesheet sets `color:#333` on the popup wrapper, which
+     the card inherits. That is near-invisible on the dark card background, so
+     pin the text colour to the theme's text colour (room name, price, meta). */
+  color:var(--text);
   box-shadow:var(--shadow-lg, 0 10px 25px -5px rgba(0,0,0,.25));
   border:1px solid var(--border);
 }
@@ -2065,7 +2069,7 @@ td{ padding:.8rem 1rem; border-top:1px solid var(--border); vertical-align:top; 
 @media (max-width:400px){
   .su-actions{ flex-direction:column-reverse; }
   .su-actions .btn{ width:100%; }
-} }
+}
 #suMap{ height:300px; border-radius:var(--radius-sm); margin:.8rem 0; z-index:0; }
 #suMap .leaflet-pane{ z-index:10 !important; }
 #suMap .leaflet-top, #suMap .leaflet-bottom{ z-index:20 !important; }
