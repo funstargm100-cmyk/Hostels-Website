@@ -78,14 +78,13 @@
 
       <div class="price-box">
         <div class="price-box-top">
+          <span class="tag" id="occupancyTag"></span>
           <button type="button" class="share-btn" id="shareRoomBtn" onclick="shareRoom()" aria-label="Share this room" title="Share this room">
             <i data-lucide="share-2"></i>
           </button>
-          <span class="tag" id="occupancyTag"></span>
         </div>
         <div style="font-family:var(--font-display);font-size:1.9rem;font-weight:600;color:var(--primary);margin-top:.6rem" id="priceMain"></div>
         <div class="text-muted" id="pricePerHead" style="margin-bottom:1rem"></div>
-        <div id="priceBreakdown" class="text-muted" style="font-size:.78rem;margin-bottom:.4rem"></div>
         <div class="text-muted" style="font-size:.85rem;margin-bottom:1rem" id="moveInDate"></div>
         <div style="display:flex;gap:1.2rem;font-size:.82rem;color:var(--text-muted);margin-bottom:1.2rem">
           <span><i data-lucide="eye" style="width:14px;height:14px"></i> <span id="viewCount"></span> views</span>

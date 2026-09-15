@@ -1702,9 +1702,9 @@ body.map-fullscreen-active .filters-panel.open{ transform:translateX(0); }
 .amenity-item i,.amenity-item svg{ width:16px; height:16px; color:var(--primary); }
 @media (max-width:600px){ .amenities-grid{ grid-template-columns:repeat(2,1fr); } }
 .price-box{ background:var(--card-bg); border:1px solid var(--border); border-radius:var(--radius); padding:1.5rem; position:sticky; top:90px; min-width:0; max-width:100%; overflow-wrap:anywhere; }
-/* Top row of the price card: share button on the left, occupancy tag on the right. */
+/* Top row of the price card: occupancy tag on the left, share button top-right. */
 .price-box-top{ display:flex; align-items:center; gap:.6rem; }
-.price-box-top .tag{ margin-left:auto; }
+.price-box-top .share-btn{ margin-left:auto; }
 .share-btn{
   display:inline-flex; align-items:center; justify-content:center; gap:.4rem;
   background:transparent; border:1px solid var(--border); border-radius:999px;
@@ -2408,27 +2408,30 @@ td{ padding:.8rem 1rem; border-top:1px solid var(--border); vertical-align:top; 
     width:100%;
     margin-top:.2rem;
   }
-  /* Follow fills the row; Share is a compact icon button beside it. */
+  /* Follow is a short, centred pill; Share is a compact icon button beside it.
+     The pair stays centred as a group so Share never pushes Follow off-centre. */
   .poster-header-actions{
     width:100%;
     flex-wrap:nowrap;
+    justify-content:center;
+    gap:.5rem;
   }
   .poster-header-follow #followBtn{
-    flex:1 1 auto;
+    flex:0 0 auto;
     width:auto;
     justify-content:center;
-    padding:.7rem 1rem;
+    padding:.6rem 1.6rem;
   }
   .poster-header-follow .poster-share-btn{
     flex:0 0 auto;
-    width:46px;
-    height:46px;
+    width:42px;
+    height:42px;
     padding:0;
     justify-content:center;
   }
   .poster-header-follow .poster-share-btn span{ display:none; }
   .poster-header-follow .poster-share-btn i,
-  .poster-header-follow .poster-share-btn svg{ width:19px; height:19px; }
+  .poster-header-follow .poster-share-btn svg{ width:18px; height:18px; }
   .poster-rooms-heading{
     font-size:1.15rem;
     text-align:center;
