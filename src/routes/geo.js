@@ -7,18 +7,12 @@ const CACHE_TTL = 1000 * 60 * 60; // 1 hour
 // Curated popular places (Ghana) shown as quick-pick chips.
 // Each entry is searched via Nominatim on demand — we only keep labels here.
 const POPULAR_PLACES = [
-  { label: 'KNUST', emoji: '🎓', query: 'KNUST' },
-  { label: 'University of Ghana, Legon', emoji: '🎓', query: 'University of Ghana, Legon, Accra' },
-  { label: 'UENR Sunyani', emoji: '🎓', query: 'UENR Sunyani' },
-  { label: 'UCC Cape Coast', emoji: '🎓', query: 'University of Cape Coast' },
-  { label: 'Ho Technical University', emoji: '🎓', query: 'Ho Technical University, Ho' },
-  { label: 'Takoradi Technical University', emoji: '🎓', query: 'Takoradi Technical University' },
-  { label: 'University for Development Studies', emoji: '🎓', query: 'University for Development Studies, Tamale' },
-  { label: 'GIMPA', emoji: '🎓', query: 'Ghana Institute of Management and Public Administration, Accra' },
-  { label: 'Accra Mall', emoji: '🛍️', query: 'Accra Mall' },
-  { label: 'Kumasi City Mall', emoji: '🛍️', query: 'Kumasi City Mall' },
-  { label: 'Kotoka Int. Airport', emoji: '✈️', query: 'Kotoka International Airport, Accra' },
-  { label: 'Makola Market', emoji: '🧺', query: 'Makola Market, Accra' }
+  { label: 'UENR', emoji: '🎓', query: 'UENR, Sunyani' },
+  { label: 'Fiapre', emoji: '📍', query: 'Fiapre, Sunyani' },
+  { label: 'Notre Dame', emoji: '📍', query: 'Notre Dame, Sunyani' },
+  { label: 'Berlin Top', emoji: '📍', query: 'Berlin Top, Sunyani' },
+  { label: 'Bofre Ase', emoji: '📍', query: 'Bofre Ase, Sunyani' },
+  { label: 'Zinco Hotel', emoji: '🏨', query: 'Zinco Hotel, Sunyani' }
 ];
 
 // GET /api/geo/popular — the quick-pick chips
