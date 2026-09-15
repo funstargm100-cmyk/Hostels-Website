@@ -18,10 +18,10 @@ function suShow(id) {
   const sub = document.getElementById('suStepSub');
   if (id === 'suStep1') {
     title.textContent = 'Create your account';
-    sub.textContent = 'First — what brings you to Rentel?';
+    sub.textContent = 'First - what brings you to Rentel?';
   } else if (id === 'seekerDetailsForm') {
     title.textContent = 'Your details';
-    sub.textContent = 'Step 2 of 2 — almost done';
+    sub.textContent = 'Step 2 of 2 - almost done';
   } else {
     title.textContent = 'Your details';
     sub.textContent = 'Tell us a bit about yourself';
