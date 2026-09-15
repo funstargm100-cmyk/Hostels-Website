@@ -113,6 +113,15 @@
           <textarea id="adDescription" name="description" placeholder="Describe the room, the neighbourhood, house rules..."></textarea>
         </div>
         <p class="text-muted" style="font-size:.78rem">Don't include phone numbers, WhatsApp or social handles here — Rentel will connect you with interested renters directly.</p>
+        <div class="form-group">
+          <label>Gender</label>
+          <select id="adGender" name="gender_preference">
+            <option value="mixed" selected>Any</option>
+            <option value="male">Male only</option>
+            <option value="female">Female only</option>
+          </select>
+          <p class="text-muted" style="font-size:.75rem;margin-top:.35rem">Who the room is available to. Defaults to “Any”.</p>
+        </div>
         <div class="alert alert-danger" id="step2Error" style="display:none"></div>
       </div>
 

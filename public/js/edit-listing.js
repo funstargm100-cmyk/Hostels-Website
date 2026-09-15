@@ -39,6 +39,9 @@ async function initEdit() {
     // The form edits the PER-PERSON price, so pre-fill from price_per_head.
     document.getElementById('edPrice').value = listing.price_per_head || listing.listed_price || listing.original_price || '';
     document.getElementById('edOccupancy').value = String(listing.occupancy_type || 1);
+    // Rooms created before the gender field existed have no value — default them to
+    // "Any" (stored as 'mixed') so the select always shows a valid choice.
+    document.getElementById('edGender').value = listing.gender_preference || 'mixed';
     document.getElementById('edLocation').value = listing.location_area || '';
     document.getElementById('edLandmark').value = listing.nearest_landmark || '';
     // Seed the hidden location fields with the saved coords so the map can restore
@@ -376,6 +379,7 @@ document.getElementById('editForm')?.addEventListener('submit', async (e) => {
     fd.append('description', document.getElementById('edDescription').value.trim());
     fd.append('price_per_head', document.getElementById('edPrice').value);
     fd.append('occupancy_type', document.getElementById('edOccupancy').value);
+    fd.append('gender_preference', document.getElementById('edGender').value || 'mixed');
     fd.append('location_area', document.getElementById('edLocation').value.trim());
     fd.append('nearest_landmark', document.getElementById('edLandmark').value.trim());
     fd.append('location_lat', document.getElementById('edLat').value);

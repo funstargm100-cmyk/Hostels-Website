@@ -344,6 +344,12 @@ router.post('/', requireAuth, requireRole('owner', 'agent', 'admin'), uploadList
   const hasPrice = (price_per_head_in !== undefined && price_per_head_in !== '') || !!original_price;
   if (!title || !hasPrice || !location_area || !occupancy_type) return res.status(400).json({ error: 'Missing required fields' });
 
+  // Gender preference: only the three known values are accepted; anything else
+  // (or nothing) falls back to 'mixed' ("Any"). This keeps the DB CHECK happy and
+  // means an older client that never sends the field still gets a valid default.
+  const VALID_GENDERS = ['male', 'female', 'mixed'];
+  const genderPref = VALID_GENDERS.includes(gender_preference) ? gender_preference : 'mixed';
+
   const contentCheck = validateAdContent(title, description);
   if (!contentCheck.isClean) return res.status(400).json({ error: 'Ad contains contact information. Remove it and resubmit.', violations: contentCheck.violations });
   // A listing must carry at least TWO photos (the building cover plus at least one
@@ -409,7 +415,7 @@ router.post('/', requireAuth, requireRole('owner', 'agent', 'admin'), uploadList
   const result = await db.query(
       `INSERT INTO listings (owner_id, title, description, occupancy_type, original_price, listed_price, price_per_head, location_area, full_address, location_lat, location_lng, nearest_landmark, gender_preference, move_in_date, expires_at, poster_type, commission_type, commission_value, platform_fee_rate, platform_fee)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20) RETURNING id, uuid`,
-      [req.session.user.id, title, description, occupancy_type, price, listed_price, price_per_head, location_area, req.body.full_address || null, location_lat || null, location_lng || null, nearest_landmark || null, gender_preference || 'mixed', move_in_date || null, expires_at, kind, commType, commValue, feeRate, platformFee]
+      [req.session.user.id, title, description, occupancy_type, price, listed_price, price_per_head, location_area, req.body.full_address || null, location_lat || null, location_lng || null, nearest_landmark || null, genderPref, move_in_date || null, expires_at, kind, commType, commValue, feeRate, platformFee]
     );
     const { id: listingId, uuid } = result.rows[0];
 
@@ -477,7 +483,13 @@ router.put('/:uuid', requireAuth, uploadListingImages, async (req, res) => {
     if (nearest_landmark !== undefined) { fields.push(`nearest_landmark=$${p++}`); vals.push(nearest_landmark); }
     if (location_lat !== undefined && location_lat !== '') { fields.push(`location_lat=$${p++}`); vals.push(parseFloat(location_lat)); }
     if (location_lng !== undefined && location_lng !== '') { fields.push(`location_lng=$${p++}`); vals.push(parseFloat(location_lng)); }
-    if (gender_preference) { fields.push(`gender_preference=$${p++}`); vals.push(gender_preference); }
+    // Only the three known values are accepted, so an invalid one can never reach
+    // the DB CHECK constraint. Blank/'mixed' both mean "Any".
+    if (gender_preference !== undefined) {
+      const VALID_GENDERS = ['male', 'female', 'mixed'];
+      fields.push(`gender_preference=$${p++}`);
+      vals.push(VALID_GENDERS.includes(gender_preference) ? gender_preference : 'mixed');
+    }
     if (move_in_date) { fields.push(`move_in_date=$${p++}`); vals.push(move_in_date); }
     // Price may arrive as price_per_head (per-person, preferred) or as a room
     // TOTAL via original_price (legacy). Derive the other two from whichever came.

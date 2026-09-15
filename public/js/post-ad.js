@@ -562,6 +562,14 @@ function getMyLocation() {
 }
 
 // ─── REVIEW SUMMARY ───────────────────────────────────────────────────────────
+// Human-readable label for the stored gender_preference value. 'mixed' means the
+// room is open to anyone, shown to posters as "Any".
+function genderLabel(value) {
+  if (value === 'male') return 'Male only';
+  if (value === 'female') return 'Female only';
+  return 'Any';
+}
+
 function buildReviewSummary() {
   const form = document.getElementById('postAdForm');
   const data = new FormData(form);
@@ -576,6 +584,7 @@ function buildReviewSummary() {
     <div style="display:grid;gap:0.75rem;font-size:0.875rem">
       ${row('Title', data.get('title') || '—', 'style="font-weight:600;max-width:60%;text-align:right"')}
       ${row('Occupancy', `${p.occ}-in-1`)}
+      ${row('Gender', genderLabel(data.get('gender_preference')))}
       ${row('Posting as', isAgent ? 'Agent' : 'Owner')}
       ${row('Price per person', `${ghs(p.pricePerPerson)} / year`)}
       ${isAgent

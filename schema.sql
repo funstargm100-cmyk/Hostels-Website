@@ -207,3 +207,12 @@ ALTER TABLE listings ADD COLUMN IF NOT EXISTS commission_type VARCHAR(10);
 ALTER TABLE listings ADD COLUMN IF NOT EXISTS commission_value NUMERIC(12,2);
 ALTER TABLE listings ADD COLUMN IF NOT EXISTS platform_fee_rate NUMERIC(5,4);
 ALTER TABLE listings ADD COLUMN IF NOT EXISTS platform_fee NUMERIC(12,2);
+
+-- Migration: gender preference on listings (who the room is available to).
+--   'mixed'  -> open to anyone (shown to posters as "Any") — the default
+--   'male'   -> male only
+--   'female' -> female only
+ALTER TABLE listings ADD COLUMN IF NOT EXISTS gender_preference VARCHAR(10) DEFAULT 'mixed';
+-- Rooms created before this field existed have NULL — backfill them to 'mixed'
+-- so every existing room reads as "Any".
+UPDATE listings SET gender_preference = 'mixed' WHERE gender_preference IS NULL;
