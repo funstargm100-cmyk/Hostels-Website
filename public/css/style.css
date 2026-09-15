@@ -1702,6 +1702,19 @@ body.map-fullscreen-active .filters-panel.open{ transform:translateX(0); }
 .amenity-item i,.amenity-item svg{ width:16px; height:16px; color:var(--primary); }
 @media (max-width:600px){ .amenities-grid{ grid-template-columns:repeat(2,1fr); } }
 .price-box{ background:var(--card-bg); border:1px solid var(--border); border-radius:var(--radius); padding:1.5rem; position:sticky; top:90px; min-width:0; max-width:100%; overflow-wrap:anywhere; }
+/* Top row of the price card: share button on the left, occupancy tag on the right. */
+.price-box-top{ display:flex; align-items:center; gap:.6rem; }
+.price-box-top .tag{ margin-left:auto; }
+.share-btn{
+  display:inline-flex; align-items:center; justify-content:center; gap:.4rem;
+  background:transparent; border:1px solid var(--border); border-radius:999px;
+  width:36px; height:36px; padding:0; flex-shrink:0;
+  color:var(--text-muted); cursor:pointer;
+  transition:color .15s ease, border-color .15s ease, background .15s ease, transform .12s ease;
+}
+.share-btn:hover{ color:var(--primary); border-color:var(--primary); background:var(--primary-light); }
+.share-btn:active{ transform:scale(.94); }
+.share-btn i,.share-btn svg{ width:17px; height:17px; }
 .poster-card{
   background: var(--bg);
   border: 1px solid var(--border);
@@ -2338,6 +2351,21 @@ td{ padding:.8rem 1rem; border-top:1px solid var(--border); vertical-align:top; 
   text-align:center;
   flex:0 0 auto;
 }
+/* Follow + Share sit side by side next to the profile info. */
+.poster-header-actions{
+  display:flex;
+  align-items:center;
+  gap:.5rem;
+  flex-wrap:wrap;
+  justify-content:center;
+}
+.poster-share-btn{
+  display:inline-flex;
+  align-items:center;
+  gap:.4rem;
+  white-space:nowrap;
+}
+.poster-share-btn i,.poster-share-btn svg{ width:16px; height:16px; }
 .poster-header-followers{
   font-size:.75rem;
   margin-top:.35rem;
@@ -2380,12 +2408,27 @@ td{ padding:.8rem 1rem; border-top:1px solid var(--border); vertical-align:top; 
     width:100%;
     margin-top:.2rem;
   }
-  /* Full-width tap target for the primary action on a phone. */
-  .poster-header-follow .btn{
+  /* Follow fills the row; Share is a compact icon button beside it. */
+  .poster-header-actions{
     width:100%;
+    flex-wrap:nowrap;
+  }
+  .poster-header-follow #followBtn{
+    flex:1 1 auto;
+    width:auto;
     justify-content:center;
     padding:.7rem 1rem;
   }
+  .poster-header-follow .poster-share-btn{
+    flex:0 0 auto;
+    width:46px;
+    height:46px;
+    padding:0;
+    justify-content:center;
+  }
+  .poster-header-follow .poster-share-btn span{ display:none; }
+  .poster-header-follow .poster-share-btn i,
+  .poster-header-follow .poster-share-btn svg{ width:19px; height:19px; }
   .poster-rooms-heading{
     font-size:1.15rem;
     text-align:center;

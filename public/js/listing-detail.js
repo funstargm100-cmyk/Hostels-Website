@@ -625,6 +625,23 @@ function applyRequestState(hasRequested) {
   if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [btn] });
 }
 
+// Share this room's public link. Uses the native share sheet where available,
+// otherwise copies the link to the clipboard (see shareLink in app.js).
+function shareRoom() {
+  const listing = currentListing;
+  const title = listing ? listing.title : 'This room on Rentel';
+  const price = listing && listing.listed_price ? ` — GHS ${listing.listed_price}` : '';
+  const url = listing && listing.uuid
+    ? `${location.origin}/listing?id=${listing.uuid}`
+    : location.href;
+  return shareLink({
+    title: `${title} on Rentel`,
+    text: `Check out this room on Rentel: ${title}${price}`,
+    url
+  });
+}
+window.shareRoom = shareRoom;
+
 async function toggleFavorite() {
   const user = JSON.parse(localStorage.getItem('user') || 'null');
   if (!user) return location.href = '/login?redirect=' + encodeURIComponent(location.pathname + location.search);

@@ -100,7 +100,7 @@ router.post('/signup', async (req, res) => {
     // Await the send so serverless (Vercel) doesn't kill it after the response.
     let emailSent = true;
     if (email) {
-      emailSent = await sendEmail(email, 'Verify your account', templates.otp(otp));
+      emailSent = await sendEmail(email, `${otp} is your Rentel verification code`, templates.otp(otp));
       if (!emailSent)
         console.error('Signup OTP email failed for', email, '— user can use resend on the login page.');
     }
@@ -133,7 +133,7 @@ router.post('/resend-otp', async (req, res) => {
     const otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
     await db.query('UPDATE users SET otp_code=$1, otp_expires_at=$2 WHERE id=$3', [otp, otpExpiry, user.id]);
 
-    const sent = await sendEmail(user.email, 'Your verification code', templates.otp(otp));
+    const sent = await sendEmail(user.email, `${otp} is your Rentel verification code`, templates.otp(otp));
     if (!sent)
       return res.status(500).json({ error: 'Could not send the verification email right now. Please try again later or contact support.' });
     res.json({ message: 'A new verification code was sent to your email.' });
@@ -315,7 +315,7 @@ router.post('/forgot-password', async (req, res) => {
 
     // Await the send so serverless (Vercel) doesn't kill it after the response.
     const emailSent = user.email
-      ? await sendEmail(user.email, 'Reset your password', templates.resetPassword(link))
+      ? await sendEmail(user.email, 'Reset your Rentel password', templates.resetPassword(link))
       : false;
     if (!emailSent) console.error('FORGOT PASSWORD: reset email not sent for', normEmail);
 

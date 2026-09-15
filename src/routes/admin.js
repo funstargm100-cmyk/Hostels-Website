@@ -1,7 +1,7 @@
 const router = require('express').Router();
 const db = require('../utils/db');
 const { requireRole } = require('../middleware/auth');
-const { sendEmail, templates } = require('../utils/mailer');
+const { sendEmail, templates, REQUEST_STATUS_LABEL } = require('../utils/mailer');
 const { notify, notifyFollowers } = require('../utils/notify');
 
 const admin = requireRole('admin');
@@ -68,7 +68,7 @@ router.put('/listings/:id/approve', admin, async (req, res) => {
     const listing = result.rows[0];
     if (!listing) return res.status(404).json({ error: 'Not found' });
     await db.query("UPDATE listings SET status='active' WHERE id=$1", [req.params.id]);
-    if (listing.email) await sendEmail(listing.email, 'Listing Approved', templates.adApproved(listing.title));
+    if (listing.email) await sendEmail(listing.email, `Your Rentel listing "${listing.title}" is now live`, templates.adApproved(listing.title, { uuid: listing.uuid, req }));
     await notify(listing.owner_id, 'adApproved', [listing.title], { link: '/dashboard#listings' });
     await notifyFollowers(listing.owner_id, listing.owner_name || 'A landlord you follow', listing.title, '/listings');
     await logAction(req.session.user.id, 'approve_listing', 'listing', req.params.id);
@@ -86,7 +86,7 @@ router.put('/listings/:id/reject', admin, async (req, res) => {
     const listing = result.rows[0];
     if (!listing) return res.status(404).json({ error: 'Not found' });
     await db.query("UPDATE listings SET status='rejected', rejection_reason=$1 WHERE id=$2", [reason || 'Policy violation', req.params.id]);
-    if (listing.email) await sendEmail(listing.email, 'Listing Rejected', templates.adRejected(listing.title, reason));
+    if (listing.email) await sendEmail(listing.email, `Action needed on your Rentel listing "${listing.title}"`, templates.adRejected(listing.title, reason, { uuid: listing.uuid, req }));
     await notify(listing.owner_id, 'adRejected', [listing.title, reason], { link: '/dashboard#listings' });
     await logAction(req.session.user.id, 'reject_listing', 'listing', req.params.id, reason);
     res.json({ message: 'Listing rejected' });
@@ -102,7 +102,7 @@ router.delete('/listings/:id', admin, async (req, res) => {
     if (!existing.rows.length) return res.status(404).json({ error: 'Listing not found' });
     const listing = existing.rows[0];
     const ownerRes = await db.query('SELECT email FROM users WHERE id=$1', [listing.owner_id]);
-    if (ownerRes.rows[0]?.email) await sendEmail(ownerRes.rows[0].email, 'Listing Removed', templates.adDeleted(listing.title));
+    if (ownerRes.rows[0]?.email) await sendEmail(ownerRes.rows[0].email, `Your Rentel listing "${listing.title}" has been removed`, templates.adDeleted(listing.title, { req }));
     await notify(listing.owner_id, 'adDeleted', [listing.title], { link: '/dashboard#listings' });
     await db.query('DELETE FROM listings WHERE id=$1', [req.params.id]);
     await logAction(req.session.user.id, 'delete_listing', 'listing', req.params.id);
@@ -113,10 +113,10 @@ router.delete('/listings/:id', admin, async (req, res) => {
 // PUT /api/admin/listings/:id/deactivate  (mark as unavailable)
 router.put('/listings/:id/deactivate', admin, async (req, res) => {
   try {
-    const existing = await db.query('SELECT l.id, l.title, l.owner_id, u.email as owner_email FROM listings l JOIN users u ON l.owner_id=u.id WHERE l.id=$1', [req.params.id]);
+    const existing = await db.query('SELECT l.id, l.title, l.uuid, l.owner_id, u.email as owner_email FROM listings l JOIN users u ON l.owner_id=u.id WHERE l.id=$1', [req.params.id]);
     if (!existing.rows.length) return res.status(404).json({ error: 'Listing not found' });
     const listing = existing.rows[0];
-    if (listing.owner_email) await sendEmail(listing.owner_email, 'Listing Marked Unavailable', templates.adUnavailable(listing.title));
+    if (listing.owner_email) await sendEmail(listing.owner_email, `Your Rentel listing "${listing.title}" is temporarily unavailable`, templates.adUnavailable(listing.title, { uuid: listing.uuid, req }));
     await notify(listing.owner_id, 'adUnavailable', [listing.title], { link: '/dashboard#listings' });
     await db.query("UPDATE listings SET status='deactivated' WHERE id=$1", [req.params.id]);
     await logAction(req.session.user.id, 'deactivate_listing', 'listing', req.params.id);
@@ -127,10 +127,10 @@ router.put('/listings/:id/deactivate', admin, async (req, res) => {
 // PUT /api/admin/listings/:id/reactivate  (restore availability)
 router.put('/listings/:id/reactivate', admin, async (req, res) => {
   try {
-    const existing = await db.query('SELECT l.id, l.title, l.owner_id, u.name as owner_name, u.email as owner_email FROM listings l JOIN users u ON l.owner_id=u.id WHERE l.id=$1', [req.params.id]);
+    const existing = await db.query('SELECT l.id, l.title, l.uuid, l.owner_id, u.name as owner_name, u.email as owner_email FROM listings l JOIN users u ON l.owner_id=u.id WHERE l.id=$1', [req.params.id]);
     if (!existing.rows.length) return res.status(404).json({ error: 'Listing not found' });
     const listing = existing.rows[0];
-    if (listing.owner_email) await sendEmail(listing.owner_email, 'Listing Reactivated', templates.adReactivated(listing.title));
+    if (listing.owner_email) await sendEmail(listing.owner_email, `Your Rentel listing "${listing.title}" is live again`, templates.adReactivated(listing.title, { uuid: listing.uuid, req }));
     await notify(listing.owner_id, 'adReactivated', [listing.title], { link: '/dashboard#listings' });
     await notifyFollowers(listing.owner_id, listing.owner_name || 'A landlord you follow', listing.title, '/listings');
     await db.query("UPDATE listings SET status='active' WHERE id=$1", [req.params.id]);
@@ -179,7 +179,10 @@ router.put('/requests/:id/status', admin, async (req, res) => {
   const validStatuses = ['received', 'in_progress', 'connected', 'closed'];
   if (!validStatuses.includes(status)) return res.status(400).json({ error: 'Invalid status' });
   try {
-    const result = await db.query('SELECT cr.*, u.email FROM contact_requests cr LEFT JOIN users u ON cr.seeker_id=u.id WHERE cr.id=$1', [req.params.id]);
+    const result = await db.query(
+      'SELECT cr.*, u.email, l.title AS listing_title FROM contact_requests cr LEFT JOIN users u ON cr.seeker_id=u.id LEFT JOIN listings l ON cr.listing_id=l.id WHERE cr.id=$1',
+      [req.params.id]
+    );
     const request = result.rows[0];
     if (!request) return res.status(404).json({ error: 'Not found' });
     // Only touch admin_notes when the client actually sent the field. A status-only
@@ -190,7 +193,8 @@ router.put('/requests/:id/status', admin, async (req, res) => {
       await db.query('UPDATE contact_requests SET status=$1 WHERE id=$2', [status, req.params.id]);
     }
     const emailTo = request.seeker_email || request.email;
-    if (emailTo) await sendEmail(emailTo, 'Request Update', templates.requestUpdate(status));
+    const statusLabel = REQUEST_STATUS_LABEL[status] || status;
+    if (emailTo) await sendEmail(emailTo, `Update on your Rentel request — now ${statusLabel}`, templates.requestUpdate(status, request.listing_title, { req }));
     if (request.seeker_id) await notify(request.seeker_id, 'requestUpdate', [status], { link: '/dashboard#requests' });
     await logAction(req.session.user.id, 'update_request_status', 'request', req.params.id, status);
     res.json({ message: 'Status updated' });
@@ -309,7 +313,7 @@ router.put('/payouts/:id/approve', admin, async (req, res) => {
     if (!payout) return res.status(404).json({ error: 'Not found' });
     await db.query("UPDATE payout_requests SET status='paid' WHERE id=$1", [req.params.id]);
     await db.query('UPDATE users SET wallet_balance = wallet_balance - $1 WHERE id=$2', [payout.amount, payout.owner_id]);
-    if (payout.email) await sendEmail(payout.email, 'Payout Confirmed', templates.payoutConfirmed(payout.amount));
+    if (payout.email) await sendEmail(payout.email, `Your Rentel payout of GHS ${payout.amount} has been processed`, templates.payoutConfirmed(payout.amount, { req }));
     await logAction(req.session.user.id, 'approve_payout', 'payout', req.params.id);
     res.json({ message: 'Payout approved' });
   } catch (err) { res.status(500).json({ error: 'Server error' }); }

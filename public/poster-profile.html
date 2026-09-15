@@ -48,9 +48,14 @@
           <div class="poster-header-since text-muted" id="memberSince"></div>
         </div>
         <div class="poster-header-follow">
-          <button class="btn btn-primary" id="followBtn" onclick="toggleFollow()">
-            <i data-lucide="user-plus"></i> <span id="followBtnLabel">Follow</span>
-          </button>
+          <div class="poster-header-actions">
+            <button class="btn btn-primary" id="followBtn" onclick="toggleFollow()">
+              <i data-lucide="user-plus"></i> <span id="followBtnLabel">Follow</span>
+            </button>
+            <button type="button" class="btn btn-outline poster-share-btn" id="shareProfileBtn" onclick="shareProfile()" aria-label="Share this profile" title="Share this profile">
+              <i data-lucide="share-2"></i> <span>Share</span>
+            </button>
+          </div>
           <div class="poster-header-followers text-muted" id="followerCount"></div>
         </div>
       </header>

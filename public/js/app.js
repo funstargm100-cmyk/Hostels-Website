@@ -292,6 +292,34 @@ function showToast(message, type = 'info', duration = 3500) {
   setTimeout(() => { toast.style.animation = 'none'; toast.style.opacity = '0'; toast.style.transition = 'opacity 0.3s'; setTimeout(() => toast.remove(), 300); }, duration);
 }
 
+// ─── SHARE ─────────────────
+// Share a page link using the device's native share sheet when available
+// (mobile, most modern browsers), and fall back to copying the link to the
+// clipboard on desktop. Returns a promise that resolves once done.
+async function shareLink({ title, text, url }) {
+  const shareUrl = url || location.href;
+  const payload = { title, text, url: shareUrl };
+  if (navigator.share) {
+    try {
+      await navigator.share(payload);
+      return;
+    } catch (err) {
+      // The user dismissed the sheet, or the browser aborted it — treat a real
+      // dismissal as "nothing to do" rather than falling back to a copy.
+      if (err && err.name === 'AbortError') return;
+      // Any other failure (e.g. no share target) falls through to copy.
+    }
+  }
+  try {
+    await navigator.clipboard.writeText(shareUrl);
+    showToast('Link copied to clipboard', 'success');
+  } catch {
+    // Clipboard blocked (insecure context / permission) — last resort: prompt.
+    window.prompt('Copy this link:', shareUrl);
+  }
+}
+window.shareLink = shareLink;
+
 // ─── MODAL ────────────────────────────────────────────────────────────────────
 // ─── PASSWORD VISIBILITY TOGGLE ────────────────────────────────
 // Flip a password input between hidden and visible. Called by the eye button in

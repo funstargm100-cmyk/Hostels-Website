@@ -42,6 +42,19 @@ function renderListings(listings) {
   if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [el] });
 }
 
+// Share this poster's public profile link. Uses the native share sheet where
+// available, otherwise copies the link to the clipboard (see shareLink in app.js).
+function shareProfile() {
+  const name = posterData && posterData.poster ? posterData.poster.name : 'this landlord';
+  const url = `${location.origin}/poster-profile?id=${posterId}`;
+  return shareLink({
+    title: `${name} on Rentel`,
+    text: `Browse rooms listed by ${name} on Rentel.`,
+    url
+  });
+}
+window.shareProfile = shareProfile;
+
 function renderFollowBtn(following) {
   const btn = document.getElementById('followBtn');
   btn.innerHTML = following

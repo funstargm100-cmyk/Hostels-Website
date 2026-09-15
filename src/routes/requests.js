@@ -13,7 +13,7 @@ router.post('/', optionalAuth, async (req, res) => {
   if (!listing_uuid || !seeker_name || (!seeker_phone && !seeker_email)) return res.status(400).json({ error: 'Missing required fields' });
 
   try {
-    const lr = await db.query("SELECT id, title, owner_id FROM listings WHERE uuid=$1 AND status='active'", [listing_uuid]);
+    const lr = await db.query("SELECT id, uuid, title, owner_id FROM listings WHERE uuid=$1 AND status='active'", [listing_uuid]);
     const listing = lr.rows[0];
     if (!listing) return res.status(404).json({ error: 'Listing not found' });
 
@@ -39,7 +39,7 @@ router.post('/', optionalAuth, async (req, res) => {
     (async () => {
       const ownerRes = await db.query('SELECT email FROM users WHERE id=$1', [listing.owner_id]);
       const owner = ownerRes.rows[0];
-      if (owner?.email) await sendEmail(owner.email, 'New Interest in Your Listing', templates.interestReceived(listing.title));
+      if (owner?.email) await sendEmail(owner.email, `New interest in your room "${listing.title}"`, templates.interestReceived(listing.title, { uuid: listing.uuid, req }));
     })().catch(err => console.error('interest owner email failed:', err.message));
 
     // In-app notification to the owner (dashboard "My listings").
@@ -47,7 +47,7 @@ router.post('/', optionalAuth, async (req, res) => {
       .catch(err => console.error('interest owner notify failed:', err.message));
 
     if (seeker_email) {
-      sendEmail(seeker_email, 'Request Received', templates.requestUpdate('received', listing.title))
+      sendEmail(seeker_email, `We received your request for "${listing.title}"`, templates.requestUpdate('received', listing.title, { req }))
         .catch(err => console.error('interest seeker email failed:', err.message));
     }
     // In-app confirmation to the signed-in seeker (dashboard "My requests").
