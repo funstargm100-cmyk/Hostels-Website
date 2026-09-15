@@ -40,6 +40,10 @@
         <input type="text" id="verifyOtp" inputmode="numeric" maxlength="6" placeholder="6-digit code" required />
       </div>
       <p class="text-muted" id="otpCountdown" style="font-size:.85rem"></p>
+      <div id="verifyAccountSwitch" style="display:none;margin-bottom:.75rem">
+        <p class="text-muted" style="font-size:.85rem;margin-bottom:.4rem">Verifying a different account?</p>
+        <div id="verifyAccountList" style="display:flex;flex-wrap:wrap;gap:.5rem"></div>
+      </div>
       <p class="text-muted" style="font-size:.85rem;margin-bottom:.75rem">Can't find the code? Check your <strong>spam or junk folder</strong> — it sometimes ends up there.</p>
       <button type="submit" class="btn btn-primary btn-lg" style="width:100%" id="verifySubmitBtn">Verify account</button>
       <button type="button" class="btn btn-ghost" style="width:100%;margin-top:.5rem" id="resendBtn">Resend code</button>
@@ -144,7 +148,7 @@ function startCountdown(sentAtMs) {
   countdownTimer = setInterval(tick, 1000);
 }
 
-function showVerifyPanel(uuid, email, bannerMsg, sentAtMs) {
+function showVerifyPanel(uuid, email, bannerMsg, sentAtMs, accounts) {
   document.getElementById('verifyUuid').value = uuid || '';
   document.getElementById('verifyBanner').textContent = bannerMsg ||
     'Your account is not verified yet.' + (email ? ' We sent a code to ' + email + '.' : '');
@@ -153,32 +157,77 @@ function showVerifyPanel(uuid, email, bannerMsg, sentAtMs) {
   loginForm.style.display = 'none';
   document.getElementById('loginFootnote').style.display = 'none';
   startCountdown(sentAtMs || Date.now());
+
+  // When the credential owns several accounts, none verified, let the user switch
+  // which one they are verifying — otherwise they would be stuck on the first.
+  const switchWrap = document.getElementById('verifyAccountSwitch');
+  const switchList = document.getElementById('verifyAccountList');
+  const others = (accounts || []).filter(a => a.uuid !== uuid);
+  if (others.length) {
+    switchList.innerHTML = others.map(a => {
+      const meta = ROLE_META[a.role] || { label: a.role };
+      return `<button type="button" class="btn btn-ghost" style="padding:.35rem .8rem;font-size:.82rem" data-uuid="${a.uuid}" data-email="${a.email || ''}">Verify ${meta.label} account</button>`;
+    }).join('');
+    switchWrap.style.display = 'block';
+    switchList.querySelectorAll('button[data-uuid]').forEach(b => {
+      b.addEventListener('click', async () => {
+        const newUuid = b.dataset.uuid;
+        document.getElementById('verifyUuid').value = newUuid;
+        errEl0.style.display = 'none';
+        // Send a fresh code for the account they just switched to.
+        try {
+          const r = await api.post('/api/auth/resend-otp', { uuid: newUuid });
+          document.getElementById('verifyBanner').textContent = r.message ||
+            'A new verification code was sent to ' + (b.dataset.email || 'your email') + '.';
+          startCountdown(Date.now());
+        } catch (ex2) {
+          errEl0.textContent = ex2.message; errEl0.style.display = 'block';
+        }
+      });
+    });
+  } else {
+    switchWrap.style.display = 'none';
+    switchList.innerHTML = '';
+  }
 }
 
 // Arrived from signup with a pending verification
 const params = new URLSearchParams(location.search);
 if (params.get('verify') === '1' && params.get('uuid')) {
   showVerifyPanel(params.get('uuid'), params.get('email') || '',
-    'Account created! Sending your verification code…',
+    'Account created! ' + (params.get('sent') === '0'
+      ? 'Sending your verification code…'
+      : 'Check your email for the verification code.'),
     parseInt(params.get('t') || '0', 10) || Date.now());
 
-  // Automatically send the OTP right away — no need to click "Resend code".
-  // Wait for window load: this inline script runs BEFORE the deferred app.js,
-  // so `api` may not exist yet at parse time.
-  window.addEventListener('load', () => {
-    (async () => {
-      try {
-        const res = await api.post('/api/auth/resend-otp', { uuid: params.get('uuid') });
-        document.getElementById('verifyBanner').textContent =
-          res.message || 'We sent a verification code to ' + (params.get('email') || 'your email') + '.';
-      } catch (ex) {
-        console.error('Auto-send OTP failed:', ex);
-        // The signup request already attempted to send one; fall back to manual resend.
-        document.getElementById('verifyBanner').textContent =
-          'Could not auto-send the code. Click "Resend code" to try again.';
-      }
-    })();
-  });
+  // Signup ALREADY emailed a verification code, so by default we must NOT send
+  // another one here — that is what produced duplicate emails (and invalidated the
+  // first code). Only auto-send when signup explicitly reported its email failed
+  // (emailSent=0); otherwise just tell the user to check their inbox.
+  // `&sent=0` is set by the signup flow when the first email could not be delivered.
+  const needAutoSend = params.get('sent') === '0';
+  const bannerEl = document.getElementById('verifyBanner');
+  const emailLbl = params.get('email') || 'your email';
+  if (needAutoSend) {
+    // Wait for window load: this inline script runs BEFORE the deferred app.js,
+    // so `api` may not exist yet at parse time.
+    window.addEventListener('load', () => {
+      (async () => {
+        try {
+          const res = await api.post('/api/auth/resend-otp', { uuid: params.get('uuid') });
+          bannerEl.textContent =
+            res.message || 'We sent a verification code to ' + emailLbl + '.';
+        } catch (ex) {
+          console.error('Auto-send OTP failed:', ex);
+          bannerEl.textContent =
+            'Could not auto-send the code. Click "Resend code" to try again.';
+        }
+      })();
+    });
+  } else {
+    bannerEl.textContent = 'We emailed a verification code to ' + emailLbl +
+      '. Enter it below (check spam/junk if you don\'t see it).';
+  }
 }
 
 verifyForm.addEventListener('submit', async (e) => {
@@ -298,9 +347,15 @@ function showRoleChoice(identifier, password, accounts) {
   const list = document.getElementById('roleChoiceList');
   list.innerHTML = accounts.map(a => {
     const meta = ROLE_META[a.role] || { label: a.role, desc: '', icon: 'user' };
+    // An unverified account can still be chosen: picking it takes the user to the
+    // verification step instead of locking them out.
+    const unverified = a.verified === false;
+    const hint = unverified
+      ? '<span class="text-muted" style="font-size:.8rem;display:block;line-height:1.3">Not verified yet — continue to enter your code</span>'
+      : `<span class="text-muted" style="font-size:.8rem;display:block;line-height:1.3">${meta.desc}</span>`;
     return `<button type="button" class="btn btn-outline" style="justify-content:flex-start;text-align:left;padding:.8rem 1rem;display:flex;gap:.8rem;align-items:center;white-space:normal" data-role="${a.role}">
         <i data-lucide="${meta.icon}" style="flex-shrink:0"></i>
-        <span style="min-width:0"><strong style="display:block">Continue as ${meta.label}</strong><span class="text-muted" style="font-size:.8rem;display:block;line-height:1.3">${meta.desc}</span></span>
+        <span style="min-width:0"><strong style="display:block">Continue as ${meta.label}</strong>${hint}</span>
       </button>`;
   }).join('');
   if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [list] });
@@ -314,9 +369,18 @@ function showRoleChoice(identifier, password, accounts) {
         const res = await api.post('/api/auth/select-account', { identifier, password, role });
         completeLogin(res);
       } catch (ex) {
-        errEl0.className = 'alert alert-danger';
-        errEl0.textContent = ex.message;
-        errEl0.style.display = 'block';
+        const info = ex.data || ex;
+        // The chosen account is not verified yet — route to the verification panel
+        // so the user can actually finish setting up that account.
+        if (ex.needVerification || info.needVerification) {
+          showVerifyPanel(info.uuid, info.email, info.error || ex.message, undefined,
+            accounts.filter(a => a.uuid !== info.uuid));
+          errEl0.style.display = 'none';
+        } else {
+          errEl0.className = 'alert alert-danger';
+          errEl0.textContent = ex.message;
+          errEl0.style.display = 'block';
+        }
         btn.disabled = false; btn.classList.remove('btn-loading');
       }
     });
@@ -359,7 +423,7 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
   } catch (ex) {
     if (ex.needVerification || (ex.data && ex.data.needVerification)) {
       const info = ex.data || ex;
-      showVerifyPanel(info.uuid, info.email, info.error || ex.message);
+      showVerifyPanel(info.uuid, info.email, info.error || ex.message, undefined, info.accounts);
       errEl.style.display = 'none';
     } else {
       errEl.textContent = ex.message;

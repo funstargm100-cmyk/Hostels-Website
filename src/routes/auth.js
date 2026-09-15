@@ -11,6 +11,9 @@ const PHONE_RE = /^\+?[0-9]{9,15}$/; // digits only after optional +, 9–15 dig
 
 const normalizePhone = (p) => (p || '').replace(/[\s()\-]/g, '');
 const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
+// A uuid that is not a real UUID makes Postgres throw on the ::uuid cast, which
+// surfaces as a raw 500 leaking a DB error. Reject it up front with a clean 400.
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const signToken = (user) => jwt.sign(
   { id: user.id, uuid: user.uuid, name: user.name, role: user.role },
   SECRET,
@@ -118,6 +121,7 @@ router.post('/signup', async (req, res) => {
 router.post('/resend-otp', async (req, res) => {
   const { uuid } = req.body;
   if (!uuid) return res.status(400).json({ error: 'Account id required' });
+  if (!UUID_RE.test(String(uuid))) return res.status(400).json({ error: 'Invalid account id' });
   try {
     const result = await db.query('SELECT * FROM users WHERE uuid=$1', [uuid]);
     const user = result.rows[0];
@@ -142,6 +146,8 @@ router.post('/resend-otp', async (req, res) => {
 // POST /api/auth/verify-otp
 router.post('/verify-otp', async (req, res) => {
   const { uuid, otp } = req.body;
+  if (!uuid) return res.status(400).json({ error: 'Account id required' });
+  if (!UUID_RE.test(String(uuid))) return res.status(400).json({ error: 'Invalid account id' });
   try {
     const result = await db.query('SELECT * FROM users WHERE uuid=$1', [uuid]);
     const user = result.rows[0];
@@ -195,34 +201,40 @@ router.post('/login', async (req, res) => {
     // Prefer a verified account; if none is verified, ask the user to verify.
     const verified = usable.filter(r => r.is_verified);
     if (!verified.length) {
+      // Nothing verified: send the user to the verification step. If the credential
+      // owns several roles, carry the whole set so they can still choose which one
+      // to verify (a verified password alone must not lock out a sibling account).
       const u = usable[0];
       return res.status(403).json({
         error: 'Please verify your account first. We sent a code to your email.',
         needVerification: true,
         uuid: u.uuid,
-        email: u.email || null
+        email: u.email || null,
+        accounts: usable.map(x => ({ uuid: x.uuid, name: x.name, role: x.role, email: x.email || null, verified: !!x.is_verified }))
+      });
+    }
+
+    // More than one usable account shares this credential — ALWAYS let the user pick
+    // which to enter, even when only some are verified. Without this, a verified
+    // seeker account would silently swallow the login and the user could never reach
+    // (and verify) their unverified agent/owner account.
+    if (usable.length > 1) {
+      return res.json({
+        chooseRole: true,
+        message: 'This login has more than one account. Choose how to continue.',
+        identifier: id,
+        roles: usable.map(u => u.role),
+        accounts: usable.map(u => ({ uuid: u.uuid, name: u.name, role: u.role, email: u.email || null, verified: !!u.is_verified }))
       });
     }
 
     // A single linked account — just log in, no chooser needed.
-    if (verified.length === 1) {
-      const user = verified[0];
-      const token = signToken(user);
-      return res.json({
-        message: 'Login successful',
-        token,
-        user: { id: user.id, uuid: user.uuid, name: user.name, role: user.role }
-      });
-    }
-
-    // Multiple accounts share this credential — let the user pick which to enter.
-    const roles = verified.map(u => u.role);
-    res.json({
-      chooseRole: true,
-      message: 'This login has more than one account. Choose how to continue.',
-      identifier: id,
-      roles,
-      accounts: verified.map(u => ({ uuid: u.uuid, name: u.name, role: u.role, email: u.email || null }))
+    const user = verified[0];
+    const token = signToken(user);
+    return res.json({
+      message: 'Login successful',
+      token,
+      user: { id: user.id, uuid: user.uuid, name: user.name, role: user.role }
     });
   } catch (err) {
     console.error('LOGIN ERROR:', err.message);
