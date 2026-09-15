@@ -423,9 +423,9 @@ router.post('/', requireAuth, requireRole('owner', 'agent', 'admin'), uploadList
     const listed_price = price;
 
   const result = await db.query(
-      `INSERT INTO listings (owner_id, title, description, occupancy_type, original_price, listed_price, price_per_head, location_area, full_address, location_lat, location_lng, nearest_landmark, gender_preference, move_in_date, expires_at, poster_type, commission_type, commission_value, platform_fee_rate, platform_fee)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20) RETURNING id, uuid`,
-      [req.session.user.id, title, description, occupancy_type, price, listed_price, price_per_head, location_area, req.body.full_address || null, location_lat || null, location_lng || null, nearest_landmark || null, genderPref, move_in_date || null, expires_at, kind, commType, commValue, feeRate, platformFee]
+      `INSERT INTO listings (owner_id, title, description, occupancy_type, original_price, listed_price, price_per_head, base_price_per_head, location_area, full_address, location_lat, location_lng, nearest_landmark, gender_preference, move_in_date, expires_at, poster_type, commission_type, commission_value, platform_fee_rate, platform_fee)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21) RETURNING id, uuid`,
+      [req.session.user.id, title, description, occupancy_type, price, listed_price, price_per_head, pricePerPerson, location_area, req.body.full_address || null, location_lat || null, location_lng || null, nearest_landmark || null, genderPref, move_in_date || null, expires_at, kind, commType, commValue, feeRate, platformFee]
     );
     const { id: listingId, uuid } = result.rows[0];
 
@@ -501,21 +501,61 @@ router.put('/:uuid', requireAuth, uploadListingImages, async (req, res) => {
       vals.push(VALID_GENDERS.includes(gender_preference) ? gender_preference : 'mixed');
     }
     if (move_in_date) { fields.push(`move_in_date=$${p++}`); vals.push(move_in_date); }
-    // Price may arrive as price_per_head (per-person, preferred) or as a room
-    // TOTAL via original_price (legacy). Derive the other two from whichever came.
+    // The edit form edits the poster's BASE price per head (before commission and
+    // platform fee). From that base we RE-COMPUTE commission, platform fee and both
+    // stored totals with exactly the same maths as POST /api/listings, so an edit
+    // can never leave the fee figures stale. `original_price` (legacy room TOTAL)
+    // is still accepted and treated as a base-per-person figure derived from it.
     if (price_per_head_in !== undefined && price_per_head_in !== '') {
-      const occ = parseInt(occupancy_type || listing.occupancy_type) || 1;
-      const pph = parseFloat(parseFloat(price_per_head_in).toFixed(2));
-      const op = parseFloat((pph * occ).toFixed(2));
-      fields.push(`original_price=$${p++}`, `listed_price=$${p++}`, `price_per_head=$${p++}`);
-      vals.push(op, op, pph);
+      const occ = clampOccupancy(occupancy_type || listing.occupancy_type);
+      const base = parseFloat(parseFloat(price_per_head_in).toFixed(2));
+      if (!Number.isFinite(base) || base <= 0) return res.status(400).json({ error: 'A valid price per person is required' });
+
+      // Poster type + commission are properties of the listing (set at post time),
+      // not the edit form — read them from the stored row.
+      const kind = listing.poster_type === 'agent' ? 'agent' : 'owner';
+      const feeRate = kind === 'agent' ? 0.05 : 0.07;
+      const commValue = kind === 'agent' && Number.isFinite(parseFloat(listing.commission_value))
+        ? parseFloat(parseFloat(listing.commission_value).toFixed(2))
+        : 0;
+      const commission = kind === 'agent' ? parseFloat((commValue * occ).toFixed(2)) : 0;
+      // Platform fee: agent -> 5% of ((total commission × occupancy) + base per
+      // person); owner -> 7% of the base per person. Identical to POST.
+      const feeBasePerPerson = kind === 'agent'
+        ? parseFloat(((commission * occ) + base).toFixed(2))
+        : base;
+      const platformFee = parseFloat((feeBasePerPerson * feeRate).toFixed(2));
+      const commissionPerPerson = kind === 'agent' ? commValue : 0;
+      // Total per person, then the whole room (all occupants).
+      const price_per_head = parseFloat((base + commissionPerPerson + platformFee).toFixed(2));
+      const price = parseFloat((price_per_head * occ).toFixed(2));
+
+      fields.push(
+        `base_price_per_head=$${p++}`, `original_price=$${p++}`, `listed_price=$${p++}`,
+        `price_per_head=$${p++}`, `platform_fee=$${p++}`, `platform_fee_rate=$${p++}`
+      );
+      vals.push(base, price, price, price_per_head, platformFee, feeRate);
     } else if (original_price) {
-      const op = parseFloat(original_price);
-      const occ = parseInt(occupancy_type || listing.occupancy_type) || 1;
-      const lp = op; // price posted is price shown (no platform fee)
-      const pph = parseFloat((lp / occ).toFixed(2));
-      fields.push(`original_price=$${p++}`, `listed_price=$${p++}`, `price_per_head=$${p++}`);
-      vals.push(op, lp, pph);
+      // Legacy: a room TOTAL was sent. Treat it as a base-per-person figure.
+      const occ = clampOccupancy(occupancy_type || listing.occupancy_type);
+      const base = parseFloat((parseFloat(original_price) / occ).toFixed(2));
+      if (!Number.isFinite(base) || base <= 0) return res.status(400).json({ error: 'A valid price is required' });
+      const kind = listing.poster_type === 'agent' ? 'agent' : 'owner';
+      const feeRate = kind === 'agent' ? 0.05 : 0.07;
+      const commValue = kind === 'agent' && Number.isFinite(parseFloat(listing.commission_value))
+        ? parseFloat(parseFloat(listing.commission_value).toFixed(2))
+        : 0;
+      const commission = kind === 'agent' ? parseFloat((commValue * occ).toFixed(2)) : 0;
+      const feeBasePerPerson = kind === 'agent' ? parseFloat(((commission * occ) + base).toFixed(2)) : base;
+      const platformFee = parseFloat((feeBasePerPerson * feeRate).toFixed(2));
+      const commissionPerPerson = kind === 'agent' ? commValue : 0;
+      const price_per_head = parseFloat((base + commissionPerPerson + platformFee).toFixed(2));
+      const price = parseFloat((price_per_head * occ).toFixed(2));
+      fields.push(
+        `base_price_per_head=$${p++}`, `original_price=$${p++}`, `listed_price=$${p++}`,
+        `price_per_head=$${p++}`, `platform_fee=$${p++}`, `platform_fee_rate=$${p++}`
+      );
+      vals.push(base, price, price, price_per_head, platformFee, feeRate);
     }
     if (occupancy_type && (original_price || (price_per_head_in !== undefined && price_per_head_in !== ''))) { fields.push(`occupancy_type=$${p++}`); vals.push(clampOccupancy(occupancy_type)); }
     // Editing an existing listing must NOT send it back through admin review —

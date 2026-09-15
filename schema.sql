@@ -216,3 +216,20 @@ ALTER TABLE listings ADD COLUMN IF NOT EXISTS gender_preference VARCHAR(10) DEFA
 -- Rooms created before this field existed have NULL — backfill them to 'mixed'
 -- so every existing room reads as "Any".
 UPDATE listings SET gender_preference = 'mixed' WHERE gender_preference IS NULL;
+
+-- Migration: the poster's BASE price per head (before commission + platform fee).
+-- The edit form only ever changes this base figure; the server then recomputes
+-- commission, platform fee, price_per_head (total per person) and original_price
+-- (whole room) from it — see POST /api/listings and PUT /api/listings/:uuid.
+-- Storing it directly avoids re-deriving it (with rounding drift) from the totals.
+ALTER TABLE listings ADD COLUMN IF NOT EXISTS base_price_per_head NUMERIC(10,2);
+-- Backfill existing rooms by reversing the forward formula:
+--   owner: price_per_head = base × 1.07
+--   agent: price_per_head = base × 1.05 + commission_value × (1 + 0.05 × occ²)
+UPDATE listings SET base_price_per_head = CASE
+    WHEN poster_type = 'agent' AND commission_value IS NOT NULL THEN
+      GREATEST(ROUND((price_per_head - commission_value * (1 + 0.05 * occupancy_type * occupancy_type)) / 1.05, 2), 0.01)
+    ELSE
+      ROUND(price_per_head / 1.07, 2)
+  END
+  WHERE base_price_per_head IS NULL;

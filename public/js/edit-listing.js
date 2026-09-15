@@ -2,6 +2,66 @@
 // prefills the form, and saves via PUT /api/listings/:uuid.
 const editUUID = new URLSearchParams(location.search).get('id');
 const MAX_PHOTOS = 10;
+
+// ─── PRICING ─────────────────
+// The edit form only changes the BASE price per head. Commission and platform fee
+// are properties fixed when the room was posted, so we read them from the listing
+// and recompute the totals here — mirroring POST /api/listings exactly. Keep these
+// in sync with src/routes/listings.js.
+const PLATFORM_FEE_RATE = { owner: 0.07, agent: 0.05 };
+let editPricing = { posterType: 'owner', commissionPerPerson: 0 };
+
+// The base price per head for the loaded listing. New rooms store it directly in
+// base_price_per_head; older rooms are backfilled by the schema migration, and if
+// it is still missing we reverse the forward formula as a fallback.
+function deriveBasePricePerHead(listing) {
+  if (listing.base_price_per_head != null && Number.isFinite(Number(listing.base_price_per_head))) {
+    return Number(listing.base_price_per_head);
+  }
+  const occ = Number(listing.occupancy_type) || 1;
+  const total = Number(listing.price_per_head) || 0;
+  if (listing.poster_type === 'agent' && Number.isFinite(Number(listing.commission_value))) {
+    const c = Number(listing.commission_value);
+    return Math.max((total - c * (1 + 0.05 * occ * occ)) / 1.05, 0);
+  }
+  return total / 1.07;
+}
+
+// Recompute and display commission, platform fee and totals from the current base
+// price + occupancy. Same sequence as the server so the preview matches the save.
+function updatePricePreview() {
+  const preview = document.getElementById('pricePreview');
+  if (!preview) return;
+  const base = parseFloat(document.getElementById('edPrice').value);
+  const occ = parseInt(document.getElementById('edOccupancy').value, 10) || 1;
+  if (!Number.isFinite(base) || base <= 0) { preview.style.display = 'none'; return; }
+
+  const isAgent = editPricing.posterType === 'agent';
+  const rate = PLATFORM_FEE_RATE[editPricing.posterType] || PLATFORM_FEE_RATE.owner;
+  const commValue = isAgent ? editPricing.commissionPerPerson : 0;
+  const commission = isAgent ? parseFloat((commValue * occ).toFixed(2)) : 0;
+  const feeBasePerPerson = isAgent ? parseFloat(((commission * occ) + base).toFixed(2)) : base;
+  const platformFee = parseFloat((feeBasePerPerson * rate).toFixed(2));
+  const totalPerPerson = parseFloat((base + commValue + platformFee).toFixed(2));
+
+  const ghs = (n) => 'GHS ' + Number(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const commissionRow = document.getElementById('prevCommission');
+  const feeBaseRow = document.getElementById('prevFeeBase');
+  if (isAgent) {
+    commissionRow.textContent = `Total commission for ${occ} occupant${occ === 1 ? '' : 's'}: ${ghs(commission)}`;
+    commissionRow.style.display = 'flex';
+    feeBaseRow.textContent = `Commission per occupant: ${ghs(commValue)}`;
+    feeBaseRow.style.display = 'flex';
+  } else {
+    commissionRow.style.display = 'none';
+    feeBaseRow.style.display = 'none';
+  }
+  document.getElementById('prevFeeLabel').textContent = `Platform fee (${Math.round(rate * 100)}%)`;
+  document.getElementById('prevPlatformFee').textContent = ghs(platformFee);
+  document.getElementById('prevPerHead').textContent = `${ghs(totalPerPerson)} / person`;
+  preview.style.display = 'block';
+}
+window.updatePricePreview = updatePricePreview;
 // The "what's left" prompt is transient — auto-clear it after a few seconds so it
 // never sits on the form blocking the view once the user has read it.
 const PROMPT_TIMEOUT_MS = 4000;
@@ -36,9 +96,15 @@ async function initEdit() {
 
     document.getElementById('edTitle').value = listing.title || '';
     document.getElementById('edDescription').value = listing.description || '';
-    // The form edits the PER-PERSON price, so pre-fill from price_per_head.
-    document.getElementById('edPrice').value = listing.price_per_head || listing.listed_price || listing.original_price || '';
+    // The form edits the BASE price per head (before commission + platform fee), so
+    // pre-fill from base_price_per_head rather than the stored total.
+    document.getElementById('edPrice').value = deriveBasePricePerHead(listing).toFixed(2);
     document.getElementById('edOccupancy').value = String(listing.occupancy_type || 1);
+    // Commission + poster type are fixed at post time and shown in the fee preview.
+    editPricing = {
+      posterType: listing.poster_type === 'agent' ? 'agent' : 'owner',
+      commissionPerPerson: Number.isFinite(Number(listing.commission_value)) ? Number(listing.commission_value) : 0
+    };
     // Rooms created before the gender field existed have no value — default them to
     // "Any" (stored as 'mixed') so the select always shows a valid choice.
     document.getElementById('edGender').value = listing.gender_preference || 'mixed';
@@ -57,6 +123,9 @@ async function initEdit() {
     document.getElementById('edKitchen').checked = !!amenities.kitchen_access;
     document.getElementById('edParking').checked = !!amenities.parking;
     document.getElementById('edPets').checked = !!amenities.pet_friendly;
+
+    // Show the derived commission / platform fee / total for the loaded price.
+    updatePricePreview();
 
     // images arrive ordered by sort_order; the first is the current cover.
     photoItems = images.map(img => ({ key: 'i:' + img.id, type: 'existing', id: img.id, path: img.image_path }));
@@ -336,7 +405,7 @@ function validateEditForm() {
   const val = (id) => { const el = document.getElementById(id); return el ? String(el.value || '').trim() : ''; };
   if (!val('edTitle')) return 'Title is required.';
   if (!val('edDescription')) return 'Description is required.';
-  if (!val('edPrice')) return 'Enter a price per person.';
+  if (!val('edPrice')) return 'Enter a base price per person.';
   if (!val('edOccupancy')) return 'Select the occupancy type.';
   if (!val('edLocation')) return 'Location area is required.';
   if (!val('edLandmark')) return 'Nearest landmark is required.';
