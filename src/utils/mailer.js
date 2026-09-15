@@ -83,12 +83,12 @@ function htmlToText(html) {
     .trim();
 }
 
-// Human-readable labels for contact-request statuses (shared by email + in-app copy).
+// Human-readable labels for rental statuses (shared by email + in-app copy).
 const REQUEST_STATUS_LABEL = {
-  received: 'Received',
-  in_progress: 'In progress',
-  connected: 'Connected',
-  closed: 'Closed'
+  received: 'Pending',
+  in_progress: 'Processing',
+  connected: 'Ready to move in',
+  closed: 'Completed'
 };
 
 // Single source of truth for user-facing wording. Each entry returns { title, message }.
@@ -116,18 +116,18 @@ const copy = {
     message: `"${title}" has been permanently removed from the platform by our moderation team. Contact support if you believe this was done in error.`
   }),
   interestReceived: (listing) => ({
-    title: 'Someone is interested in your room',
-    message: `Someone showed interest in "${listing}". We'll be in touch to connect you.`
+    title: 'Someone wants to rent your room',
+    message: `Someone requested to rent "${listing}". We'll be in touch to connect you.`
   }),
   requestCancelled: (listing) => ({
-    title: 'A seeker withdrew their request',
-    message: `A seeker withdrew their interest in "${listing}".`
+    title: 'A renter cancelled their request',
+    message: `A renter withdrew their interest in "${listing}".`
   }),
   requestUpdate: (status, listing) => ({
-    title: status === 'received' ? 'We received your request' : `Your request was marked ${REQUEST_STATUS_LABEL[status] || status}`,
+    title: status === 'received' ? 'We received your rental request' : `Your rental is now ${REQUEST_STATUS_LABEL[status] || status}`,
     message: listing
-      ? `Your request for "${listing}" is now ${REQUEST_STATUS_LABEL[status] || status}.`
-      : `Your contact request is now ${REQUEST_STATUS_LABEL[status] || status}.`
+      ? `Your rental for "${listing}" is now ${REQUEST_STATUS_LABEL[status] || status}.`
+      : `Your rental is now ${REQUEST_STATUS_LABEL[status] || status}.`
   }),
   newRoomFromFollowed: (owner, title) => ({
     title: `New room from ${owner}`,
@@ -304,13 +304,13 @@ const templates = {
   }),
 
   interestReceived: (listing, ctx = {}) => layout({
-    heading: 'Someone is interested in your room',
-    preheader: `A seeker just showed interest in "${listing}".`,
+    heading: 'Someone wants to rent your room',
+    preheader: `A renter just requested "${listing}".`,
     body: `
-      <p style="margin:0 0 12px">Good news — a seeker has shown interest in <strong>"${listing}"</strong>. Their details have been shared with our team, who will connect you shortly.</p>
+      <p style="margin:0 0 12px">Good news — a renter has requested to rent <strong>"${listing}"</strong>. Their details have been shared with our team, who will connect you shortly.</p>
       <p style="margin:0">To make the most of this lead:</p>
       <ul style="margin:8px 0 0;padding-left:20px">
-        <li style="margin-bottom:6px">Reply promptly — seekers often contact several rooms at once.</li>
+        <li style="margin-bottom:6px">Reply promptly — renters often contact several rooms at once.</li>
         <li style="margin-bottom:6px">Have your viewing times and key details ready.</li>
         <li>Keep the listing accurate so there are no surprises on the day.</li>
       </ul>`,
@@ -318,35 +318,35 @@ const templates = {
   }),
 
   requestCancelled: (listing, ctx = {}) => layout({
-    heading: 'A seeker withdrew their request',
-    preheader: `A seeker withdrew their interest in "${listing}".`,
+    heading: 'A renter cancelled their request',
+    preheader: `A renter withdrew their request for "${listing}".`,
     body: `
-      <p style="margin:0 0 12px">A seeker who had shown interest in <strong>"${listing}"</strong> has withdrawn their request. This is normal in the room-hunting process — seekers often pursue several options at once.</p>
-      <p style="margin:0">No action is needed from you. Your listing remains live and visible to other seekers, so you can expect new interest to come in.</p>`,
+      <p style="margin:0 0 12px">A renter who had requested <strong>"${listing}"</strong> has cancelled their request. This is normal in the room-hunting process — renters often pursue several options at once.</p>
+      <p style="margin:0">No action is needed from you. Your listing remains live and visible to other renters, so you can expect new interest to come in.</p>`,
     action: { label: 'Go to your listings', url: link('/dashboard#listings', ctx.req) }
   }),
 
   requestUpdate: (status, listing, ctx = {}) => {
     const label = REQUEST_STATUS_LABEL[status] || status;
     const statusCopy = {
-      received: 'We\u2019ve received your request and passed it to the room owner. They\u2019ll get back to you with next steps — there\u2019s nothing you need to do right now.',
-      in_progress: 'The owner is reviewing your request and will be in touch soon. Keep an eye on your email and dashboard for updates.',
-      connected: 'You\u2019ve been connected with the room owner. They should reach out to arrange a viewing or answer your questions — feel free to follow up if you don\u2019t hear back shortly.',
-      closed: 'This request has now been closed. If you\u2019re still looking, you can browse more rooms and send a fresh request at any time.'
-    }[status] || `Your request is now marked ${label}.`;
+      received: 'We\u2019ve received your rental request and passed it to the room owner. They\u2019ll get back to you with next steps — there\u2019s nothing you need to do right now.',
+      in_progress: 'The owner is reviewing your rental request and will be in touch soon. Keep an eye on your email and dashboard for updates.',
+      connected: 'You\u2019ve been connected with the room owner and are ready to move in. They should reach out to arrange a viewing or answer your questions — feel free to follow up if you don\u2019t hear back shortly.',
+      closed: 'This rental has now been completed. If you\u2019re still looking, you can browse more rooms and request another rental at any time.'
+    }[status] || `Your rental is now ${label}.`;
     return layout({
-      heading: status === 'received' ? 'We\u2019ve received your request' : `Your request is now ${label}`,
+      heading: status === 'received' ? 'We\u2019ve received your rental request' : `Your rental is now ${label}`,
       preheader: listing
-        ? `Update on your request for "${listing}" — now ${label}.`
-        : `Your contact request is now ${label}.`,
+        ? `Update on your rental for "${listing}" — now ${label}.`
+        : `Your rental is now ${label}.`,
       body: `
         ${listing ? `<p style="margin:0 0 12px;padding:12px 14px;background:#F6F4EE;border:1px solid #E7E3D8;border-radius:10px"><strong>${listing}</strong></p>` : ''}
         <div style="margin:0 0 12px">
           <span style="display:inline-block;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#B07D2B;background:#FBF4E6;border-radius:999px;padding:4px 12px">${label}</span>
         </div>
         <p style="margin:0 0 12px">${statusCopy}</p>
-        <p style="margin:0">You can track this request any time from your dashboard.</p>`,
-      action: { label: 'View your request', url: link('/dashboard#requests', ctx.req) }
+        <p style="margin:0">You can track this rental any time from your dashboard.</p>`,
+      action: { label: 'View your rental', url: link('/dashboard#requests', ctx.req) }
     });
   },
 

@@ -87,7 +87,7 @@ function renderSidebarNav() {
   ];
   if (isOwner) items.push({ tab: 'listings', icon: 'building-2', label: 'My rooms' });
   else {
-    items.push({ tab: 'requests', icon: 'message-circle', label: 'My requests' });
+    items.push({ tab: 'requests', icon: 'key-round', label: 'My rentals' });
     items.push({ tab: 'favorites', icon: 'heart', label: 'Saved rooms' });
   }
   items.push({ tab: 'notifications', icon: 'bell', label: 'Notifications' });
@@ -144,7 +144,7 @@ async function loadOverview() {
         <div class="stat-card"><div class="stat-card-value">${listings.length}</div><div class="stat-card-label">My rooms</div></div>
         <div class="stat-card"><div class="stat-card-value">${listings.filter(l => l.status === 'active').length}</div><div class="stat-card-label">Active</div></div>
         <div class="stat-card"><div class="stat-card-value">${views}</div><div class="stat-card-label">Views</div></div>
-        <div class="stat-card"><div class="stat-card-value">${interest}</div><div class="stat-card-label">Interest</div></div>`;
+        <div class="stat-card"><div class="stat-card-value">${interest}</div><div class="stat-card-label">Renters interested</div></div>`;
     } else {
       const [{ requests }, { favorites }, { user }] = await Promise.all([
         api.get('/api/requests/mine'),
@@ -154,8 +154,8 @@ async function loadOverview() {
       profileData = user;
       const days = Math.max(0, Math.floor((Date.now() - new Date(user.created_at).getTime()) / 86400000));
       statsEl.innerHTML = `
-        <div class="stat-card"><div class="stat-card-value">${requests.length}</div><div class="stat-card-label">My requests</div></div>
-        <div class="stat-card"><div class="stat-card-value">${requests.filter(r => r.status === 'connected').length}</div><div class="stat-card-label">Connected</div></div>
+        <div class="stat-card"><div class="stat-card-value">${requests.length}</div><div class="stat-card-label">My rentals</div></div>
+        <div class="stat-card"><div class="stat-card-value">${requests.filter(r => r.status === 'connected').length}</div><div class="stat-card-label">Ready to move in</div></div>
         <div class="stat-card"><div class="stat-card-value">${favorites.length}</div><div class="stat-card-label">Saved rooms</div></div>
         <div class="stat-card"><div class="stat-card-value">${days}</div><div class="stat-card-label">Days on Rentel</div></div>`;
     }
@@ -168,9 +168,9 @@ async function loadRequests() {
   renderStatusLegend();
   try {
     const { requests } = await api.get('/api/requests/mine');
-    if (!requests.length) { el.innerHTML = `<div class="empty-state"><div class="icon"><i data-lucide="message-circle" style="width:48px;height:48px"></i></div><p>You haven't reached out to any rooms yet — browse rooms and tap “I'm Interested” to start.</p><a href="/listings" class="btn btn-primary btn-sm" style="margin-top:.9rem">Browse rooms</a></div>`; if (typeof lucide !== 'undefined') lucide.createIcons(); return; }
-    // A request can only be withdrawn while it is still pending. Once an admin
-    // has connected or closed it, the connection already happened — no button.
+    if (!requests.length) { el.innerHTML = `<div class="empty-state"><div class="icon"><i data-lucide="key-round" style="width:48px;height:48px"></i></div><p>You haven't rented any rooms yet — browse rooms and tap “Rent this room” to start.</p><a href="/listings" class="btn btn-primary btn-sm" style="margin-top:.9rem">Browse rooms</a></div>`; if (typeof lucide !== 'undefined') lucide.createIcons(); return; }
+    // A rental can only be cancelled while it is still pending. Once an admin
+    // has connected or completed it, the rental already happened — no button.
     const canWithdraw = (status) => status !== 'connected' && status !== 'closed';
     el.innerHTML = `<div class="table-wrap"><table><thead><tr><th>Room</th><th>Status</th><th>Move-in</th><th>Date</th><th>Actions</th></tr></thead><tbody>` +
       requests.map(r => `<tr>
@@ -178,29 +178,29 @@ async function loadRequests() {
         <td><span class="status-badge status-${r.status}">${r.status.replace('_', ' ')}</span></td>
         <td>${r.move_in_date ? new Date(r.move_in_date).toLocaleDateString() : '—'}</td>
         <td>${new Date(r.created_at).toLocaleDateString()}</td>
-        <td>${canWithdraw(r.status) ? `<button class="btn btn-ghost btn-sm" onclick="withdrawRequest('${r.uuid}')">Unrequest</button>` : '<span class="text-muted">—</span>'}</td>
+        <td>${canWithdraw(r.status) ? `<button class="btn btn-ghost btn-sm" onclick="withdrawRequest('${r.uuid}')">Cancel rental</button>` : '<span class="text-muted">—</span>'}</td>
       </tr>`).join('') + '</tbody></table></div>';
     if (typeof lucide !== 'undefined') lucide.createIcons();
   } catch (e) { el.innerHTML = `<p class="text-muted">${e.message}</p>`; }
 }
 
-// A seeker withdraws a pending request. Removes it from their list AND from the
-// admin requests table (both read contact_requests), and frees the listing's
-// "Request Sent" button to be used again.
+// A seeker cancels a pending rental. Removes it from their list AND from the
+// admin rentals table (both read contact_requests), and frees the listing's
+// "Rental requested" button to be used again.
 async function withdrawRequest(uuid) {
-  if (!confirm('Withdraw this request? The owner will no longer see your interest.')) return;
+  if (!confirm('Cancel this rental request? The owner will no longer see your interest.')) return;
   try {
     await api.delete(`/api/requests/${uuid}`);
-    showToast('Request withdrawn', 'success');
+    showToast('Rental request cancelled', 'success');
     loadRequests();
   } catch (e) { showToast(e.message, 'error'); }
 }
 
-// One-line colour key for the request status column.
+// One-line colour key for the rental status column.
 function renderStatusLegend() {
   const el = document.getElementById('requestsLegend');
   if (!el) return;
-  const items = [['received', 'Received'], ['in_progress', 'In progress'], ['connected', 'Connected'], ['closed', 'Closed']];
+  const items = [['received', 'Pending'], ['in_progress', 'Processing'], ['connected', 'Ready to move in'], ['closed', 'Completed']];
   el.innerHTML = '<span class="legend-title">Status key</span>' +
     items.map(([s, label]) => `<span class="legend-item"><span class="legend-dot status-${s}"></span>${label}</span>`).join('');
 }
@@ -212,9 +212,9 @@ async function loadOwnerListings() {
     if (!listings.length) { el.innerHTML = `<div class="empty-state"><div class="icon"><i data-lucide="building-2" style="width:48px;height:48px"></i></div><p>You don't have any rooms yet. Post your first room — it's free.</p><a href="/post-ad" class="btn btn-primary btn-sm" style="margin-top:.9rem">Post a room</a></div>`; if (typeof lucide !== 'undefined') lucide.createIcons(); return; }
     // Performance nudge: rooms with no views get more traction with more photos.
     const tip = listings.some(l => (l.views_count || 0) === 0)
-      ? `<div class="tip-box"><i data-lucide="lightbulb"></i><span>Add more photos to get up to 3× more interest — rooms with a full gallery get noticed faster.</span></div>`
+      ? `<div class="tip-box"><i data-lucide="lightbulb"></i><span>Add more photos to get up to 3× more rentals — rooms with a full gallery get noticed faster.</span></div>`
       : '';
-    el.innerHTML = tip + `<div class="table-wrap"><table><thead><tr><th>Title</th><th>Status</th><th>Price</th><th>Views</th><th>Interest</th><th>Actions</th></tr></thead><tbody>` +
+    el.innerHTML = tip + `<div class="table-wrap"><table><thead><tr><th>Title</th><th>Status</th><th>Price</th><th>Views</th><th>Renters</th><th>Actions</th></tr></thead><tbody>` +
       listings.map(l => `<tr>
         <td><a href="/listing?id=${l.uuid}" style="color:var(--primary)">${l.title}</a></td>
         <td><span class="status-badge status-${l.status}">${l.status}</span></td>
@@ -288,8 +288,8 @@ function renderEvent(ev) {
   switch (ev.type) {
     case 'interest':
       linked = true;
-      if (owner) { icon = 'message-circle'; text = `Someone showed interest in “${title}”`; }
-      else { icon = 'send'; text = `You expressed interest in “${title}”`; }
+      if (owner) { icon = 'key-round'; text = `Someone wants to rent “${title}”`; }
+      else { icon = 'send'; text = `You requested to rent “${title}”`; }
       break;
     case 'saved':
       linked = true; icon = 'heart'; text = `You saved “${title}”`; break;
@@ -299,7 +299,7 @@ function renderEvent(ev) {
       linked = true;
       if (ev.status === 'active') { icon = 'check-circle'; text = `“${title}” was approved and is live`; }
       else if (ev.status === 'rejected') { icon = 'x-circle'; text = `“${title}” was rejected`; }
-      else if (ev.status === 'connected') { icon = 'check-circle'; text = 'Your request was marked Connected'; }
+      else if (ev.status === 'connected') { icon = 'check-circle'; text = 'Your rental is ready to move in'; }
       else { icon = 'info'; text = `“${title}” was marked ${cap(ev.status)}`; }
       break;
     case 'views':
@@ -341,7 +341,7 @@ async function loadAccount() {
   try {
     const { user, has_active_request } = await api.get('/api/user/profile');
     profileData = user;
-    // While a request is in progress the owner is already reviewing the details
+    // While a rental is in progress the owner is already reviewing the details
     // submitted with it, so every profile detail is locked until it is completed.
     const locked = !!has_active_request;
     const memberSince = new Date(user.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
@@ -352,7 +352,7 @@ async function loadAccount() {
       <div class="account-grid">
         <div class="card account-card">
           <h3>Profile details</h3>
-          ${locked ? `<div class="alert alert-info" style="margin-bottom:1rem">You have a request in progress. Your profile details are locked until it is completed — cancel the request to make changes.</div>` : ''}
+          ${locked ? `<div class="alert alert-info" style="margin-bottom:1rem">You have a rental in progress. Your profile details are locked until it is completed — cancel the rental to make changes.</div>` : ''}
           <form id="accountForm">
             <div class="form-group"><label for="acctName">Full name</label><input id="acctName" value="${escAttr(user.name)}" ${locked ? 'disabled' : 'required'} /></div>
             <div class="form-group"><label for="acctEmail">Email</label><input id="acctEmail" type="email" value="${escAttr(user.email || '')}" disabled /><span class="field-hint">Your email is your account identifier and cannot be changed.</span></div>
@@ -402,7 +402,7 @@ function applyAccountName(name) {
 
 async function onAccountSave(ev) {
   ev.preventDefault();
-  if (window.__profileLocked) return showToast('Profile details are locked while a request is in progress.', 'error');
+  if (window.__profileLocked) return showToast('Profile details are locked while a rental is in progress.', 'error');
   const btn = ev.target.querySelector('button[type="submit"]');
   const payload = {
     name: document.getElementById('acctName').value.trim(),

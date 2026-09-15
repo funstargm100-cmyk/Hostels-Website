@@ -18,9 +18,9 @@ router.post('/', optionalAuth, async (req, res) => {
     if (!listing) return res.status(404).json({ error: 'Listing not found' });
 
     const seeker_id = req.session.user?.id || null;
-    // An owner cannot send a request to their own listing.
+    // An owner cannot rent their own listing.
     if (seeker_id && seeker_id === listing.owner_id)
-      return res.status(403).json({ error: "You can't send a request to your own room" });
+      return res.status(403).json({ error: "You can't rent your own room" });
     const result = await db.query(
       'INSERT INTO contact_requests (listing_id, seeker_id, seeker_name, seeker_phone, seeker_email, move_in_date, message) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING uuid',
       [listing.id, seeker_id, seeker_name, seeker_phone || null, seeker_email || null, move_in_date || null, message || null]
@@ -32,14 +32,14 @@ router.post('/', optionalAuth, async (req, res) => {
     // and let the notifications/emails run in the background. Awaiting SMTP was
     // holding the response for several seconds, which left the seeker staring at
     // "Sending..." long after the request had actually gone through.
-    res.status(201).json({ message: 'Interest submitted. We will contact you shortly.', uuid: result.rows[0].uuid });
+    res.status(201).json({ message: 'Rental request submitted. We will contact you shortly.', uuid: result.rows[0].uuid });
 
     // Fire-and-forget side effects. Each is isolated so one failure (e.g. SMTP
     // down) cannot reject the others or affect the response already sent.
     (async () => {
       const ownerRes = await db.query('SELECT email FROM users WHERE id=$1', [listing.owner_id]);
       const owner = ownerRes.rows[0];
-      if (owner?.email) await sendEmail(owner.email, `New interest in your room "${listing.title}"`, templates.interestReceived(listing.title, { uuid: listing.uuid, req }));
+      if (owner?.email) await sendEmail(owner.email, `Someone wants to rent your room "${listing.title}"`, templates.interestReceived(listing.title, { uuid: listing.uuid, req }));
     })().catch(err => console.error('interest owner email failed:', err.message));
 
     // In-app notification to the owner (dashboard "My listings").
@@ -47,7 +47,7 @@ router.post('/', optionalAuth, async (req, res) => {
       .catch(err => console.error('interest owner notify failed:', err.message));
 
     if (seeker_email) {
-      sendEmail(seeker_email, `We received your request for "${listing.title}"`, templates.requestUpdate('received', listing.title, { req }))
+      sendEmail(seeker_email, `We received your rental request for "${listing.title}"`, templates.requestUpdate('received', listing.title, { req }))
         .catch(err => console.error('interest seeker email failed:', err.message));
     }
     // In-app confirmation to the signed-in seeker (dashboard "My requests").
@@ -81,14 +81,14 @@ router.delete('/:uuid', requireAuth, async (req, res) => {
     const request = fr.rows[0];
     if (!request) return res.status(404).json({ error: 'Request not found' });
     if (request.status === 'connected' || request.status === 'closed')
-      return res.status(409).json({ error: 'This request has already been handled and can no longer be withdrawn' });
+      return res.status(409).json({ error: 'This rental has already been handled and can no longer be cancelled' });
 
     await db.query('DELETE FROM contact_requests WHERE id=$1', [request.id]);
     // Undo the interest bump from POST /api/requests so the listing's count stays
     // honest (never below zero).
     await db.query('UPDATE listings SET interest_count = GREATEST(interest_count - 1, 0) WHERE id=$1', [request.listing_id]);
 
-    res.json({ message: 'Request withdrawn' });
+    res.json({ message: 'Rental request cancelled' });
 
     // Fire-and-forget: let the owner know so the withdrawal is visible on their
     // side too (dashboard notifications), and the admin list already lost the row.
@@ -125,7 +125,7 @@ router.post('/:uuid/review', requireAuth, async (req, res) => {
   try {
     const result = await db.query("SELECT * FROM contact_requests WHERE uuid=$1 AND seeker_id=$2 AND status='connected'", [req.params.uuid, req.session.user.id]);
     const request = result.rows[0];
-    if (!request) return res.status(403).json({ error: 'Can only review after a confirmed connection' });
+    if (!request) return res.status(403).json({ error: 'You can only review after a confirmed rental' });
 
     await db.query(
       'INSERT INTO reviews (listing_id, reviewer_id, contact_request_id, rating, comment) VALUES ($1,$2,$3,$4,$5)',

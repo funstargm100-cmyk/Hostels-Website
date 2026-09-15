@@ -494,15 +494,15 @@ function drawDetailTrace(room, base) {
 function openInterestModal() {
   // Belt-and-braces: the server rejects this too, but never open the form for
   // someone trying to book their own room.
-  if (isOwnListing(currentListing)) return showToast("You can't send a request to your own room", 'error');
-  // Already requested this room — the button is disabled, but guard the handler
-  // too so a stale tap cannot create a duplicate request.
-  if (currentListing && currentListing.has_requested) return showToast('You have already sent a request for this room.', 'info');
+  if (isOwnListing(currentListing)) return showToast("You can't rent your own room", 'error');
+  // Already rented this room — the button is disabled, but guard the handler
+  // too so a stale tap cannot create a duplicate rental.
+  if (currentListing && currentListing.has_requested) return showToast('You have already requested to rent this room.', 'info');
   prefillInterestForm();
   openModal('interestModal');
 }
 
-// Pull the seeker's details straight from their account so the request form is a
+// Pull the seeker's details straight from their account so the rental form is a
 // confirmation step, not a place to retype (or alter) them. The fields are set
 // read-only and a note points to the account page for any changes. Guests who
 // are not logged in still fill the form in by hand.
@@ -556,7 +556,7 @@ async function submitInterest(e) {
   const phone = document.getElementById('intPhone').value;
   const email = document.getElementById('intEmail').value;
   if (!phone && !email) return showToast('Please provide phone or email', 'error');
-  btn.disabled = true; btn.textContent = 'Sending...';
+  btn.disabled = true; btn.textContent = 'Submitting...';
   try {
     await api.post('/api/requests', {
       listing_uuid: listingUUID,
@@ -567,12 +567,12 @@ async function submitInterest(e) {
       message: document.getElementById('intMessage').value || undefined
     });
     closeModal('interestModal');
-    showToast('Request sent! We will contact you shortly.', 'success');
+    showToast('Rental request sent! We\u2019ll connect you with the owner shortly.', 'success');
     // Clear only the fields the seeker typed; the account details stay prefilled
-    // for the next request (and would be re-pulled anyway when the modal opens).
+    // for the next rental (and would be re-pulled anyway when the modal opens).
     document.getElementById('intMoveIn').value = '';
     document.getElementById('intMessage').value = '';
-    // The request now exists: reflect it immediately and remember it on the
+    // The rental now exists: reflect it immediately and remember it on the
     // listing so a reopen/tap cannot send a duplicate.
     if (currentListing) currentListing.has_requested = true;
     applyRequestState(true);
@@ -580,8 +580,8 @@ async function submitInterest(e) {
     showToast(ex.message, 'error');
   } finally {
     // `btn` is the modal's submit button (#interestSubmitBtn), separate from the
-    // page's Request button — restore it so the form can be retried on failure.
-    btn.disabled = false; btn.textContent = 'Send Request';
+    // page's Rent button — restore it so the form can be retried on failure.
+    btn.disabled = false; btn.textContent = 'Rent this room';
   }
 }
 
@@ -612,15 +612,15 @@ function applyFavoriteState(favorited) {
 }
 
 // Reflect whether the viewer has already requested this room. When they have,
-// the button reads "Request Sent" and stops opening the modal.
+// the button reads "Rental requested" and stops opening the modal.
 function applyRequestState(hasRequested) {
   const btn = document.getElementById('requestBtn');
   const label = document.getElementById('requestBtnLabel');
   if (!btn) return;
-  if (label) label.textContent = hasRequested ? 'Request Sent' : 'Send Request';
+  if (label) label.textContent = hasRequested ? 'Rental requested' : 'Rent this room';
   btn.classList.toggle('requested', hasRequested);
   btn.disabled = hasRequested;
-  btn.title = hasRequested ? 'You have already sent a request for this room' : '';
+  btn.title = hasRequested ? 'You have already requested to rent this room' : '';
   if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [btn] });
 }
 

@@ -18,7 +18,7 @@
       { href: '/seekers', icon: 'home', label: 'Home' },
       { href: '/listings', icon: 'search', label: 'Browse' },
       { href: '/dashboard', icon: 'heart', label: 'Saved', match: ['favorites'] },
-      { href: '/dashboard', icon: 'message-circle', label: 'Requests' },
+      { href: '/dashboard', icon: 'key-round', label: 'Rentals' },
       { href: '/about', icon: 'info', label: 'About' }
     ],
     // Agent / owner pages

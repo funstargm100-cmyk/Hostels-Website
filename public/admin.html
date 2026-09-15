@@ -37,7 +37,7 @@
       <li><a href="#" class="active" title="Overview" onclick="showAdminTab('overview',this);return false"><i data-lucide="layout-dashboard"></i> <span class="sidebar-label">Overview</span></a></li>
       <li><a href="#" title="Rooms" onclick="showAdminTab('listings',this);return false"><i data-lucide="building-2"></i> <span class="sidebar-label">Rooms</span></a></li>
       <li><a href="#" title="Rooms by user" onclick="showAdminTab('userlistings',this);return false"><i data-lucide="layers"></i> <span class="sidebar-label">Rooms by user</span></a></li>
-      <li><a href="#" title="Requests" onclick="showAdminTab('requests',this);return false"><i data-lucide="message-circle"></i> <span class="sidebar-label">Requests</span></a></li>
+      <li><a href="#" title="Rentals" onclick="showAdminTab('requests',this);return false"><i data-lucide="key-round"></i> <span class="sidebar-label">Rentals</span></a></li>
       <li><a href="#" title="Users" onclick="showAdminTab('users',this);return false"><i data-lucide="users"></i> <span class="sidebar-label">Users</span></a></li>
       <li><a href="#" title="Reports" onclick="showAdminTab('reports',this);return false"><i data-lucide="flag"></i> <span class="sidebar-label">Reports</span></a></li>
       <li><a href="#" title="Audit logs" onclick="showAdminTab('logs',this);return false"><i data-lucide="scroll-text"></i> <span class="sidebar-label">Audit logs</span></a></li>
@@ -73,13 +73,13 @@
 
     <div id="admin-tab-requests" style="display:none">
       <div class="section-head">
-        <h2 style="margin:0">Requests</h2>
+        <h2 style="margin:0">Rentals</h2>
         <select id="requestStatusFilter" onchange="loadAdminRequests()" style="width:auto">
           <option value="">All statuses</option>
           <option value="new">New</option>
-          <option value="in_progress">In progress</option>
-          <option value="connected">Connected</option>
-          <option value="closed">Closed</option>
+          <option value="in_progress">Processing</option>
+          <option value="connected">Ready to move in</option>
+          <option value="closed">Completed</option>
         </select>
       </div>
       <div id="adminRequestsTable"></div>
@@ -135,15 +135,15 @@
   </div>
 </div>
 
-<!-- Update request modal -->
+<!-- Update rental modal -->
 <div class="modal-overlay" id="requestModal">
  <div class="modal" style="max-width:560px">
-    <h3>Request details</h3>
+    <h3>Rental details</h3>
     <p class="text-muted" id="reqRoomLine" style="margin:-.3rem 0 .9rem;font-size:.9rem"></p>
 
-    <!-- Message the seeker typed on the request form (optional) -->
+    <!-- Message the renter typed on the rental form (optional) -->
     <div class="form-group">
-      <label>Seeker's message</label>
+      <label>Renter's message</label>
       <div id="reqMessage" class="req-message"></div>
     </div>
 
@@ -160,10 +160,10 @@
     <div class="form-group">
       <label>Status</label>
       <select id="newRequestStatus">
-        <option value="received">Received</option>
-        <option value="in_progress">In progress</option>
-        <option value="connected">Connected</option>
-        <option value="closed">Closed</option>
+        <option value="received">Pending</option>
+        <option value="in_progress">Processing</option>
+        <option value="connected">Ready to move in</option>
+        <option value="closed">Completed</option>
       </select>
     </div>
     <div class="form-group"><label>Admin notes</label><textarea id="adminNotes" placeholder="Internal notes (not shared with users)"></textarea></div>

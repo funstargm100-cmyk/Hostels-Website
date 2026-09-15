@@ -88,7 +88,7 @@
         <div class="text-muted" style="font-size:.85rem;margin-bottom:1rem" id="moveInDate"></div>
         <div style="display:flex;gap:1.2rem;font-size:.82rem;color:var(--text-muted);margin-bottom:1.2rem">
           <span><i data-lucide="eye" style="width:14px;height:14px"></i> <span id="viewCount"></span> views</span>
-          <span><i data-lucide="users" style="width:14px;height:14px"></i> <span id="interestCount"></span> interested</span>
+          <span><i data-lucide="users" style="width:14px;height:14px"></i> <span id="interestCount"></span> renting</span>
         </div>
         <div class="poster-card" id="posterCard">
           <a id="ownerAvatarLink" href="#" class="poster-card-avatar-link" title="View all rooms by this poster">
@@ -109,7 +109,7 @@
         <!-- Seeker / visitor actions -->
         <div id="seekerActions">
           <div style="display:flex;gap:.6rem">
-            <button class="btn btn-primary" style="flex:1" id="requestBtn" onclick="openInterestModal()"><i data-lucide="send"></i> <span id="requestBtnLabel">Send Request</span></button>
+            <button class="btn btn-primary" style="flex:1" id="requestBtn" onclick="openInterestModal()"><i data-lucide="key-round"></i> <span id="requestBtnLabel">Rent this room</span></button>
             <button class="btn btn-outline" id="favBtn" onclick="toggleFavorite()"><i data-lucide="heart"></i></button>
           </div>
           <button class="btn btn-ghost btn-sm mt-2" style="width:100%" onclick="openReportModal()"><i data-lucide="flag"></i> Report this room</button>
@@ -141,11 +141,11 @@
 
 <nav class="footer-nav" id="footerNav" data-mode="visitor"></nav>
 
-<!-- Interest / request modal -->
+<!-- Rent / booking modal -->
 <div class="modal-overlay" id="interestModal">
-  <div class="modal">
-    <h3>Send a request</h3>
-    <p class="text-muted" style="font-size:.85rem">Only send request when you are ready to rent the room!</p>
+ <div class="modal">
+    <h3>Rent this room</h3>
+    <p class="text-muted" style="font-size:.85rem">Tell us when you'd like to move in. We'll verify your details and connect you with the owner to complete your rental.</p>
     <form id="interestForm" onsubmit="submitInterest(event)">
       <div id="interestAccountNote" class="alert alert-info" style="display:none;margin-bottom:.9rem">
         Go to your <a href="/dashboard#account"><u>account page</u></a> to edit your details.
@@ -157,7 +157,7 @@
       </div>
       <div class="form-group"><label>When do you want to move in?</label><input type="date" id="intMoveIn" /></div>
       <div class="form-group"><label>Message (optional)</label><textarea id="intMessage" placeholder="Anything you want us to know?"></textarea></div>
-      <button type="submit" class="btn btn-primary" style="width:100%" id="interestSubmitBtn">Send Request</button>
+      <button type="submit" class="btn btn-primary" style="width:100%" id="interestSubmitBtn">Rent this room</button>
     </form>
   </div>
 </div>

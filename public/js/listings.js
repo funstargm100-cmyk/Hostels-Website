@@ -50,7 +50,7 @@ function renderOwnerCard(l) {
         <div class="card-location"><i data-lucide="map-pin"></i> <span>${l.location_area || ''}</span></div>
         <div class="amenity-icons" style="gap:1rem">
           <span class="amenity-icon"><i data-lucide="eye"></i> ${l.views_count || 0} views</span>
-          <span class="amenity-icon"><i data-lucide="message-circle"></i> ${l.interest_count || 0} interest</span>
+          <span class="amenity-icon"><i data-lucide="message-circle"></i> ${l.interest_count || 0} renting</span>
         </div>
       </div>
       <div class="card-footer" style="gap:.5rem;flex-wrap:wrap">

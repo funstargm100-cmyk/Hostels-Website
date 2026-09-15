@@ -27,7 +27,7 @@
 <div class="auth-shell">
   <div class="auth-card">
     <h2 style="font-size:1.4rem">Welcome back</h2>
-    <p class="text-muted mb-3" style="margin-top:-.4rem">Log in to manage your rooms or requests.</p>
+    <p class="text-muted mb-3" style="margin-top:-.4rem">Log in to manage your rooms or rentals.</p>
 
     <div class="alert alert-danger" id="loginError" style="display:none"></div>
 
@@ -326,9 +326,9 @@ function completeLogin({ token, user }) {
 }
 
 const ROLE_META = {
-  seeker: { label: 'Seeker', desc: 'Browse rooms, save favourites and send interest', icon: 'search' },
-  owner:  { label: 'Agent', desc: 'List rooms and manage incoming interest', icon: 'home' },
-  agent:  { label: 'Agent', desc: 'List rooms and manage incoming interest', icon: 'home' },
+  seeker: { label: 'Seeker', desc: 'Browse rooms, save favourites and request rentals', icon: 'search' },
+  owner:  { label: 'Agent', desc: 'List rooms and manage incoming rentals', icon: 'home' },
+  agent:  { label: 'Agent', desc: 'List rooms and manage incoming rentals', icon: 'home' },
   admin:  { label: 'Admin', desc: 'Platform administration', icon: 'shield' }
 };
 

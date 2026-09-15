@@ -194,7 +194,7 @@ router.put('/requests/:id/status', admin, async (req, res) => {
     }
     const emailTo = request.seeker_email || request.email;
     const statusLabel = REQUEST_STATUS_LABEL[status] || status;
-    if (emailTo) await sendEmail(emailTo, `Update on your Rentel request — now ${statusLabel}`, templates.requestUpdate(status, request.listing_title, { req }));
+    if (emailTo) await sendEmail(emailTo, `Update on your Rentel rental — now ${statusLabel}`, templates.requestUpdate(status, request.listing_title, { req }));
     if (request.seeker_id) await notify(request.seeker_id, 'requestUpdate', [status], { link: '/dashboard#requests' });
     await logAction(req.session.user.id, 'update_request_status', 'request', req.params.id, status);
     res.json({ message: 'Status updated' });

@@ -117,7 +117,7 @@ async function loadAdminOverview() {
       <div class="stat-card"><div class="stat-card-value">${s.total_users}</div><div class="stat-card-label">Total Users</div></div>
       <div class="stat-card"><div class="stat-card-value">${s.active_listings}</div><div class="stat-card-label">Active Rooms</div></div>
       <div class="stat-card"><div class="stat-card-value" style="color:#f59e0b">${s.pending_listings}</div><div class="stat-card-label">Pending Review</div></div>
-      <div class="stat-card"><div class="stat-card-value" style="color:#3b82f6">${s.new_requests}</div><div class="stat-card-label">New Requests</div></div>
+      <div class="stat-card"><div class="stat-card-value" style="color:#3b82f6">${s.new_requests}</div><div class="stat-card-label">New Rentals</div></div>
       <div class="stat-card"><div class="stat-card-value" style="color:#ef4444">${s.open_reports}</div><div class="stat-card-label">Open Reports</div></div>`;
   } catch (e) { showToast(e.message, 'error'); }
 }
@@ -163,6 +163,11 @@ async function confirmReject() {
   } catch (e) { showToast(e.message, 'error'); }
 }
 
+// Friendly rental status labels for the admin tables (raw DB values unchanged).
+function rentalStatusLabel(status) {
+  return ({ received: 'Pending', in_progress: 'Processing', connected: 'Ready to move in', closed: 'Completed' })[status] || status;
+}
+
 async function loadAdminRequests() {
   const status = document.getElementById('requestStatusFilter').value;
   const el = document.getElementById('adminRequestsTable');
@@ -174,13 +179,13 @@ async function loadAdminRequests() {
     // ended early and the button became a no-op. Looking it up here sidesteps
     // all HTML-escaping entirely.
     adminRequests = requests;
-    if (!requests.length) { el.innerHTML = '<p class="text-muted">No requests.</p>'; return; }
-    el.innerHTML = `<div class="table-wrap"><table><thead><tr><th>Seeker</th><th>Room</th><th>Owner Contact</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead><tbody>` +
+    if (!requests.length) { el.innerHTML = '<p class="text-muted">No rentals.</p>'; return; }
+    el.innerHTML = `<div class="table-wrap"><table><thead><tr><th>Renter</th><th>Room</th><th>Owner Contact</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead><tbody>` +
       requests.map(r => `<tr>
         <td>${r.seeker_name}<br><span class="text-muted" style="font-size:0.75rem">${r.seeker_phone || r.seeker_email || ''}</span></td>
         <td><a href="/listing?id=${r.listing_uuid}" target="_blank" style="color:var(--primary)">${r.listing_title}</a>${(r.message || '').trim() ? '<span class="msg-dot" title="Seeker left a message"><i data-lucide="message-square" style="width:14px;height:14px"></i></span>' : ''}</td>
         <td style="font-size:0.82rem">${r.owner_name}<br>${r.owner_phone || r.owner_email || ''}</td>
-        <td><span class="status-badge status-${r.status}">${r.status.replace('_', ' ')}</span></td>
+        <td><span class="status-badge status-${r.status}">${rentalStatusLabel(r.status)}</span></td>
         <td>${new Date(r.created_at).toLocaleDateString()}</td>
         <td><button class="btn btn-outline btn-sm" onclick="openRequestModal(${r.id})"><i data-lucide="calculator" style="width:14px;height:14px"></i> Details</button></td>
       </tr>`).join('') + '</tbody></table></div>';
@@ -267,7 +272,7 @@ function openRequestModal(id) {
   const r = (adminRequests || []).find(x => x.id === id);
   if (r) {
     document.getElementById('reqRoomLine').innerHTML =
-      `<strong>${r.listing_title || 'Room'}</strong> — requested by ${r.seeker_name || 'a seeker'}`;
+      `<strong>${r.listing_title || 'Room'}</strong> — rented by ${r.seeker_name || 'a renter'}`;
     renderPricingBreakdown(r);
     // The message the seeker typed on the request form (optional). Was saved all
     // along but never surfaced to the admin — show it, or an explicit placeholder.
