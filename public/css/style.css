@@ -2219,6 +2219,7 @@ td{ padding:.8rem 1rem; border-top:1px solid var(--border); vertical-align:top; 
 .dashboard-shell.sidebar-collapsed .sidebar-profile-text,
 .dashboard-shell.sidebar-collapsed .sidebar-label{ opacity:0; width:0; flex:0 1 0; pointer-events:none; transform:translateX(-8px); }
 .dashboard-shell.sidebar-collapsed .sidebar-nav a{ justify-content:center; padding-left:.3rem; padding-right:.3rem; }
+.dashboard-shell.sidebar-collapsed .sidebar-logout{ justify-content:center; padding-left:.3rem; padding-right:.3rem; }
 .dashboard-shell.sidebar-collapsed .sidebar-toggle{ justify-content:center; }
 
 /* expand on hover — only for devices that actually have hover (desktop) */
@@ -2229,7 +2230,8 @@ td{ padding:.8rem 1rem; border-top:1px solid var(--border); vertical-align:top; 
   }
   .dashboard-shell.sidebar-collapsed .sidebar:hover .sidebar-profile-text,
   .dashboard-shell.sidebar-collapsed .sidebar:hover .sidebar-label{ opacity:1; width:auto; flex:0 0 auto; pointer-events:auto; transform:none; }
-  .dashboard-shell.sidebar-collapsed .sidebar:hover .sidebar-nav a{ justify-content:flex-start; padding-left:.8rem; padding-right:.8rem; }
+  .dashboard-shell.sidebar-collapsed .sidebar:hover .sidebar-nav a,
+  .dashboard-shell.sidebar-collapsed .sidebar:hover .sidebar-logout{ justify-content:flex-start; padding-left:.8rem; padding-right:.8rem; }
   .dashboard-shell.sidebar-collapsed .sidebar:hover .sidebar-profile{ justify-content:flex-start; }
   .dashboard-shell.sidebar-collapsed .sidebar:hover .sidebar-toggle{ justify-content:flex-end; }
 }
@@ -2278,6 +2280,7 @@ td{ padding:.8rem 1rem; border-top:1px solid var(--border); vertical-align:top; 
   .dashboard-shell.sidebar-collapsed .sidebar-profile-text,
   .dashboard-shell.sidebar-collapsed .sidebar-label{ opacity:1; width:auto; flex:0 0 auto; pointer-events:auto; transform:none; }
   .dashboard-shell.sidebar-collapsed .sidebar-nav a{ justify-content:flex-start; padding-left:.8rem; padding-right:.8rem; }
+  .dashboard-shell.sidebar-collapsed .sidebar-logout{ justify-content:flex-start; padding-left:.8rem; padding-right:.8rem; }
   .dashboard-shell.collapsible .sidebar{ animation:drawerIn .3s cubic-bezier(.4,0,.2,1); }
 }
 

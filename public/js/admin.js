@@ -8,7 +8,42 @@ async function initAdmin() {
   const user = await initNavAuth();
   if (!user || user.role !== 'admin') { location.href = '/login'; return; }
   initAdminSidebar();
+  initAdminSettings();
   loadAdminOverview();
+}
+
+// ── Settings: change password + logout ──────────────────
+// Both are wired here rather than inline so they are added once, on init, and
+// share the same confirm/toast language as the rest of the app.
+function initAdminSettings() {
+  document.getElementById('adminPasswordForm')?.addEventListener('submit', onAdminPasswordSave);
+  document.getElementById('adminSidebarLogout')?.addEventListener('click', confirmAdminLogout);
+  document.getElementById('adminSettingsLogout')?.addEventListener('click', confirmAdminLogout);
+}
+
+function confirmAdminLogout() {
+  if (!confirm('Log out of the admin panel?\n\nYou\'ll need to sign in again to continue.')) return;
+  handleLogout();
+}
+
+async function onAdminPasswordSave(ev) {
+  ev.preventDefault();
+  const cur = document.getElementById('adminCurPw').value;
+  const nw = document.getElementById('adminNewPw').value;
+  const conf = document.getElementById('adminConfPw').value;
+  if (nw !== conf) return showToast('New passwords do not match', 'error');
+  if (nw.length < 6) return showToast('New password must be at least 6 characters', 'error');
+  const btn = ev.target.querySelector('button[type="submit"]');
+  btn.disabled = true;
+  try {
+    await api.put('/api/user/password', { current_password: cur, new_password: nw });
+    ev.target.reset();
+    showToast('Password changed', 'success');
+  } catch (e) {
+    showToast(e.message, 'error');
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 // ── Collapsible sidebar ──────────────────────
@@ -104,6 +139,7 @@ function showAdminTab(tab, link) {
   const el = document.getElementById(`admin-tab-${tab}`);
   if (el) el.style.display = 'block';
   if (link) link.classList.add('active');
+  // Settings is static markup (change-password form + logout) so it has no loader.
   const loaders = { overview: loadAdminOverview, listings: loadAdminListings, userlistings: loadAdminListingsByUser, requests: loadAdminRequests, users: loadAdminUsers, reports: loadAdminReports, logs: loadAdminLogs };
   loaders[tab]?.();
   // On mobile, close the panel after choosing a tab

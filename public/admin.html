@@ -40,9 +40,11 @@
       <li><a href="#" title="Rentals" onclick="showAdminTab('requests',this);return false"><i data-lucide="key-round"></i> <span class="sidebar-label">Rentals</span></a></li>
       <li><a href="#" title="Users" onclick="showAdminTab('users',this);return false"><i data-lucide="users"></i> <span class="sidebar-label">Users</span></a></li>
       <li><a href="#" title="Reports" onclick="showAdminTab('reports',this);return false"><i data-lucide="flag"></i> <span class="sidebar-label">Reports</span></a></li>
-      <li><a href="#" title="Audit logs" onclick="showAdminTab('logs',this);return false"><i data-lucide="scroll-text"></i> <span class="sidebar-label">Audit logs</span></a></li>
-    </ul>
-  </aside>
+           <li><a href="#" title="Audit logs" onclick="showAdminTab('logs',this);return false"><i data-lucide="scroll-text"></i> <span class="sidebar-label">Audit logs</span></a></li>
+           <li><a href="#" title="Settings" onclick="showAdminTab('settings',this);return false"><i data-lucide="settings"></i> <span class="sidebar-label">Settings</span></a></li>
+         </ul>
+         <button class="sidebar-logout" id="adminSidebarLogout" type="button"><i data-lucide="log-out"></i> <span class="sidebar-label">Log out</span></button>
+      </aside>
 
   <main class="dashboard-main">
     <div id="admin-tab-overview">
@@ -104,11 +106,32 @@
       <div id="adminReportsTable"></div>
     </div>
 
-    <div id="admin-tab-logs" style="display:none">
-      <h2>Audit logs</h2>
-      <div id="adminLogsTable"></div>
-    </div>
-  </main>
+       <div id="admin-tab-logs" style="display:none">
+         <h2>Audit logs</h2>
+         <div id="adminLogsTable"></div>
+       </div>
+
+       <div id="admin-tab-settings" style="display:none">
+         <h2>Settings</h2>
+         <div class="account-grid">
+           <div class="card account-card">
+             <h3>Change password</h3>
+             <p class="text-muted" style="font-size:.85rem;margin-top:-.3rem">You'll stay signed in after changing your password.</p>
+             <form id="adminPasswordForm">
+               <div class="form-group"><label for="adminCurPw">Current password</label><input id="adminCurPw" type="password" autocomplete="current-password" required /></div>
+               <div class="form-group"><label for="adminNewPw">New password</label><input id="adminNewPw" type="password" autocomplete="new-password" minlength="6" required /></div>
+               <div class="form-group"><label for="adminConfPw">Confirm new password</label><input id="adminConfPw" type="password" autocomplete="new-password" minlength="6" required /></div>
+               <button class="btn btn-primary" type="submit">Update password</button>
+             </form>
+           </div>
+           <div class="card account-card">
+             <h3>Session</h3>
+             <p class="text-muted" style="font-size:.85rem;margin-top:-.3rem">Sign out of the admin panel on this device. You'll need to sign in again to continue.</p>
+             <button class="btn btn-outline" type="button" id="adminSettingsLogout"><i data-lucide="log-out"></i> Log out</button>
+           </div>
+         </div>
+       </div>
+    </main>
 </div>
 
 <!-- Reject room modal -->
