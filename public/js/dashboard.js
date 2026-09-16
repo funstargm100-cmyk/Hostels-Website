@@ -224,6 +224,7 @@ async function loadOwnerListings() {
         <td style="white-space:nowrap">
           <a href="/edit-listing?id=${l.uuid}" class="btn btn-outline btn-sm"><i data-lucide="pencil"></i> Edit</a>
           ${l.status === 'active' ? `<button class="btn btn-ghost btn-sm" onclick="deactivateListing('${l.uuid}')">Deactivate</button>` : ''}
+          ${(l.status !== 'active') ? `<button class="btn btn-ghost btn-sm" style="color:var(--danger,#dc2626)" onclick="deleteOwnListing('${l.uuid}', '${String(l.title).replace(/'/g, "\\'")}')"><i data-lucide="trash-2"></i> Delete</button>` : ''}
         </td>
       </tr>`).join('') + '</tbody></table></div>';
     if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -235,6 +236,19 @@ async function deactivateListing(uuid) {
   try {
     await api.delete(`/api/listings/${uuid}`);
     showToast('Room deactivated', 'success');
+    loadOwnerListings();
+  } catch (e) { showToast(e.message, 'error'); }
+}
+
+// Permanently remove a room the owner owns. Offered for rooms that are NOT yet
+// live (pending review, rejected, or deactivated) — an owner should be able to
+// withdraw a submission before/without approval. DELETE /api/listings/:uuid/permanent
+// scopes to the owner, so this can never touch someone else's room.
+async function deleteOwnListing(uuid, title) {
+  if (!confirm(`Permanently delete "${title}"?\n\nThis cannot be undone.`)) return;
+  try {
+    await api.delete(`/api/listings/${uuid}/permanent`);
+    showToast('Room deleted', 'success');
     loadOwnerListings();
   } catch (e) { showToast(e.message, 'error'); }
 }
