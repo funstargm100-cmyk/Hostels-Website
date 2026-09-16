@@ -563,6 +563,14 @@ router.put('/:uuid', requireAuth, uploadListingImages, async (req, res) => {
     vals.push(req.params.uuid);
     await db.query(`UPDATE listings SET ${fields.join(', ')} WHERE uuid=$${p}`, vals);
 
+    // A REJECTED room that its owner edited is a resubmission: send it back for
+    // review and clear the old rejection reason, so it re-enters the queue instead
+    // of staying rejected forever. Other statuses are untouched — editing an
+    // already-approved room must NOT push it back through review.
+    if (listing.status === 'rejected') {
+      await db.query("UPDATE listings SET status='pending', rejection_reason=NULL WHERE uuid=$1", [req.params.uuid]);
+    }
+
     // Update amenities if any provided
     if (water || electricity || security || furnishing || bathroom !== undefined || kitchen_access !== undefined || wifi !== undefined || parking !== undefined || pet_friendly !== undefined) {
       const aFields = []; const aVals = []; let ap = 1;

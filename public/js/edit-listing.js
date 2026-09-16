@@ -109,6 +109,9 @@ window.updatePricePreview = updatePricePreview;
 // never sits on the form blocking the view once the user has read it.
 const PROMPT_TIMEOUT_MS = 4000;
 let editPromptTimer = null;
+// True when the room being edited was rejected — the submit button reads
+// "Resubmit" and success is reported as a resubmission for review.
+let isRejectedListing = false;
 
 // A single ordered photo list drives both display and the saved order.
 // Each entry is either:
@@ -136,6 +139,17 @@ async function initEdit() {
     document.getElementById('editLoading').style.display = 'none';
     document.getElementById('editContent').style.display = 'block';
     document.title = `Edit: ${listing.title} — Rentel`;
+
+    // A rejected room is being fixed and sent back for review — saying "Resubmit"
+    // (not "Save changes") makes that clear. Saving it puts it back in the review
+    // queue (see the PUT route), so the button matches what actually happens.
+    if (listing.status === 'rejected') {
+      isRejectedListing = true;
+      const btn = document.getElementById('editSubmitBtn');
+      if (btn) btn.textContent = 'Resubmit';
+      const hint = document.getElementById('editSubtitle');
+      if (hint) hint.textContent = 'Fix the issues below and resubmit — your room goes back for review.';
+    }
 
     document.getElementById('edTitle').value = listing.title || '';
     document.getElementById('edDescription').value = listing.description || '';
@@ -533,7 +547,7 @@ document.getElementById('editForm')?.addEventListener('submit', async (e) => {
     await api.upload(`/api/listings/${editUUID}`, fd, 'PUT');
     // Saved — the redirect below must not trigger the unsaved-changes warning.
     _saved = true;
-    showToast('Changes saved!', 'success');
+    showToast(isRejectedListing ? 'Room resubmitted for review!' : 'Changes saved!', 'success');
     setTimeout(() => location.href = '/dashboard#listings', 1200);
   } catch (ex) {
     // Translate the platform's 413 into something the user can act on.
