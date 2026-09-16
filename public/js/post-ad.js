@@ -135,6 +135,8 @@ function missingFieldsForStep(step) {
     if (!val('edElectricity')) missing.push('Electricity');
     if (!val('edFurnishing')) missing.push('Furnishing');
     if (!val('edBathroom')) missing.push('Bathroom type');
+    // Security is multi-choice: ticking nothing is a valid answer ("no security"),
+    // so there is nothing to require here.
   }
   if (step === 5) {
     if (!val('adLat') || !val('adLng')) missing.push('Map pin (tap the map to set the location)');

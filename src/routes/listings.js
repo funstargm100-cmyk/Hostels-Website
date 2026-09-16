@@ -66,6 +66,28 @@ const COMMISSION_RATE = 0; // No transactions — price posted is price shown
 // type the request used.
 const toBool = (v) => v === true || v === 'true' || v === '1' || v === 'on';
 
+// ── Security (multi-choice) ────────────────────────────────
+// A room may carry MORE THAN ONE kind of security (Gated AND CCTV AND a guard),
+// so the value is stored as a comma-separated list of tokens — or the single
+// sentinel 'none' when the poster selects nothing. This is the only place the
+// shape is decided; the DB CHECK mirrors it (see schema.sql / migrate.js).
+const SECURITY_TOKENS = ['fenced', 'gated', 'guard', 'cctv'];
+// Accept either a repeated-field array (multipart sends `security` once per
+// checked box) or a comma/space separated string, drop anything unrecognised,
+// de-duplicate, and keep a stable canonical order. An empty result means 'none'.
+function normalizeSecurity(value) {
+  const parts = Array.isArray(value)
+    ? value
+    : String(value ?? '').split(',');
+  const seen = new Set();
+  for (const raw of parts) {
+    const tok = String(raw).trim().toLowerCase();
+    if (SECURITY_TOKENS.includes(tok)) seen.add(tok);
+  }
+  const ordered = SECURITY_TOKENS.filter((t) => seen.has(t));
+  return ordered.length ? ordered.join(',') : 'none';
+}
+
 // Apply photo edits to a listing: remove the given listing_images ids, store any
 // new uploads, then re-order everything. Enforces the 10-photo cap on the FINAL
 // total and guarantees exactly one primary (cover) image — the first in order.
@@ -340,6 +362,9 @@ router.get('/:uuid', optionalAuth, async (req, res) => {
 // POST /api/listings
 router.post('/', requireAuth, requireRole('owner', 'agent', 'admin'), uploadListingImages, async (req, res) => {
   const { title, description, occupancy_type, original_price, price_per_head: price_per_head_in, location_area, nearest_landmark, gender_preference, move_in_date, water, electricity, security, furnishing, bathroom, kitchen_access, wifi, parking, pet_friendly, poster_type, commission_type, commission_value } = req.body;
+  // Security is multi-choice — canonicalise the (possibly repeated or comma-list)
+  // field into the stored single string BEFORE the required-field check below.
+  const securityValue = normalizeSecurity(security);
   // The post-ad wizard names the pin fields lat/lng (see post-ad.html), while the
   // edit form uses location_lat/location_lng. Accept BOTH spellings: reading only
   // location_lat/location_lng silently stored NULL for every room posted through
@@ -432,7 +457,7 @@ router.post('/', requireAuth, requireRole('owner', 'agent', 'admin'), uploadList
     await db.query(
       `INSERT INTO amenities (listing_id, water, electricity, security, furnishing, bathroom, kitchen_access, wifi, parking, pet_friendly)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
-      [listingId, water || 'none', electricity || 'none', security || 'none', furnishing || 'unfurnished', bathroom || 'shared', !!kitchen_access, !!wifi, !!parking, !!pet_friendly]
+      [listingId, water || 'none', electricity || 'none', securityValue, furnishing || 'unfurnished', bathroom || 'shared', !!kitchen_access, !!wifi, !!parking, !!pet_friendly]
     );
 
     for (let i = 0; i < req.files.length; i++) {
@@ -566,10 +591,13 @@ router.put('/:uuid', requireAuth, uploadListingImages, async (req, res) => {
       vals.push(base, price, price, price_per_head, platformFee, feeRate);
     }
     if (occupancy_type && (original_price || (price_per_head_in !== undefined && price_per_head_in !== ''))) { fields.push(`occupancy_type=$${p++}`); vals.push(clampOccupancy(occupancy_type)); }
-    // Editing an existing listing must NOT send it back through admin review —
-    // an already-approved room stays live. Only new posts (POST /) require review.
-    vals.push(req.params.uuid);
-    await db.query(`UPDATE listings SET ${fields.join(', ')} WHERE uuid=$${p}`, vals);
+    // Only touch the listings row when there is something to change. A request that
+    // updates ONLY amenities/photos (no top-level fields) would otherwise build an
+    // empty `SET ` clause and fail with a SQL syntax error.
+    if (fields.length) {
+      vals.push(req.params.uuid);
+      await db.query(`UPDATE listings SET ${fields.join(', ')} WHERE uuid=$${p}`, vals);
+    }
 
     // A REJECTED room that its owner edited is a resubmission: send it back for
     // review and clear the old rejection reason, so it re-enters the queue instead
@@ -579,12 +607,18 @@ router.put('/:uuid', requireAuth, uploadListingImages, async (req, res) => {
       await db.query("UPDATE listings SET status='pending', rejection_reason=NULL WHERE uuid=$1", [req.params.uuid]);
     }
 
+    // Security is multi-choice (possibly a repeated multipart field). Treat it as
+    // PROVIDED when the key is present at all — an empty selection is a valid
+    // answer meaning 'none', so the value is normalised rather than skipped.
+    const securityProvided = security !== undefined && security !== null;
+    const securityValue = normalizeSecurity(security);
+
     // Update amenities if any provided
-    if (water || electricity || security || furnishing || bathroom !== undefined || kitchen_access !== undefined || wifi !== undefined || parking !== undefined || pet_friendly !== undefined) {
+    if (water || electricity || securityProvided || furnishing || bathroom !== undefined || kitchen_access !== undefined || wifi !== undefined || parking !== undefined || pet_friendly !== undefined) {
       const aFields = []; const aVals = []; let ap = 1;
       if (water) { aFields.push(`water=$${ap++}`); aVals.push(water); }
       if (electricity) { aFields.push(`electricity=$${ap++}`); aVals.push(electricity); }
-      if (security) { aFields.push(`security=$${ap++}`); aVals.push(security); }
+      if (securityProvided) { aFields.push(`security=$${ap++}`); aVals.push(securityValue); }
       if (furnishing) { aFields.push(`furnishing=$${ap++}`); aVals.push(furnishing); }
       if (bathroom) { aFields.push(`bathroom=$${ap++}`); aVals.push(bathroom); }
       if (kitchen_access !== undefined) { aFields.push(`kitchen_access=$${ap++}`); aVals.push(toBool(kitchen_access)); }

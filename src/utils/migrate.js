@@ -83,7 +83,23 @@ const MIGRATIONS = [
        ELSE
          ROUND(price_per_head / 1.07, 2)
      END
-     WHERE base_price_per_head IS NULL` }
+     WHERE base_price_per_head IS NULL` },
+
+  // Security becomes MULTI-CHOICE: a room may be e.g. Gated AND CCTV AND guarded.
+  // Stored as a comma-separated list of tokens (or the single sentinel 'none'), so
+  // we widen the column and drop the old single-value CHECK constraint. The new
+  // CHECK accepts 'none' or a comma-separated subset of the allowed tokens — see
+  // the regex in the constraint below. Existing single values already satisfy it.
+  { id: 'amenities_security_widen',
+    sql: `ALTER TABLE amenities ALTER COLUMN security TYPE VARCHAR(60)` },
+  // Drop the old single-value constraint, then add the multi-choice one. Both are
+  // in ONE multi-statement query so the migration is idempotent: even if a prior
+  // attempt added the constraint but failed to record it, a retry drops it first.
+  { id: 'amenities_security_multichoice_check',
+    sql: `ALTER TABLE amenities DROP CONSTRAINT IF EXISTS amenities_security_check;
+          ALTER TABLE amenities ADD CONSTRAINT amenities_security_check CHECK (
+            security IS NULL OR security ~ '^(none|(fenced|gated|guard|cctv)(,(fenced|gated|guard|cctv))*)$'
+          )` }
 ];
 
 let hasRun = false; // per-process guard — a single instance boots once

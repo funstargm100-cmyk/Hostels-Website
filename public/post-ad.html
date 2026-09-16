@@ -218,6 +218,18 @@
             <select id="edBathroom" name="bathroom"><option value="private">Private</option><option value="shared">Shared</option></select>
           </div>
         </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Security <span class="text-muted" style="font-weight:400">(choose any that apply)</span></label>
+            <div class="chip-row" id="edSecurityGroup">
+              <label class="chip-radio"><input type="checkbox" name="security" value="fenced" /><span>Fenced</span></label>
+              <label class="chip-radio"><input type="checkbox" name="security" value="gated" /><span>Gated</span></label>
+              <label class="chip-radio"><input type="checkbox" name="security" value="guard" /><span>Security guard</span></label>
+              <label class="chip-radio"><input type="checkbox" name="security" value="cctv" /><span>CCTV</span></label>
+            </div>
+            <p class="text-muted" style="font-size:.75rem;margin-top:.4rem">Leave all unticked if the room has no security.</p>
+          </div>
+        </div>
         <div class="checkbox-row mb-1"><input type="checkbox" id="edWifi" name="wifi" /><label style="margin:0">Wi-Fi available</label></div>
         <div class="checkbox-row mb-1"><input type="checkbox" id="edKitchen" name="kitchen_access" /><label style="margin:0">Kitchen access</label></div>
         <div class="checkbox-row mb-1"><input type="checkbox" id="edParking" name="parking" /><label style="margin:0">Parking available</label></div>

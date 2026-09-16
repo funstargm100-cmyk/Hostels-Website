@@ -146,6 +146,24 @@ let editMarker = null;
 let editInitialLat = null; // saved coords, restored onto the map
 let editInitialLng = null;
 
+// ─── SECURITY (multi-choice) ────────────────────────────────
+// Security is stored as a comma-separated list of tokens (e.g. 'gated,cctv') or
+// 'none'. These helpers map between that stored shape and the checkbox chips.
+const SECURITY_TOKENS = ['fenced', 'gated', 'guard', 'cctv'];
+
+function getCheckedSecurity() {
+  return SECURITY_TOKENS.filter(t =>
+    document.querySelector(`#edSecurityGroup input[value="${t}"]`)?.checked);
+}
+
+function setSecurityCheckboxes(stored) {
+  const wanted = new Set(
+    SECURITY_TOKENS.filter(t => String(stored || '').split(',').map(s => s.trim()).includes(t)));
+  document.querySelectorAll('#edSecurityGroup input').forEach(cb => {
+    cb.checked = wanted.has(cb.value);
+  });
+}
+
 async function initEdit() {
   const user = await initNavAuth();
   if (!user) { location.href = '/login?redirect=' + encodeURIComponent(location.pathname + location.search); return; }
@@ -198,6 +216,9 @@ async function initEdit() {
     if (amenities.electricity) document.getElementById('edElectricity').value = amenities.electricity;
     if (amenities.furnishing) document.getElementById('edFurnishing').value = amenities.furnishing;
     if (amenities.bathroom) document.getElementById('edBathroom').value = amenities.bathroom;
+    // Security is multi-choice, stored as a comma-separated list (or 'none'/null
+    // for older rooms). Tick the matching chips.
+    setSecurityCheckboxes(amenities.security);
     document.getElementById('edWifi').checked = !!amenities.wifi;
     document.getElementById('edKitchen').checked = !!amenities.kitchen_access;
     document.getElementById('edParking').checked = !!amenities.parking;
@@ -499,6 +520,7 @@ function validateEditForm() {
   if (!val('edElectricity')) return 'Select an electricity supply.';
   if (!val('edFurnishing')) return 'Select the furnishing.';
   if (!val('edBathroom')) return 'Select the bathroom type.';
+  // Security is multi-choice: ticking nothing is a valid answer ("no security").
   if (totalPhotoCount() < 2) return 'A room needs at least 2 photos.';
   return '';
 }
@@ -541,6 +563,13 @@ document.getElementById('editForm')?.addEventListener('submit', async (e) => {
     fd.append('electricity', document.getElementById('edElectricity').value);
     fd.append('furnishing', document.getElementById('edFurnishing').value);
     fd.append('bathroom', document.getElementById('edBathroom').value);
+    // Security is multi-choice — send one `security` field per ticked chip. The
+    // server normalises the repeated field into the stored comma-separated value.
+    // A SINGLE combined comma string is sent when nothing is ticked, so the server
+    // still sees the field and records 'none' rather than leaving the old value.
+    const secChecked = getCheckedSecurity();
+    if (secChecked.length) secChecked.forEach(v => fd.append('security', v));
+    else fd.append('security', 'none');
     fd.append('wifi', document.getElementById('edWifi').checked);
     fd.append('kitchen_access', document.getElementById('edKitchen').checked);
     fd.append('parking', document.getElementById('edParking').checked);

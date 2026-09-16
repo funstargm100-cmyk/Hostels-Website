@@ -177,7 +177,8 @@ function renderAmenities(a) {
   const items = [
     AMENITY_MAP.water[a.water],
     AMENITY_MAP.electricity[a.electricity],
-    AMENITY_MAP.security[a.security],
+    // Security is multi-choice: one chip per selected kind (e.g. Gated + CCTV).
+    ...securityItems(a.security),
     AMENITY_MAP.furnishing[a.furnishing],
     AMENITY_MAP.bathroom[a.bathroom],
     a.wifi ? { icon: 'wifi', label: 'Wi-Fi Available' } : null,
@@ -187,6 +188,16 @@ function renderAmenities(a) {
   ].filter(Boolean);
   grid.innerHTML = items.map(item => `<div class="amenity-item"><i data-lucide="${item.icon}"></i><span>${item.label}</span></div>`).join('');
   if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [grid] });
+}
+
+// Expand the stored security value into one amenity chip per selected kind.
+// The value is either the sentinel 'none'/empty (→ a single "No Security" chip)
+// or a comma-separated list such as 'gated,cctv'. Unknown tokens are ignored.
+function securityItems(stored) {
+  const tokens = String(stored || '').split(',').map(s => s.trim()).filter(Boolean);
+  const known = tokens.filter(t => AMENITY_MAP.security[t] && t !== 'none');
+  if (!known.length) return [AMENITY_MAP.security.none];
+  return known.map(t => AMENITY_MAP.security[t]);
 }
 
 function renderPriceBox(l) {

@@ -65,7 +65,11 @@ CREATE TABLE IF NOT EXISTS amenities (
   listing_id INT UNIQUE NOT NULL REFERENCES listings(id) ON DELETE CASCADE,
   water VARCHAR(20) DEFAULT 'none' CHECK (water IN ('constant','intermittent','borehole','none')),
   electricity VARCHAR(20) DEFAULT 'none' CHECK (electricity IN ('prepaid','postpaid','generator','none')),
-  security VARCHAR(20) DEFAULT 'none' CHECK (security IN ('fenced','gated','guard','cctv','none')),
+  -- Security is MULTI-CHOICE: a room may be e.g. Gated AND CCTV AND guarded.
+  -- Stored as a comma-separated list of tokens, or the single sentinel 'none'.
+  security VARCHAR(60) DEFAULT 'none' CHECK (
+    security IS NULL OR security ~ '^(none|(fenced|gated|guard|cctv)(,(fenced|gated|guard|cctv))*)$'
+  ),
   furnishing VARCHAR(20) DEFAULT 'unfurnished' CHECK (furnishing IN ('furnished','semi-furnished','unfurnished')),
   bathroom VARCHAR(10) DEFAULT 'shared' CHECK (bathroom IN ('private','shared')),
   kitchen_access BOOLEAN DEFAULT FALSE,
@@ -233,3 +237,13 @@ UPDATE listings SET base_price_per_head = CASE
       ROUND(price_per_head / 1.07, 2)
   END
   WHERE base_price_per_head IS NULL;
+-- Migration: SECURITY is now MULTI-CHOICE. A room may carry more than one kind of
+-- security (e.g. Gated AND CCTV AND a guard). It is stored as a comma-separated
+-- list of tokens, or the single sentinel 'none'. The old single-value CHECK
+-- constraint is dropped, the column is widened to fit several tokens, and a new
+-- CHECK accepts 'none' or a comma-separated subset of the allowed tokens.
+ALTER TABLE amenities DROP CONSTRAINT IF EXISTS amenities_security_check;
+ALTER TABLE amenities ALTER COLUMN security TYPE VARCHAR(60);
+ALTER TABLE amenities ADD CONSTRAINT amenities_security_check CHECK (
+  security IS NULL OR security ~ '^(none|(fenced|gated|guard|cctv)(,(fenced|gated|guard|cctv))*)$'
+);
