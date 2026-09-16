@@ -1,11 +1,76 @@
 // ─── BACK NAVIGATION ─────────────────────────────────────────────────────────
-function goBack(fallback = '/') {
+// Actually navigate, ignoring any unsaved-changes guard.
+function _navigateBack(fallback = '/') {
   if (history.length > 1 && document.referrer && document.referrer !== location.href) {
     history.back();
   } else {
     location.href = fallback;
   }
 }
+
+// Pages that hold editable, unsaved data (post-ad, edit-listing) define
+// window.hasUnsavedChanges() -> true when there is work that would be lost.
+// The Back button then warns before leaving.
+function goBack(fallback = '/') {
+  if (typeof window.hasUnsavedChanges === 'function' && window.hasUnsavedChanges()) {
+    confirmLeave(() => _navigateBack(fallback));
+    return;
+  }
+  _navigateBack(fallback);
+}
+
+// ─── UNSAVED-CHANGES CONFIRM MODAL ────────────────────
+// A reusable dialog, injected once and re-used. Calling confirmLeave(cb) warns
+// the user that their unsaved work will be lost; cb runs only if they confirm.
+let _leaveModalEl = null;
+let _leaveConfirmCb = null;
+
+function _ensureLeaveModal() {
+  if (_leaveModalEl) return _leaveModalEl;
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.id = 'leaveConfirmModal';
+  overlay.innerHTML = `
+    <div class="modal" role="alertdialog" aria-modal="true" aria-labelledby="leaveConfirmTitle">
+      <h3 id="leaveConfirmTitle">Leave without saving?</h3>
+      <p class="text-muted" style="margin:.4rem 0 1rem">You have unsaved changes. If you leave now, your work will be lost.</p>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" id="leaveCancelBtn">Keep editing</button>
+        <button type="button" class="btn btn-primary" id="leaveConfirmBtn" style="background:var(--brick)">Discard &amp; leave</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+
+  overlay.querySelector('#leaveCancelBtn').addEventListener('click', () => closeModal('leaveConfirmModal'));
+  overlay.querySelector('#leaveConfirmBtn').addEventListener('click', () => {
+    const cb = _leaveConfirmCb;
+    _leaveConfirmCb = null;
+    closeModal('leaveConfirmModal');
+    if (typeof cb === 'function') cb();
+  });
+  // Clicking the dimmed backdrop counts as "keep editing" (do nothing).
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) closeModal('leaveConfirmModal'); });
+
+  _leaveModalEl = overlay;
+  return overlay;
+}
+
+function confirmLeave(onConfirm) {
+  _leaveConfirmCb = onConfirm;
+  _ensureLeaveModal();
+  openModal('leaveConfirmModal');
+}
+
+// Warn on browser back / tab close / reload while there is unsaved work.
+// A page opts in by defining window.hasUnsavedChanges(). After a successful save
+// that function returns false, so the post-save redirect is silent.
+window.addEventListener('beforeunload', (e) => {
+  if (typeof window.hasUnsavedChanges === 'function' && window.hasUnsavedChanges()) {
+    e.preventDefault();
+    e.returnValue = '';
+    return '';
+  }
+});
 
 // ─── API HELPER ───────────────────────────────────────────────────────────────
 const api = {

@@ -72,4 +72,12 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: err.message || 'Server error' });
 });
 
-app.listen(PORT, () => console.log(`Hostels Marketplace running on http://localhost:${PORT}`));
+// Apply additive schema migrations BEFORE serving traffic, so a deployed database
+// that predates a column is brought up to date on boot. A ledger + advisory lock
+// make this a no-op on steady-state cold starts and safe across concurrent
+// instances (see src/utils/migrate.js). runMigrations() never throws — a failure is
+// logged and startup continues.
+const { runMigrations } = require('./src/utils/migrate');
+runMigrations().finally(() => {
+  app.listen(PORT, () => console.log(`Hostels Marketplace running on http://localhost:${PORT}`));
+});

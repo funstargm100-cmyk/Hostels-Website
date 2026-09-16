@@ -11,6 +11,43 @@ let postMarker = null;
 const PROMPT_TIMEOUT_MS = 4000;
 const promptTimers = new WeakMap();
 
+// ─── UNSAVED-CHANGES GUARD ────────────────────────────────
+// A posted room goes straight to review once submitted, so anything typed or
+// uploaded here is lost if the poster leaves. hasUnsavedChanges() reports whether
+// the form holds data worth warning about — read by the Back button and the
+// browser unload guard (see app.js).
+let _submitted = false; // set true once the POST succeeds, so leaving is silent
+function _formFieldsSnapshot() {
+  const form = document.getElementById('postAdForm');
+  if (!form) return {};
+  const snap = {};
+  form.querySelectorAll('input, select, textarea').forEach((el) => {
+    if (!el.name) return;           // file inputs / unnamed fields handled separately
+    if (el.type === 'checkbox' || el.type === 'radio') {
+      if (el.checked) snap[el.name + ':' + el.value] = true;
+    } else if (el.value) {
+      snap[el.name] = el.value;
+    }
+  });
+  return snap;
+}
+
+// The form's field values as they were when the page loaded. Any later difference
+// (a typed field, a chosen select/radio) counts as unsaved work.
+let _initialFieldSnapshot = null;
+function _captureInitialSnapshot() { _initialFieldSnapshot = _formFieldsSnapshot(); }
+
+window.hasUnsavedChanges = function () {
+  if (_submitted) return false;
+  // Photos count: a cover or any room photo is meaningful, unsaved work.
+  if (coverFile || selectedFiles.length) return true;
+  if (_initialFieldSnapshot == null) return false;
+  return JSON.stringify(_formFieldsSnapshot()) !== JSON.stringify(_initialFieldSnapshot);
+};
+
+// Called when the POST succeeds — nothing left to warn about.
+window._markSaved = function () { _submitted = true; };
+
 // ─── AUTH GATE ────────────────────────────────────────────────────────────────
 async function checkAuth() {
   const user = await initNavAuth();
@@ -666,6 +703,8 @@ document.getElementById('postAdForm').addEventListener('submit', async (e) => {
     // Order here must match `compressed`, which was built as [cover, ...photos].
     compressed.forEach(r => formData.append('images', r.file));
     await api.upload('/api/listings', formData);
+    // Saved — the redirect below must not trigger the unsaved-changes warning.
+    window._markSaved();
     showToast('Room submitted for review!', 'success');
     setTimeout(() => location.href = '/dashboard', 1500);
   } catch (ex) {
@@ -686,4 +725,7 @@ document.getElementById('postAdForm').addEventListener('submit', async (e) => {
   updateWizardUI();
   // Initialise the pricing UI (commission block shown only when posting as agent).
   onPosterTypeChange();
+  // Baseline the form AFTER auth preselects poster type, so those defaults are not
+  // mistaken for the poster's own unsaved edits.
+  _captureInitialSnapshot();
 })();

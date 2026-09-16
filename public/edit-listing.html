@@ -127,7 +127,7 @@
 
       <div style="display:flex;gap:.7rem">
         <button type="submit" class="btn btn-primary" id="editSubmitBtn">Save changes</button>
-        <a href="/dashboard#listings" class="btn btn-outline">Cancel</a>
+        <a href="/dashboard#listings" class="btn btn-outline" onclick="return confirmLeaveIfDirty('/dashboard#listings')">Cancel</a>
       </div>
     </form>
   </div>

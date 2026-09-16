@@ -11,6 +11,49 @@ const MAX_PHOTOS = 10;
 const PLATFORM_FEE_RATE = { owner: 0.07, agent: 0.05 };
 let editPricing = { posterType: 'owner', commissionPerPerson: 0 };
 
+// ─── UNSAVED-CHANGES GUARD ────────────────────────────────
+// Warn before leaving if the owner has edited any field or touched the photos.
+// Read by the Back button, the Cancel link and the browser unload guard (app.js).
+let _saved = false;              // true once a save succeeds — leaving is then silent
+let _initialFieldSnapshot = null;
+let _initialPhotoSignature = '';
+
+function _editFieldsSnapshot() {
+  const form = document.getElementById('editForm');
+  if (!form) return {};
+  const snap = {};
+  form.querySelectorAll('input, select, textarea').forEach((el) => {
+    if (!el.id) return;
+    if (el.type === 'checkbox') { if (el.checked) snap[el.id] = true; }
+    else if (el.value) snap[el.id] = el.value;
+  });
+  return snap;
+}
+
+// A compact signature of the photo set (existing ids + staged files, in order).
+function _photoSignature() {
+  return photoItems.map(it => it.type === 'existing' ? 'i' + it.id : 'n' + (it.file ? it.file.name + it.file.size : '')).join('|');
+}
+
+function _captureEditBaseline() {
+  _initialFieldSnapshot = _editFieldsSnapshot();
+  _initialPhotoSignature = _photoSignature();
+}
+
+window.hasUnsavedChanges = function () {
+  if (_saved) return false;
+  if (_initialFieldSnapshot == null) return false;
+  if (JSON.stringify(_editFieldsSnapshot()) !== JSON.stringify(_initialFieldSnapshot)) return true;
+  return _photoSignature() !== _initialPhotoSignature;
+};
+
+// Cancel link / any hash link to the dashboard — routed through the same guard.
+window.confirmLeaveIfDirty = function (href) {
+  if (window.hasUnsavedChanges()) { confirmLeave(() => { location.href = href; }); return false; }
+  location.href = href;
+  return false;
+};
+
 // The base price per head for the loaded listing. New rooms store it directly in
 // base_price_per_head; older rooms are backfilled by the schema migration, and if
 // it is still missing we reverse the forward formula as a fallback.
@@ -133,6 +176,10 @@ async function initEdit() {
     updatePhotoCount();
 
     initEditMap();
+
+    // Baseline AFTER the form is fully pre-filled, so the loaded values are not
+    // mistaken for the owner's own unsaved edits.
+    _captureEditBaseline();
 
     if (typeof lucide !== 'undefined') lucide.createIcons();
   } catch (e) {
@@ -484,6 +531,8 @@ document.getElementById('editForm')?.addEventListener('submit', async (e) => {
     fd.append('photo_order', JSON.stringify(photoOrder));
 
     await api.upload(`/api/listings/${editUUID}`, fd, 'PUT');
+    // Saved — the redirect below must not trigger the unsaved-changes warning.
+    _saved = true;
     showToast('Changes saved!', 'success');
     setTimeout(() => location.href = '/dashboard#listings', 1200);
   } catch (ex) {
