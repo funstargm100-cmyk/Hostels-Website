@@ -168,6 +168,7 @@
     </div>
     <div class="form-group"><label>Admin notes</label><textarea id="adminNotes" placeholder="Internal notes (not shared with users)"></textarea></div>
     <div class="modal-actions">
+      <button class="btn btn-ghost" style="margin-right:auto;color:var(--danger,#dc2626)" onclick="deleteRequest()"><i data-lucide="trash-2" style="width:15px;height:15px"></i> Delete request</button>
       <button class="btn btn-ghost" onclick="closeModal('requestModal')">Cancel</button>
       <button class="btn btn-primary" onclick="updateRequestStatus()">Save</button>
     </div>

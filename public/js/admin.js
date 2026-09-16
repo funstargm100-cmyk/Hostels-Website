@@ -304,6 +304,22 @@ async function updateRequestStatus() {
   } catch (e) { showToast(e.message, 'error'); }
 }
 
+// Permanently remove a rental request. Unlike the seeker's own withdrawal, an
+// admin may remove a request in ANY status (that is the point — e.g. spam, a
+// duplicate, or a stuck request). DELETE /api/admin/requests/:id also decrements
+// the listing's renter count and notifies the seeker.
+async function deleteRequest() {
+  const r = (adminRequests || []).find(x => x.id === pendingRequestId);
+  const label = r ? ` from ${r.seeker_name || 'this renter'} for "${r.listing_title || 'this room'}"` : '';
+  if (!confirm(`Delete this rental request${label}?\n\nThis cannot be undone.`)) return;
+  try {
+    await api.delete(`/api/admin/requests/${pendingRequestId}`);
+    closeModal('requestModal');
+    showToast('Rental request deleted', 'success');
+    loadAdminRequests();
+  } catch (e) { showToast(e.message, 'error'); }
+}
+
 async function loadAdminUsers() {
   const role = document.getElementById('userRoleFilter').value;
   const el = document.getElementById('adminUsersTable');

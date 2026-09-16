@@ -203,6 +203,38 @@ router.put('/requests/:id/status', admin, async (req, res) => {
   }
 });
 
+// DELETE /api/admin/requests/:id — an admin removes a rental request outright.
+// Mirrors the seeker's own withdrawal (DELETE /api/requests/:uuid): the row is
+// deleted and the listing's interest_count is decremented so its "renters" figure
+// stays honest. The seeker is notified, since their request disappears from their
+// dashboard without them acting.
+router.delete('/requests/:id', admin, async (req, res) => {
+  try {
+    const result = await db.query(
+      'SELECT cr.id, cr.listing_id, cr.seeker_id, u.email AS seeker_email, l.title AS listing_title FROM contact_requests cr LEFT JOIN users u ON cr.seeker_id=u.id LEFT JOIN listings l ON cr.listing_id=l.id WHERE cr.id=$1',
+      [req.params.id]
+    );
+    const request = result.rows[0];
+    if (!request) return res.status(404).json({ error: 'Request not found' });
+
+    await db.query('DELETE FROM contact_requests WHERE id=$1', [req.params.id]);
+    // Undo the interest bump from POST /api/requests (never below zero).
+    await db.query('UPDATE listings SET interest_count = GREATEST(interest_count - 1, 0) WHERE id=$1', [request.listing_id]);
+    await logAction(req.session.user.id, 'delete_request', 'request', req.params.id);
+    res.json({ message: 'Rental request deleted' });
+
+    // Fire-and-forget: tell the seeker their request is gone (email + in-app), so
+    // it vanishing from their dashboard is explained. A failure here must not fail
+    // the deletion the admin already performed.
+    const emailTo = request.seeker_email;
+    if (emailTo) sendEmail(emailTo, 'Your rental request was removed', templates.requestRemoved(request.listing_title, { req })).catch(err => console.error('request removed seeker email failed:', err.message));
+    if (request.seeker_id) notify(request.seeker_id, 'requestRemoved', [request.listing_title], { link: '/dashboard#requests' }).catch(err => console.error('request removed seeker notify failed:', err.message));
+  } catch (err) {
+    console.error('ADMIN DELETE REQUEST ERROR:', err.message);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // GET /api/admin/users
 router.get('/users', admin, async (req, res) => {
   const { role, page = 1, limit = 20 } = req.query;

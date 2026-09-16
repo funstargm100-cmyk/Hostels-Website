@@ -123,6 +123,10 @@ const copy = {
     title: 'A renter cancelled their request',
     message: `A renter withdrew their interest in "${listing}".`
   }),
+  requestRemoved: (listing) => ({
+    title: 'Your rental request was removed',
+    message: `Your rental request for "${listing}" was removed by our team. Contact support if you believe this was a mistake.`
+  }),
   requestUpdate: (status, listing) => ({
     title: status === 'received' ? 'We received your rental request' : `Your rental is now ${REQUEST_STATUS_LABEL[status] || status}`,
     message: listing
@@ -315,6 +319,12 @@ const templates = {
         <li>Keep the listing accurate so there are no surprises on the day.</li>
       </ul>`,
     action: { label: 'Open your dashboard', url: link('/dashboard#listings', ctx.req) }
+  }),
+
+  requestRemoved: (listing, ctx = {}) => layout({
+    heading: 'Your rental request was removed',
+    body: `Your rental request for <strong>${listing}</strong> was removed by our team. Contact support if you believe this was a mistake.`,
+    ...ctx
   }),
 
   requestCancelled: (listing, ctx = {}) => layout({
