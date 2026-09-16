@@ -305,10 +305,27 @@ function setUpOwnerView(listing) {
   if (seekerActions) seekerActions.style.display = 'none';
   if (ownerActions) ownerActions.style.display = 'block';
 
+  // Admins manage EVERY listing (active or pending) and are its owner. Tell
+  // the edit page to come BACK here (the listing detail page) after save/cancel,
+  // rather than dropping the admin on the owner dashboard. Owners have no `from`,
+  // so they keep their usual dashboard return path.
   const editBtn = document.getElementById('editListingBtn');
-  if (editBtn) editBtn.href = '/edit-listing?id=' + listing.uuid;
+  if (editBtn) {
+    const isAdmin = isAdminUser();
+    editBtn.href = '/edit-listing?id=' + listing.uuid
+      + (isAdmin ? '&from=' + encodeURIComponent('/listing?id=' + listing.uuid) : '');
+  }
 
   refreshListingStatusUI(listing);
+}
+
+// Is the signed-in viewer an admin? Read from the cached user (same source
+// isOwnListing uses), so it works before initNavAuth resolves too.
+function isAdminUser() {
+  try {
+    const user = JSON.parse(localStorage.getItem('user') || 'null');
+    return !!user && user.role === 'admin';
+  } catch { return false; }
 }
 
 // Reflect the listing's current status on the deactivate / reactivate button.

@@ -460,9 +460,17 @@ router.post('/', requireAuth, requireRole('owner', 'agent', 'admin'), uploadList
 // against the FINAL count, not just the newly uploaded files.
 router.put('/:uuid', requireAuth, uploadListingImages, async (req, res) => {
   try {
-    const result = await db.query('SELECT * FROM listings WHERE uuid=$1 AND owner_id=$2', [req.params.uuid, req.session.user.id]);
+    // Owners edit their own listing; an admin may edit ANY listing (including one
+    // still in review/pending). So the owner scope is applied for everyone else,
+    // and admins look the row up by uuid alone — otherwise `listing` would be
+    // undefined for an admin editing someone else's room and every later read of
+    // listing.status / listing.id / listing.occupancy_type would throw a 500.
+    const isAdmin = req.session.user.role === 'admin';
+    const result = isAdmin
+      ? await db.query('SELECT * FROM listings WHERE uuid=$1', [req.params.uuid])
+      : await db.query('SELECT * FROM listings WHERE uuid=$1 AND owner_id=$2', [req.params.uuid, req.session.user.id]);
     const listing = result.rows[0];
-    if (!listing && req.session.user.role !== 'admin') return res.status(404).json({ error: 'Listing not found' });
+    if (!listing) return res.status(404).json({ error: 'Listing not found' });
 
     const { title, description, original_price, price_per_head: price_per_head_in, occupancy_type, location_area, full_address, nearest_landmark, gender_preference, move_in_date,
             location_lat, location_lng,
@@ -683,12 +691,17 @@ router.put('/:uuid/availability', requireAuth, async (req, res) => {
   }
 });
 
-// GET /api/listings/:uuid/edit-data — owner fetches full listing + amenities for the edit form
+// GET /api/listings/:uuid/edit-data — owner (or an admin) fetches full listing +
+// amenities for the edit form. An admin edits ANY listing, so for them the row is
+// found by uuid alone — otherwise `listing` would be undefined and building the
+// response would throw a 500, blocking admins from the edit form entirely.
 router.get('/:uuid/edit-data', requireAuth, async (req, res) => {
   try {
-    const lr = await db.query('SELECT * FROM listings WHERE uuid=$1 AND owner_id=$2', [req.params.uuid, req.session.user.id]);
-    if (!lr.rows.length && req.session.user.role !== 'admin') return res.status(404).json({ error: 'Listing not found' });
+    const lr = req.session.user.role === 'admin'
+      ? await db.query('SELECT * FROM listings WHERE uuid=$1', [req.params.uuid])
+      : await db.query('SELECT * FROM listings WHERE uuid=$1 AND owner_id=$2', [req.params.uuid, req.session.user.id]);
     const listing = lr.rows[0];
+    if (!listing) return res.status(404).json({ error: 'Listing not found' });
     const amenities = (await db.query('SELECT * FROM amenities WHERE listing_id=$1', [listing.id])).rows[0] || {};
     const images = (await db.query('SELECT id, image_path, is_primary FROM listing_images WHERE listing_id=$1 ORDER BY sort_order', [listing.id])).rows;
     res.json({ listing, amenities, images });

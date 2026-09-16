@@ -3,6 +3,24 @@
 const editUUID = new URLSearchParams(location.search).get('id');
 const MAX_PHOTOS = 10;
 
+// Where to return after saving / cancelling. An admin arrives from the listing
+// detail page with ?from=/listing?id=..., so they land back on the room they were
+// editing instead of the owner dashboard. Owners send no `from` and keep the
+// dashboard. Only SAME-SITE absolute paths are honoured, so this cannot be turned
+// into an open redirect.
+const returnTo = (() => {
+  const raw = new URLSearchParams(location.search).get('from');
+  return raw && /^\/[^/\\]/.test(raw) ? raw : '/dashboard#listings';
+})();
+
+// Point the Back button and the Cancel link at the return destination.
+function applyReturnLinks() {
+  const backBtn = document.querySelector('.back-btn');
+  if (backBtn) backBtn.setAttribute('onclick', `goBack('${returnTo}')`);
+  const cancel = document.getElementById('editCancelLink');
+  if (cancel) cancel.setAttribute('href', returnTo);
+}
+
 // ─── PRICING ─────────────────
 // The edit form only changes the BASE price per head. Commission and platform fee
 // are properties fixed when the room was posted, so we read them from the listing
@@ -133,6 +151,10 @@ async function initEdit() {
   if (!user) { location.href = '/login?redirect=' + encodeURIComponent(location.pathname + location.search); return; }
   if (!['owner', 'agent', 'admin'].includes(user.role)) { location.href = '/dashboard'; return; }
   if (!editUUID) { location.href = '/dashboard#listings'; return; }
+
+  // Back / Cancel should return to where the editor came from (the listing detail
+  // page for an admin; the dashboard for an owner).
+  applyReturnLinks();
 
   try {
     const { listing, amenities, images } = await api.get(`/api/listings/${editUUID}/edit-data`);
@@ -548,7 +570,9 @@ document.getElementById('editForm')?.addEventListener('submit', async (e) => {
     // Saved — the redirect below must not trigger the unsaved-changes warning.
     _saved = true;
     showToast(isRejectedListing ? 'Room resubmitted for review!' : 'Changes saved!', 'success');
-    setTimeout(() => location.href = '/dashboard#listings', 1200);
+    // Back to where the editor came from: the listing detail page for an admin,
+    // the dashboard for an owner.
+    setTimeout(() => location.href = returnTo, 1200);
   } catch (ex) {
     // Translate the platform's 413 into something the user can act on.
     errEl.textContent = /PAYLOAD_TOO_LARGE|413|too large/i.test(ex.message)
