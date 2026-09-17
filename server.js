@@ -79,5 +79,5 @@ app.use((err, req, res, next) => {
 // logged and startup continues.
 const { runMigrations } = require('./src/utils/migrate');
 runMigrations().finally(() => {
-  app.listen(PORT, () => console.log(`Hostels Marketplace running on http://localhost:${PORT}`));
+  app.listen(PORT, () => console.log(`Rentel running on http://localhost:${PORT}`));
 });

@@ -1,7 +1,7 @@
 {
-  "name": "hostels-marketplace",
+  "name": "rentel",
   "version": "1.0.0",
-  "description": "Hostel & Room Rental Marketplace",
+  "description": "Rentel — Hostel & Room Rental Marketplace",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
